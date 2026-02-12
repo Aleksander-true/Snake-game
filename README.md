@@ -5,7 +5,7 @@ A modern Snake game built with TypeScript and HTML5 Canvas where snakes hunt rab
 ## Features
 
 - **Classic snake gameplay** with additional rabbit breeding mechanics
-- **Multiplayer**: 0–3 human players + 0–4 AI bots
+- **Multiplayer**: 0–2 human players + 0–4 AI bots
 - **Progressive difficulty**: growing field size, more walls, smarter rabbits
 - **AI bots** with configurable vision and heuristic decision-making
 - **Score tracking** with localStorage persistence
@@ -80,7 +80,6 @@ docs/
 |--------|------|
 | Player 1 | W A S D |
 | Player 2 | Arrow keys |
-| Player 3 | I J K L |
 
 ## Architecture
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-"Snake Eats Rabbits" is a snake game where snakes hunt rabbits that can breed and multiply on the field. Supports 0–3 human players and 0–4 AI bots simultaneously.
+"Snake Eats Rabbits" is a snake game where snakes hunt rabbits that can breed and multiply on the field. Supports 0–2 human players and 0–4 AI bots simultaneously.
 
 ## Board
 
@@ -85,8 +85,9 @@ Each rabbit tracks:
 - Level ends when:
   - Only 1 snake remains alive, **OR**
   - Level timer expires (3 minutes)
-- Winner determined by highest score for that level
-- Track "levels won" per snake across the game
+- **Level winner**: the surviving snake. If both alive after 3 min → draw (no winner).
+- Track "levels won" per snake across the game.
+- **Overall winner**: most levels won. Tiebreak: most rabbits eaten (total score). If still tied → draw.
 
 ## Walls / Obstacles
 
@@ -116,8 +117,8 @@ Each rabbit tracks:
 | 1 | 0 | Classic single-player |
 | 1 | 1–3 | Player vs bots |
 | 2 | 0–2 | Local multiplayer |
-| 3 | 0–1 | 3-player local |
-| * | * | Total snakes = players + bots (max practical: ~4–7) |
+| 2 | 1–2 | 2 players + bots |
+| * | * | Total snakes = players + bots (max practical: ~4–6) |
 
 ## Results
 
