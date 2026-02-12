@@ -1,9 +1,9 @@
 import { GameState, Snake } from '../types';
-import { getTargetScore } from '../game';
+import { getCumulativeTargetScore } from '../game';
 
 /**
  * Check if the current level is complete.
- * Single player: target score reached or snake dead.
+ * Single player: cumulative target score reached or snake dead.
  * Multiplayer: 1 snake left OR time expired.
  */
 export function checkLevelComplete(state: GameState): boolean {
@@ -11,8 +11,8 @@ export function checkLevelComplete(state: GameState): boolean {
   const totalSnakes = state.snakes.length;
 
   if (totalSnakes === 1) {
-    // Single-player: check target score
-    const target = getTargetScore(state.level);
+    // Single-player: check cumulative target score
+    const target = getCumulativeTargetScore(state.level);
     const snake = state.snakes[0];
     if (snake.score >= target) {
       return true;

@@ -1,6 +1,6 @@
 import { createEmptyBoard, inBounds } from '../src/engine/board';
 import { isReverseDirection } from '../src/engine/collision';
-import { createSnake, getTargetScore, getInitialRabbitCount } from '../src/engine/game';
+import { createSnake, getTargetScore, getCumulativeTargetScore, getInitialRabbitCount } from '../src/engine/game';
 
 describe('Smoke tests — project skeleton', () => {
   test('createEmptyBoard creates correct dimensions', () => {
@@ -35,6 +35,15 @@ describe('Smoke tests — project skeleton', () => {
   test('getTargetScore computes correctly', () => {
     expect(getTargetScore(1)).toBe(11); // floor(1*1.2+10) = 11
     expect(getTargetScore(5)).toBe(16); // floor(5*1.2+10) = 16
+  });
+
+  test('getCumulativeTargetScore sums level targets', () => {
+    // Level 1: 11
+    expect(getCumulativeTargetScore(1)).toBe(11);
+    // Level 2: 11 + 12 = 23
+    expect(getCumulativeTargetScore(2)).toBe(23);
+    // Level 3: 11 + 12 + 13 = 36
+    expect(getCumulativeTargetScore(3)).toBe(36);
   });
 
   test('getInitialRabbitCount computes correctly', () => {

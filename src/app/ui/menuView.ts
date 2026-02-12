@@ -42,7 +42,7 @@ export function renderMenu(
           </div>
 
           <span class="menu-label">Сложность (1–10):</span>
-          <input type="number" id="difficulty" min="1" max="10" value="5"
+          <input type="number" id="difficulty" min="1" max="10" value="1"
             class="input-field input-number">
 
         </div>

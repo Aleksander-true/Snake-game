@@ -234,10 +234,22 @@ export function createSnake(
 }
 
 /**
- * Get the target score for a level (single-player mode).
+ * Get the target score for a single level.
  */
 export function getTargetScore(level: number): number {
   return Math.floor(level * 1.2 + 10);
+}
+
+/**
+ * Get the cumulative target score to complete a given level.
+ * Level 1: 11, Level 2: 11+12=23, Level 3: 11+12+13=36, etc.
+ */
+export function getCumulativeTargetScore(level: number): number {
+  let total = 0;
+  for (let l = 1; l <= level; l++) {
+    total += getTargetScore(l);
+  }
+  return total;
 }
 
 /**

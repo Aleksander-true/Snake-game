@@ -3,7 +3,7 @@ import { GameState } from '../engine/types';
 /** Canvas color constants (mirrors CSS vars for consistency) */
 const COLORS = {
   bg:       '#000000',
-  grid:     '#1a1a1a',
+  grid:     '#cccccc',
   wall:     '#FFFFFF',
   rabbit:   '#FF0000',
   headStroke: '#FFFFFF',
