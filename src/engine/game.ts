@@ -4,6 +4,7 @@ import {
   BASE_WIDTH, BASE_HEIGHT, LEVEL_SIZE_INCREMENT,
   INITIAL_SNAKE_LENGTH, LEVEL_TIME_LIMIT, TICK_INTERVAL_MS,
 } from './constants';
+import { gameSettings } from './settings';
 import { generateWalls } from './spawning/wallsGenerator';
 import { spawnRabbits } from './spawning/rabbitsSpawner';
 import { getNextHeadPosition, moveSnake, applyDirection } from './systems/movementSystem';
@@ -17,8 +18,8 @@ import { checkLevelComplete, getLevelWinner } from './systems/levelSystem';
  * Create initial game state for a given config and level.
  */
 export function createGameState(config: GameConfig, level: number): GameState {
-  const width = BASE_WIDTH + (level - 1) * LEVEL_SIZE_INCREMENT;
-  const height = BASE_HEIGHT + (level - 1) * LEVEL_SIZE_INCREMENT;
+  const width = gameSettings.baseWidth + (level - 1) * gameSettings.levelSizeIncrement;
+  const height = gameSettings.baseHeight + (level - 1) * gameSettings.levelSizeIncrement;
 
   const state: GameState = {
     board: createEmptyBoard(width, height),
@@ -30,7 +31,7 @@ export function createGameState(config: GameConfig, level: number): GameState {
     level,
     difficultyLevel: config.difficultyLevel,
     tickCount: 0,
-    levelTimeLeft: LEVEL_TIME_LIMIT,
+    levelTimeLeft: gameSettings.levelTimeLimit,
     gameOver: false,
     levelComplete: false,
   };
@@ -44,9 +45,9 @@ export function createGameState(config: GameConfig, level: number): GameState {
 export function initLevel(state: GameState, config: GameConfig): void {
   const totalSnakes = config.playerCount + config.botCount;
 
-  // Generate walls
-  const clusterCount = getWallClusterCount(state.level);
-  const wallLength = getWallLength(state.difficultyLevel);
+  // Generate walls (respect dev-mode overrides if present)
+  const clusterCount = (gameSettings as any)._wallClustersOverride ?? getWallClusterCount(state.level);
+  const wallLength = (gameSettings as any)._wallLengthOverride ?? getWallLength(state.difficultyLevel);
   state.walls = generateWalls(state.width, state.height, clusterCount, wallLength);
 
   // Spawn snakes at predefined positions
@@ -88,7 +89,7 @@ export function initLevel(state: GameState, config: GameConfig): void {
   // Build initial board
   state.board = buildBoard(state);
   state.tickCount = 0;
-  state.levelTimeLeft = LEVEL_TIME_LIMIT;
+  state.levelTimeLeft = gameSettings.levelTimeLimit;
   state.levelComplete = false;
   state.gameOver = false;
 }
@@ -101,7 +102,7 @@ function getStartPositions(
   height: number,
   count: number
 ): Array<{ position: { x: number; y: number }; direction: Direction }> {
-  const margin = INITIAL_SNAKE_LENGTH + 2;
+  const margin = gameSettings.initialSnakeLength + 2;
   const positions: Array<{ position: { x: number; y: number }; direction: Direction }> = [
     { position: { x: margin, y: Math.floor(height / 2) }, direction: 'right' },
     { position: { x: width - margin - 1, y: Math.floor(height / 2) }, direction: 'left' },
@@ -203,7 +204,7 @@ export function createSnake(
   isBot: boolean
 ): Snake {
   const segments = [];
-  for (let i = 0; i < INITIAL_SNAKE_LENGTH; i++) {
+  for (let i = 0; i < gameSettings.initialSnakeLength; i++) {
     switch (direction) {
       case 'up':
         segments.push({ x: startPos.x, y: startPos.y + i });

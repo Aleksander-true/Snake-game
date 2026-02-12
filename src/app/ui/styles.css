@@ -28,9 +28,6 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-main);
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
 }
 
@@ -38,11 +35,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-height: 100vh;
 }
 
 canvas {
   display: block;
-  margin: 0 auto;
   image-rendering: pixelated;
 }
 
@@ -96,6 +93,11 @@ canvas {
   margin: 5px;
   background: var(--color-primary);
   color: var(--color-bg);
+}
+
+.btn-small {
+  padding: 8px 20px;
+  font-size: 0.9em;
 }
 
 /* ===== Menu screen ===== */
@@ -184,6 +186,61 @@ canvas {
   background: var(--color-row-hover);
 }
 
+/* ===== Game layout ===== */
+.game-outer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.game-top-bar {
+  width: 100%;
+}
+
+.game-middle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+}
+
+/* Dev mode: field shifts left */
+.game-middle--dev {
+  justify-content: flex-start;
+}
+
+.game-side-panel {
+  width: 140px;
+  min-width: 120px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 0.8em;
+  line-height: 1.6;
+}
+
+.game-bottom-panel {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 4px 8px;
+  flex-wrap: wrap;
+}
+
+.game-bottom-panel > div {
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8em;
+  line-height: 1.6;
+  min-width: 120px;
+}
+
 /* ===== HUD ===== */
 .hud-bar {
   display: flex;
@@ -192,14 +249,23 @@ canvas {
   background: var(--color-panel);
   border-bottom: 1px solid var(--color-panel-border);
   font-size: 0.9em;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.hud-snakes {
-  display: flex;
-  gap: 20px;
-  padding: 4px 16px;
-  background: var(--color-panel);
+.hud-paused {
+  color: var(--color-danger);
+  font-weight: bold;
+  animation: blink 1s step-start infinite;
+}
+
+.hud-hint {
+  color: var(--color-text-muted);
   font-size: 0.85em;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
 }
 
 .hud-snake-alive {
@@ -241,4 +307,89 @@ canvas {
 
 .results-buttons {
   margin-top: 30px;
+}
+
+/* ===== Dev panel ===== */
+.dev-panel {
+  width: 280px;
+  min-width: 260px;
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.dev-panel-title {
+  text-align: center;
+  font-size: 1em;
+  margin-bottom: 8px;
+  color: var(--color-primary-bright);
+}
+
+.dev-panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.dev-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 8px;
+  align-items: center;
+}
+
+.dev-label {
+  font-size: 0.78em;
+  text-align: right;
+  color: var(--color-text-muted);
+}
+
+.dev-label-wide {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--color-text);
+  margin-top: 6px;
+  font-weight: bold;
+}
+
+.dev-input {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-input-border);
+  border-radius: 3px;
+  padding: 3px 5px;
+  font-size: 0.8em;
+}
+
+.dev-input-num {
+  width: 70px;
+}
+
+.dev-input-color {
+  width: 50px;
+  height: 26px;
+  padding: 1px;
+  cursor: pointer;
+}
+
+.dev-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+/* Dev mode button in menu */
+.menu-dev-row {
+  margin-top: 16px;
+}
+
+.btn-dev {
+  padding: 8px 20px;
+  font-size: 0.85em;
+  background: #663399;
+  color: #fff;
 }

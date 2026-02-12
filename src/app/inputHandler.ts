@@ -18,14 +18,22 @@ const PLAYER2_KEYS: KeyMap = {
 
 /**
  * Input handler that captures keyboard input and stores pending directions
- * for each player.
+ * for each player. Also handles pause toggle (Space).
  */
 export class InputHandler {
   private pendingDirections: (Direction | null)[] = [null, null];
   private keydownHandler: (e: KeyboardEvent) => void;
+  private pauseCallback: (() => void) | null = null;
 
   constructor() {
     this.keydownHandler = (e: KeyboardEvent) => {
+      // Pause
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (this.pauseCallback) this.pauseCallback();
+        return;
+      }
+
       // Player 1
       if (PLAYER1_KEYS[e.code]) {
         e.preventDefault();
@@ -39,12 +47,18 @@ export class InputHandler {
     };
   }
 
+  /** Register a callback to be called when Space is pressed. */
+  onPause(callback: () => void): void {
+    this.pauseCallback = callback;
+  }
+
   start(): void {
     document.addEventListener('keydown', this.keydownHandler);
   }
 
   stop(): void {
     document.removeEventListener('keydown', this.keydownHandler);
+    this.pauseCallback = null;
   }
 
   /**

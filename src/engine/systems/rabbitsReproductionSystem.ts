@@ -1,13 +1,5 @@
 import { Rabbit, Position, GameState } from '../types';
-import {
-  REPRODUCTION_MIN_TICK,
-  REPRODUCTION_MAX_TICK,
-  REPRODUCTION_PROBABILITY_BASE,
-  MAX_REPRODUCTIONS,
-  MIN_RABBIT_DISTANCE,
-  NEIGHBOR_REPRODUCTION_PENALTY,
-  MAX_REPRODUCTION_NEIGHBORS,
-} from '../constants';
+import { gameSettings } from '../settings';
 import { inBounds } from '../board';
 
 /**
@@ -66,20 +58,24 @@ export function processRabbitReproduction(state: GameState): Rabbit[] {
   for (const rabbit of state.rabbits) {
     rabbit.clockNum++;
 
-    if (rabbit.clockNum < REPRODUCTION_MIN_TICK || rabbit.clockNum > REPRODUCTION_MAX_TICK) {
+    if (rabbit.clockNum < gameSettings.reproductionMinTick ||
+        rabbit.clockNum > gameSettings.reproductionMaxTick) {
       continue;
     }
 
-    if (rabbit.reproductionCount >= MAX_REPRODUCTIONS) {
+    if (rabbit.reproductionCount >= gameSettings.maxReproductions) {
       continue;
     }
 
-    // Calculate probability
-    const nearbyCount = countNearbyRabbits(rabbit.pos, state.rabbits, 2, rabbit);
-    if (nearbyCount >= MAX_REPRODUCTION_NEIGHBORS) continue;
+    // Count neighbors in the configured radius
+    const nearbyCount = countNearbyRabbits(
+      rabbit.pos, state.rabbits,
+      gameSettings.neighborReproductionRadius, rabbit
+    );
+    if (nearbyCount >= gameSettings.maxReproductionNeighbors) continue;
 
-    let probability = REPRODUCTION_PROBABILITY_BASE * rabbit.clockNum;
-    probability *= (1 - NEIGHBOR_REPRODUCTION_PENALTY * nearbyCount);
+    let probability = gameSettings.reproductionProbabilityBase * rabbit.clockNum;
+    probability *= (1 - gameSettings.neighborReproductionPenalty * nearbyCount);
 
     if (Math.random() < probability) {
       // Try to spawn offspring at distance 1 or 2

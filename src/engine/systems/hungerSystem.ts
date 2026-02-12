@@ -1,5 +1,5 @@
 import { Snake } from '../types';
-import { HUNGER_THRESHOLD, MIN_SNAKE_LENGTH } from '../constants';
+import { gameSettings } from '../settings';
 
 /**
  * Process hunger for a snake each tick.
@@ -10,12 +10,12 @@ export function processHunger(snake: Snake): boolean {
 
   snake.ticksWithoutFood++;
 
-  if (snake.ticksWithoutFood >= HUNGER_THRESHOLD) {
+  if (snake.ticksWithoutFood >= gameSettings.hungerThreshold) {
     // Lose one segment from the tail
     snake.segments.pop();
     snake.ticksWithoutFood = 0;
 
-    if (snake.segments.length < MIN_SNAKE_LENGTH) {
+    if (snake.segments.length < gameSettings.minSnakeLength) {
       snake.alive = false;
       snake.deathReason = 'Умерла с голоду';
       return true;

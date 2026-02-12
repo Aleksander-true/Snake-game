@@ -1,8 +1,10 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
+  const isDevMode = !!(env && env.devmode);
 
   return {
     entry: './src/index.ts',
@@ -31,6 +33,9 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './src/index.html',
         title: 'Snake Eats Rabbits',
+      }),
+      new webpack.DefinePlugin({
+        __DEV_MODE__: JSON.stringify(isDevMode),
       }),
     ],
     devServer: {

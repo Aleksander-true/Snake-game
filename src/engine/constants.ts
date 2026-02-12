@@ -15,8 +15,8 @@ export const HUNGER_THRESHOLD = 15;
 export const MIN_SNAKE_LENGTH = 2;
 
 /** Rabbit reproduction window (inclusive) */
-export const REPRODUCTION_MIN_TICK = 5;
-export const REPRODUCTION_MAX_TICK = 15;
+export const REPRODUCTION_MIN_TICK = 50;
+export const REPRODUCTION_MAX_TICK = 100;
 
 /** Base reproduction probability multiplier per clockNum */
 export const REPRODUCTION_PROBABILITY_BASE = 0.05;
@@ -30,7 +30,10 @@ export const MIN_RABBIT_DISTANCE = 2; // >1 means distance must be >= 2
 /** Neighbor penalty for reproduction: -25% per nearby rabbit */
 export const NEIGHBOR_REPRODUCTION_PENALTY = 0.25;
 
-/** Max neighbors that kill reproduction entirely */
+/** Chebyshev radius for counting neighbors that affect reproduction */
+export const NEIGHBOR_REPRODUCTION_RADIUS = 4;
+
+/** Max neighbors (within radius) that kill reproduction entirely */
 export const MAX_REPRODUCTION_NEIGHBORS = 4;
 
 /** Level time limit in seconds (multiplayer) */
