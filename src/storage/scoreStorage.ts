@@ -1,6 +1,7 @@
 import { ScoreRecord } from '../engine/types';
 
 const STORAGE_KEY = 'snake-eats-rabbits-scores';
+const NAMES_KEY = 'snake-eats-rabbits-names';
 
 /**
  * Save a score record to localStorage.
@@ -32,4 +33,31 @@ export function getScores(): ScoreRecord[] {
  */
 export function clearScores(): void {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+// --- Player name storage ---
+
+/**
+ * Save a player name to localStorage (deduplicates, keeps last 20).
+ */
+export function saveName(name: string): void {
+  if (!name.trim()) return;
+  const names = getSavedNames();
+  const filtered = names.filter(n => n !== name.trim());
+  filtered.unshift(name.trim());
+  const trimmed = filtered.slice(0, 20);
+  localStorage.setItem(NAMES_KEY, JSON.stringify(trimmed));
+}
+
+/**
+ * Get all saved player names from localStorage.
+ */
+export function getSavedNames(): string[] {
+  try {
+    const data = localStorage.getItem(NAMES_KEY);
+    if (!data) return [];
+    return JSON.parse(data) as string[];
+  } catch {
+    return [];
+  }
 }

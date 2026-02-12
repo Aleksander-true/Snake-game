@@ -17,7 +17,7 @@ export function processHunger(snake: Snake): boolean {
 
     if (snake.segments.length < MIN_SNAKE_LENGTH) {
       snake.alive = false;
-      snake.deathReason = 'Starved to death';
+      snake.deathReason = 'Умерла с голоду';
       return true;
     }
   }

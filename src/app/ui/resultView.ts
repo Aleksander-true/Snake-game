@@ -1,8 +1,8 @@
-import { GameState, ScoreRecord } from '../../engine/types';
+import { GameState } from '../../engine/types';
 import { getScores } from '../../storage/scoreStorage';
 
 /**
- * Render the results screen.
+ * Render the results screen (all in Russian).
  */
 export function renderResults(
   container: HTMLElement,
@@ -14,23 +14,26 @@ export function renderResults(
 
   let html = `
     <div style="text-align: center; padding: 40px;">
-      <h2 style="color: #0f0; margin-bottom: 20px;">Game Over</h2>
+      <h2 style="color: #0f0; margin-bottom: 20px;">Игра окончена</h2>
 
-      <h3>Results</h3>
+      <h3>Результаты</h3>
       <table style="margin: 10px auto; border-collapse: collapse;">
         <tr style="border-bottom: 1px solid #555;">
-          <th style="padding: 6px 12px;">Name</th>
-          <th style="padding: 6px 12px;">Score</th>
-          <th style="padding: 6px 12px;">Status</th>
+          <th style="padding: 6px 12px;">Имя</th>
+          <th style="padding: 6px 12px;">Очки</th>
+          <th style="padding: 6px 12px;">Победы</th>
+          <th style="padding: 6px 12px;">Статус</th>
         </tr>
   `;
 
   for (const snake of state.snakes) {
+    const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
     html += `
       <tr>
         <td style="padding: 6px 12px;">${snake.name}</td>
         <td style="padding: 6px 12px;">${snake.score}</td>
-        <td style="padding: 6px 12px;">${snake.alive ? 'Alive' : (snake.deathReason || 'Dead')}</td>
+        <td style="padding: 6px 12px;">${snake.levelsWon}</td>
+        <td style="padding: 6px 12px;">${status}</td>
       </tr>
     `;
   }
@@ -40,13 +43,13 @@ export function renderResults(
   // High scores table
   if (scores.length > 0) {
     html += `
-      <h3 style="margin-top: 30px;">High Scores</h3>
+      <h3 style="margin-top: 30px;">Таблица рекордов</h3>
       <table style="margin: 10px auto; border-collapse: collapse;">
         <tr style="border-bottom: 1px solid #555;">
           <th style="padding: 6px 12px;">#</th>
-          <th style="padding: 6px 12px;">Name</th>
-          <th style="padding: 6px 12px;">Score</th>
-          <th style="padding: 6px 12px;">Date</th>
+          <th style="padding: 6px 12px;">Имя</th>
+          <th style="padding: 6px 12px;">Очки</th>
+          <th style="padding: 6px 12px;">Дата</th>
         </tr>
     `;
 
@@ -67,8 +70,8 @@ export function renderResults(
 
   html += `
     <div style="margin-top: 30px;">
-      <button id="restartBtn" style="padding: 10px 30px; margin: 5px; background: #0a0; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Restart</button>
-      <button id="menuBtn" style="padding: 10px 30px; margin: 5px; background: #555; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Menu</button>
+      <button id="restartBtn" style="padding: 10px 30px; margin: 5px; background: #0a0; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Заново</button>
+      <button id="menuBtn" style="padding: 10px 30px; margin: 5px; background: #555; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Меню</button>
     </div>
   </div>`;
 
