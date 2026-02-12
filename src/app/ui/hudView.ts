@@ -11,19 +11,19 @@ export function renderHUD(container: HTMLElement, state: GameState): void {
   const target = getTargetScore(state.level);
 
   let html = `
-    <div style="display: flex; justify-content: space-between; padding: 8px 16px; background: #111; border-bottom: 1px solid #333; font-size: 0.9em;">
+    <div class="hud-bar">
       <span>Уровень: ${state.level}</span>
       <span>Цель: ${target}</span>
       <span>Время: ${timeStr}</span>
     </div>
-    <div style="display: flex; gap: 20px; padding: 4px 16px; background: #111; font-size: 0.85em;">
+    <div class="hud-snakes">
   `;
 
   for (const snake of state.snakes) {
-    const statusColor = snake.alive ? '#0f0' : '#f00';
+    const cssClass = snake.alive ? 'hud-snake-alive' : 'hud-snake-dead';
     const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
     html += `
-      <span style="color: ${statusColor};">
+      <span class="${cssClass}">
         ${snake.name}: ${snake.score} очк. | длина: ${snake.segments.length} | ${status}
       </span>
     `;

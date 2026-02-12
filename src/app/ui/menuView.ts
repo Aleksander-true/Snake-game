@@ -9,57 +9,46 @@ export function renderMenu(
   onStart: (config: GameConfig) => void
 ): void {
   container.innerHTML = `
-    <div style="text-align: center; padding: 40px;">
-      <h1 style="color: #0f0; font-size: 2.5em; margin-bottom: 30px;">
-        🐍 Змейка ест кроликов 🐇
-      </h1>
+    <div class="menu-wrapper">
+      <h1 class="menu-title">🐍 Змейка ест кроликов 🐇</h1>
 
-      <div style="display: inline-block; background: #111; padding: 30px 40px; border-radius: 12px; border: 1px solid #333;">
-        <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px 16px; align-items: center;">
+      <div class="menu-panel">
+        <div class="menu-grid">
 
-          <span style="text-align: right;">Игроки (0–2):</span>
+          <span class="menu-label">Игроки (0–2):</span>
           <input type="number" id="playerCount" min="0" max="2" value="1"
-            style="width: 60px; background:#222; color:#fff; border:1px solid #555; padding: 5px 8px; border-radius: 4px; justify-self: end;">
+            class="input-field input-number">
 
-          <span style="text-align: right;">Боты (0–4):</span>
+          <span class="menu-label">Боты (0–4):</span>
           <input type="number" id="botCount" min="0" max="4" value="0"
-            style="width: 60px; background:#222; color:#fff; border:1px solid #555; padding: 5px 8px; border-radius: 4px; justify-self: end;">
+            class="input-field input-number">
 
-          <span style="text-align: right;">Имя игрока 1:</span>
-          <div style="display: flex; gap: 4px; justify-self: end; position: relative;">
+          <span class="menu-label">Имя игрока 1:</span>
+          <div class="name-input-group">
             <input type="text" id="player1Name" value="Игрок 1"
-              style="width: 160px; background:#222; color:#fff; border:1px solid #555; padding: 5px 8px; border-radius: 4px;">
+              class="input-field input-text">
             <button class="name-dropdown-btn" data-target="player1Name" type="button"
-              style="background:#333; color:#fff; border:1px solid #555; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.9em;"
               title="Выбрать из сохранённых">▼</button>
-            <div class="name-dropdown-list" data-for="player1Name"
-              style="display:none; position:absolute; top:100%; right:0; background:#222; border:1px solid #555; border-radius: 4px; max-height: 150px; overflow-y: auto; z-index: 10; min-width: 200px; margin-top: 2px;">
-            </div>
+            <div class="name-dropdown-list" data-for="player1Name"></div>
           </div>
 
-          <span style="text-align: right;">Имя игрока 2:</span>
-          <div style="display: flex; gap: 4px; justify-self: end; position: relative;">
+          <span class="menu-label">Имя игрока 2:</span>
+          <div class="name-input-group">
             <input type="text" id="player2Name" value="Игрок 2"
-              style="width: 160px; background:#222; color:#fff; border:1px solid #555; padding: 5px 8px; border-radius: 4px;">
+              class="input-field input-text">
             <button class="name-dropdown-btn" data-target="player2Name" type="button"
-              style="background:#333; color:#fff; border:1px solid #555; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.9em;"
               title="Выбрать из сохранённых">▼</button>
-            <div class="name-dropdown-list" data-for="player2Name"
-              style="display:none; position:absolute; top:100%; right:0; background:#222; border:1px solid #555; border-radius: 4px; max-height: 150px; overflow-y: auto; z-index: 10; min-width: 200px; margin-top: 2px;">
-            </div>
+            <div class="name-dropdown-list" data-for="player2Name"></div>
           </div>
 
-          <span style="text-align: right;">Сложность (1–10):</span>
+          <span class="menu-label">Сложность (1–10):</span>
           <input type="number" id="difficulty" min="1" max="10" value="5"
-            style="width: 60px; background:#222; color:#fff; border:1px solid #555; padding: 5px 8px; border-radius: 4px; justify-self: end;">
+            class="input-field input-number">
 
         </div>
 
-        <div style="text-align: center; margin-top: 24px;">
-          <button id="startBtn"
-            style="padding: 12px 50px; font-size: 1.2em; background: #0a0; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-            СТАРТ
-          </button>
+        <div class="menu-start-row">
+          <button id="startBtn" class="btn btn-primary">СТАРТ</button>
         </div>
       </div>
     </div>
@@ -117,7 +106,7 @@ function setupNameDropdowns(container: HTMLElement): void {
       });
 
       // Toggle this one
-      if (dropdown.style.display === 'none') {
+      if (dropdown.style.display === 'none' || dropdown.style.display === '') {
         populateDropdown(dropdown, targetId, container);
         dropdown.style.display = 'block';
       } else {
@@ -131,21 +120,13 @@ function populateDropdown(dropdown: HTMLElement, inputId: string, container: HTM
   const names = getSavedNames();
 
   if (names.length === 0) {
-    dropdown.innerHTML = `
-      <div style="padding: 8px 12px; color: #888; font-size: 0.85em;">
-        Нет сохранённых имён
-      </div>
-    `;
+    dropdown.innerHTML = `<div class="name-dropdown-empty">Нет сохранённых имён</div>`;
     return;
   }
 
-  dropdown.innerHTML = names.map(name => `
-    <div class="name-option" data-name="${name}"
-      style="padding: 6px 12px; cursor: pointer; font-size: 0.9em; border-bottom: 1px solid #333;"
-      onmouseover="this.style.background='#444'" onmouseout="this.style.background='transparent'">
-      ${name}
-    </div>
-  `).join('');
+  dropdown.innerHTML = names.map(name =>
+    `<div class="name-option" data-name="${name}">${name}</div>`
+  ).join('');
 
   dropdown.querySelectorAll('.name-option').forEach(option => {
     option.addEventListener('click', () => {

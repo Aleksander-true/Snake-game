@@ -1,11 +1,15 @@
-import { GameState, CellContent, Snake } from '../engine/types';
+import { GameState } from '../engine/types';
 
-const GRID_COLOR = '#1a1a1a';
-const BG_COLOR = '#000000';
-const WALL_COLOR = '#FFFFFF';
-const RABBIT_COLOR = '#FF0000';
+/** Canvas color constants (mirrors CSS vars for consistency) */
+const COLORS = {
+  bg:       '#000000',
+  grid:     '#1a1a1a',
+  wall:     '#FFFFFF',
+  rabbit:   '#FF0000',
+  headStroke: '#FFFFFF',
+} as const;
 
-/** Distinct snake colors for up to 6 snakes */
+/** Distinct snake body colors for up to 6 snakes */
 const SNAKE_COLORS = [
   '#00FF00', // green
   '#00CCFF', // cyan
@@ -13,7 +17,7 @@ const SNAKE_COLORS = [
   '#FF00FF', // magenta
   '#FF8800', // orange
   '#88FF88', // light green
-];
+] as const;
 
 /**
  * Render the game state to a canvas.
@@ -29,11 +33,11 @@ export function renderGame(
   const canvasHeight = height * cellSize;
 
   // Clear
-  ctx.fillStyle = BG_COLOR;
+  ctx.fillStyle = COLORS.bg;
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
   // Draw grid lines
-  ctx.strokeStyle = GRID_COLOR;
+  ctx.strokeStyle = COLORS.grid;
   ctx.lineWidth = 0.5;
   for (let x = 0; x <= width; x++) {
     ctx.beginPath();
@@ -49,13 +53,13 @@ export function renderGame(
   }
 
   // Draw walls
-  ctx.fillStyle = WALL_COLOR;
+  ctx.fillStyle = COLORS.wall;
   for (const wall of state.walls) {
     ctx.fillRect(wall.x * cellSize, wall.y * cellSize, cellSize, cellSize);
   }
 
   // Draw rabbits
-  ctx.fillStyle = RABBIT_COLOR;
+  ctx.fillStyle = COLORS.rabbit;
   for (const rabbit of state.rabbits) {
     ctx.fillRect(rabbit.pos.x * cellSize, rabbit.pos.y * cellSize, cellSize, cellSize);
   }
@@ -73,9 +77,9 @@ export function renderGame(
       ctx.fillRect(seg.x * cellSize, seg.y * cellSize, cellSize, cellSize);
     }
 
-    // Draw head slightly different (brighter / outlined)
+    // Draw head outlined
     const head = snake.segments[0];
-    ctx.strokeStyle = '#FFFFFF';
+    ctx.strokeStyle = COLORS.headStroke;
     ctx.lineWidth = 1;
     ctx.strokeRect(head.x * cellSize, head.y * cellSize, cellSize, cellSize);
   }
