@@ -13,10 +13,14 @@ export interface Position {
   y: number;
 }
 
+/** Rabbit lifecycle phase */
+export type RabbitPhase = 'young' | 'adult' | 'old';
+
 /** A single rabbit entity */
 export interface Rabbit {
   pos: Position;
-  clockNum: number;
+  age: number;             // absolute ticks since birth (never resets)
+  clockNum: number;        // ticks since birth / last reproduction (resets on repro)
   reproductionCount: number;
 }
 

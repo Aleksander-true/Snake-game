@@ -1,4 +1,4 @@
-import { Rabbit, Position, GameState } from '../types';
+import { Rabbit, Position, GameState, RabbitPhase } from '../types';
 import { gameSettings } from '../settings';
 import { inBounds } from '../board';
 
@@ -7,6 +7,15 @@ import { inBounds } from '../board';
  */
 export function chebyshevDistance(a: Position, b: Position): number {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+}
+
+/**
+ * Determine the lifecycle phase of a rabbit based on its age.
+ */
+export function getRabbitPhase(rabbit: Rabbit): RabbitPhase {
+  if (rabbit.age < gameSettings.rabbitYoungAge) return 'young';
+  if (rabbit.age < gameSettings.rabbitAdultAge) return 'adult';
+  return 'old';
 }
 
 /**
@@ -50,22 +59,26 @@ export function isValidRabbitPosition(
 }
 
 /**
- * Process rabbit reproduction for one tick.
+ * Process rabbit aging, reproduction, and death for one tick.
+ * - Increments age and clockNum
+ * - Reproduction only during adult phase
+ * - Removes rabbits that reached max age
  */
 export function processRabbitReproduction(state: GameState): Rabbit[] {
   const newRabbits: Rabbit[] = [];
 
   for (const rabbit of state.rabbits) {
+    rabbit.age++;
     rabbit.clockNum++;
+  }
 
-    if (rabbit.clockNum < gameSettings.reproductionMinTick ||
-        rabbit.clockNum > gameSettings.reproductionMaxTick) {
-      continue;
-    }
+  // Reproduction (adults only)
+  for (const rabbit of state.rabbits) {
+    const phase = getRabbitPhase(rabbit);
+    if (phase !== 'adult') continue;
 
-    if (rabbit.reproductionCount >= gameSettings.maxReproductions) {
-      continue;
-    }
+    if (rabbit.clockNum < gameSettings.reproductionMinCooldown) continue;
+    if (rabbit.reproductionCount >= gameSettings.maxReproductions) continue;
 
     // Count neighbors in the configured radius
     const nearbyCount = countNearbyRabbits(
@@ -78,7 +91,6 @@ export function processRabbitReproduction(state: GameState): Rabbit[] {
     probability *= (1 - gameSettings.neighborReproductionPenalty * nearbyCount);
 
     if (Math.random() < probability) {
-      // Try to spawn offspring at distance 1 or 2
       const offspring = trySpawnOffspring(rabbit, state);
       if (offspring) {
         newRabbits.push(offspring);
@@ -88,8 +100,12 @@ export function processRabbitReproduction(state: GameState): Rabbit[] {
     }
   }
 
-  // Add new rabbits to state
+  // Add new rabbits
   state.rabbits.push(...newRabbits);
+
+  // Remove dead (old) rabbits
+  state.rabbits = state.rabbits.filter(r => r.age < gameSettings.rabbitMaxAge);
+
   return newRabbits;
 }
 
@@ -118,7 +134,7 @@ function trySpawnOffspring(parent: Rabbit, state: GameState): Rabbit | null {
 
   for (const pos of directions) {
     if (isValidRabbitPosition(pos, state)) {
-      return { pos, clockNum: 0, reproductionCount: 0 };
+      return { pos, age: 0, clockNum: 0, reproductionCount: 0 };
     }
   }
 

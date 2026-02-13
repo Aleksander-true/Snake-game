@@ -44,6 +44,7 @@ export function spawnRabbits(
 
     const rabbit: Rabbit = {
       pos,
+      age: 0,
       clockNum: 0,
       reproductionCount: 0,
     };

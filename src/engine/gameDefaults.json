@@ -1,0 +1,64 @@
+{
+  "snake": {
+    "hungerThreshold": 15,
+    "minSnakeLength": 2,
+    "initialSnakeLength": 5
+  },
+
+  "rabbit": {
+    "youngAge": 50,
+    "adultAge": 100,
+    "maxAge": 150,
+    "minDistance": 2,
+    "reproductionMinCooldown": 5,
+    "reproductionProbabilityBase": 0.01,
+    "maxReproductions": 5,
+    "neighborReproductionRadius": 4,
+    "neighborReproductionPenalty": 0.25,
+    "maxReproductionNeighbors": 4,
+    "countPerSnakeCoeff": 1.5,
+    "countBase": 10
+  },
+
+  "walls": {
+    "clusterCoeff": 1.2,
+    "clusterBase": 2,
+    "lengthCoeff": 1.2,
+    "lengthBase": 3
+  },
+
+  "scoring": {
+    "targetScoreCoeff": 5,
+    "targetScoreBase": 20
+  },
+
+  "board": {
+    "baseWidth": 40,
+    "baseHeight": 40,
+    "levelSizeIncrement": 5,
+    "levelTimeLimit": 180,
+    "tickIntervalMs": 150
+  },
+
+  "ai": {
+    "visionSize": 20,
+    "obstacleSignalClose": -100,
+    "obstacleSignalDecay": 20,
+    "rabbitSignalClose": 100,
+    "rabbitSignalDecay": 20,
+    "rabbitSignalMin": 5
+  },
+
+  "colors": {
+    "bg": "#000000",
+    "grid": "#cccccc",
+    "wall": "#cccccc",
+    "rabbit": "#FF0000",
+    "rabbitYoung": "#FF6666",
+    "rabbitOld": "#990000",
+    "headStroke": "#FFFFFF",
+    "snakeColors": ["#00FF00", "#00CCFF", "#FFFF00", "#FF00FF", "#FF8800", "#88FF88"]
+  },
+
+  "levelOverrides": {}
+}

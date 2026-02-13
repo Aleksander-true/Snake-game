@@ -2,7 +2,6 @@ import { BotDecision, BotInput, Snake, GameState, Direction, Position } from '..
 import { generateVision } from './vision';
 import { getNextHeadPosition } from '../engine/systems/movementSystem';
 import { collidesWithWall, collidesWithSnake } from '../engine/collision';
-import { VISION_SIZE } from '../engine/constants';
 
 /**
  * Main bot decision function.

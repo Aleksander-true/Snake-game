@@ -1,12 +1,5 @@
 import { Direction, Position, GameState } from '../engine/types';
-import {
-  VISION_SIZE,
-  OBSTACLE_SIGNAL_CLOSE,
-  OBSTACLE_SIGNAL_DECAY,
-  RABBIT_SIGNAL_CLOSE,
-  RABBIT_SIGNAL_DECAY,
-  RABBIT_SIGNAL_MIN,
-} from '../engine/constants';
+import { gameSettings } from '../engine/settings';
 import { inBounds } from '../engine/board';
 
 /**
@@ -17,7 +10,7 @@ export function generateVision(
   headPos: Position,
   direction: Direction,
   state: GameState,
-  size: number = VISION_SIZE
+  size: number = gameSettings.visionSize
 ): number[][] {
   const half = Math.floor(size / 2);
   const vision: number[][] = [];
@@ -92,15 +85,15 @@ export function rotateToWorld(
 }
 
 function getObstacleSignal(dist: number): number {
-  if (dist <= 0) return OBSTACLE_SIGNAL_CLOSE;
-  const signal = OBSTACLE_SIGNAL_CLOSE + OBSTACLE_SIGNAL_DECAY * dist;
+  if (dist <= 0) return gameSettings.obstacleSignalClose;
+  const signal = gameSettings.obstacleSignalClose + gameSettings.obstacleSignalDecay * dist;
   return Math.min(signal, -5); // cap at -5
 }
 
 function getRabbitSignal(dist: number): number {
-  if (dist <= 0) return RABBIT_SIGNAL_CLOSE;
-  const signal = RABBIT_SIGNAL_CLOSE - RABBIT_SIGNAL_DECAY * dist;
-  return Math.max(signal, RABBIT_SIGNAL_MIN);
+  if (dist <= 0) return gameSettings.rabbitSignalClose;
+  const signal = gameSettings.rabbitSignalClose - gameSettings.rabbitSignalDecay * dist;
+  return Math.max(signal, gameSettings.rabbitSignalMin);
 }
 
 /**

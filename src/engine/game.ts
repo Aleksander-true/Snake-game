@@ -1,10 +1,6 @@
 import { GameState, GameConfig, Direction, Snake, Rabbit } from './types';
 import { buildBoard, createEmptyBoard } from './board';
-import {
-  BASE_WIDTH, BASE_HEIGHT, LEVEL_SIZE_INCREMENT,
-  INITIAL_SNAKE_LENGTH, LEVEL_TIME_LIMIT, TICK_INTERVAL_MS,
-} from './constants';
-import { gameSettings } from './settings';
+import { gameSettings, getLevelOverride } from './settings';
 import { generateWalls } from './spawning/wallsGenerator';
 import { spawnRabbits } from './spawning/rabbitsSpawner';
 import { getNextHeadPosition, moveSnake, applyDirection } from './systems/movementSystem';
@@ -45,14 +41,31 @@ export function createGameState(config: GameConfig, level: number): GameState {
 export function initLevel(state: GameState, config: GameConfig): void {
   const totalSnakes = config.playerCount + config.botCount;
 
-  // Generate walls (respect dev-mode overrides if present)
-  const clusterCount = (gameSettings as any)._wallClustersOverride ?? getWallClusterCount(state.level);
-  const wallLength = (gameSettings as any)._wallLengthOverride ?? getWallLength(state.difficultyLevel);
-  state.walls = generateWalls(state.width, state.height, clusterCount, wallLength);
-
-  // Spawn snakes at predefined positions
-  state.snakes = [];
+  // Compute starting positions BEFORE wall generation so we can create exclusion zones
   const startPositions = getStartPositions(state.width, state.height, totalSnakes);
+
+  // Build exclusion zones: all cells occupied by future snakes
+  const exclusionZones = startPositions.flatMap(sp => {
+    const zones: { x: number; y: number }[] = [];
+    for (let i = 0; i < gameSettings.initialSnakeLength; i++) {
+      switch (sp.direction) {
+        case 'right': zones.push({ x: sp.position.x - i, y: sp.position.y }); break;
+        case 'left':  zones.push({ x: sp.position.x + i, y: sp.position.y }); break;
+        case 'down':  zones.push({ x: sp.position.x, y: sp.position.y - i }); break;
+        case 'up':    zones.push({ x: sp.position.x, y: sp.position.y + i }); break;
+      }
+    }
+    return zones;
+  });
+
+  // Generate walls (respect per-level overrides if present)
+  const lvlOverride = getLevelOverride(state.level);
+  const clusterCount = lvlOverride.wallClusters ?? getWallClusterCount(state.level);
+  const wallLength = lvlOverride.wallLength ?? getWallLength(state.difficultyLevel);
+  state.walls = generateWalls(state.width, state.height, clusterCount, wallLength, exclusionZones);
+
+  // Spawn snakes
+  state.snakes = [];
 
   let snakeId = 0;
   // Human players
@@ -82,8 +95,8 @@ export function initLevel(state: GameState, config: GameConfig): void {
     snakeId++;
   }
 
-  // Spawn rabbits
-  const rabbitCount = getInitialRabbitCount(totalSnakes, state.difficultyLevel);
+  // Spawn rabbits (respect per-level override if present)
+  const rabbitCount = lvlOverride.rabbitCount ?? getInitialRabbitCount(totalSnakes, state.difficultyLevel);
   state.rabbits = spawnRabbits(rabbitCount, state);
 
   // Build initial board
@@ -155,7 +168,7 @@ export function processTick(state: GameState): void {
     // Self-collision (after moving)
     if (selfCollision(snake)) {
       snake.alive = false;
-      snake.deathReason = 'Укусила сама себя';
+      snake.deathReason = 'Съела саму себя';
       continue;
     }
 
@@ -236,9 +249,10 @@ export function createSnake(
 
 /**
  * Get the target score for a single level.
+ * Formula: floor(targetScoreCoeff * level + targetScoreBase)
  */
 export function getTargetScore(level: number): number {
-  return Math.floor(level * 1.2 + 10);
+  return Math.floor(gameSettings.targetScoreCoeff * level + gameSettings.targetScoreBase);
 }
 
 /**
@@ -255,21 +269,24 @@ export function getCumulativeTargetScore(level: number): number {
 
 /**
  * Get the number of wall clusters for a level.
+ * Formula: floor(wallClusterCoeff * level + wallClusterBase)
  */
 export function getWallClusterCount(level: number): number {
-  return Math.floor(level * 1.2 + 2);
+  return Math.floor(gameSettings.wallClusterCoeff * level + gameSettings.wallClusterBase);
 }
 
 /**
  * Get wall segment length for difficulty.
+ * Formula: floor(wallLengthCoeff * difficulty + wallLengthBase)
  */
 export function getWallLength(difficultyLevel: number): number {
-  return Math.floor(difficultyLevel * 1.2 + 3);
+  return Math.floor(gameSettings.wallLengthCoeff * difficultyLevel + gameSettings.wallLengthBase);
 }
 
 /**
  * Get initial rabbit count.
+ * Formula: floor(rabbitCountPerSnakeCoeff * snakeCount + rabbitCountBase - difficultyLevel)
  */
 export function getInitialRabbitCount(snakeCount: number, difficultyLevel: number): number {
-  return Math.floor(snakeCount * 1.5 + (10 - difficultyLevel));
+  return Math.floor(gameSettings.rabbitCountPerSnakeCoeff * snakeCount + (gameSettings.rabbitCountBase - difficultyLevel));
 }

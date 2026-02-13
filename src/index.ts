@@ -3,6 +3,10 @@ import { Router } from './app/router';
 import { renderMenu } from './app/ui/menuView';
 import { renderHUD } from './app/ui/hudView';
 import { renderResults } from './app/ui/resultView';
+import {
+  showPauseModal, showLevelCompleteModal, showGameOverModal,
+  hideModal, isModalVisible,
+} from './app/ui/modalOverlay';
 import { GameConfig, GameState } from './engine/types';
 import { createGameState, initLevel, processTick, getWallClusterCount, getWallLength } from './engine/game';
 import { applyDirection } from './engine/systems/movementSystem';
@@ -20,7 +24,8 @@ let currentState: GameState | null = null;
 let gameLoopId: number | null = null;
 let timerIntervalId: number | null = null;
 let paused = false;
-let devModeActive = false;  // whether the settings panel is shown
+let waitingLevelEnd = false;  // level ended, modal shown, waiting for user
+let devModeActive = false;    // whether the settings panel is shown
 
 function init(): void {
   router.onScreenChange((screen, data) => {
@@ -93,6 +98,8 @@ function readMenuConfig(): GameConfig {
 function startGame(config: GameConfig, overrideLevel?: number): void {
   currentConfig = config;
   paused = false;
+  waitingLevelEnd = false;
+  hideModal();
   const level = overrideLevel ?? 1;
   currentState = createGameState(config, level);
 
@@ -105,7 +112,17 @@ function startGame(config: GameConfig, overrideLevel?: number): void {
   buildGameDOM();
 }
 
-/** Build game DOM structure: topBar + middle(left + canvas + right + devPanel?) + bottom. */
+/**
+ * Build game DOM structure.
+ *
+ * Layout (dev mode OFF):
+ *   #app > .game-outer > #game-area > [topBar, middle(left + canvas + right), bottom]
+ *
+ * Layout (dev mode ON):
+ *   #app > .game-outer > .game-layout-row > [ #game-area | #dev-panel-container ]
+ *
+ * The modal overlay is appended INSIDE #game-area so it never covers the dev panel.
+ */
 function buildGameDOM(): void {
   if (!currentState) return;
   app.innerHTML = '';
@@ -113,13 +130,18 @@ function buildGameDOM(): void {
   const outer = document.createElement('div');
   outer.className = 'game-outer';
 
+  // Game area — wraps everything the overlay should cover
+  const gameArea = document.createElement('div');
+  gameArea.id = 'game-area';
+  gameArea.className = 'game-area';
+
   // Top bar
   const topBar = document.createElement('div');
   topBar.id = 'hud-top';
   topBar.className = 'game-top-bar';
-  outer.appendChild(topBar);
+  gameArea.appendChild(topBar);
 
-  // Middle row
+  // Middle row (side panels + canvas)
   const middle = document.createElement('div');
   middle.className = devModeActive ? 'game-middle game-middle--dev' : 'game-middle';
 
@@ -140,29 +162,36 @@ function buildGameDOM(): void {
   rightPanel.className = 'game-side-panel';
   middle.appendChild(rightPanel);
 
-  // Dev panel (only in dev mode when active)
-  if (devModeActive) {
-    const devContainer = document.createElement('div');
-    devContainer.id = 'dev-panel-container';
-    middle.appendChild(devContainer);
-
-    // Lazy-load devPanel module
-    import('./app/ui/devPanel').then(({ renderDevPanel }) => {
-      renderDevPanel(devContainer, currentState!.level, (newLevel: number) => {
-        // Apply pressed → restart on chosen level
-        stopGameLoop();
-        startGame(currentConfig!, newLevel);
-      });
-    });
-  }
-
-  outer.appendChild(middle);
+  gameArea.appendChild(middle);
 
   // Bottom panel (bots)
   const bottomPanel = document.createElement('div');
   bottomPanel.id = 'hud-bottom';
   bottomPanel.className = 'game-bottom-panel';
-  outer.appendChild(bottomPanel);
+  gameArea.appendChild(bottomPanel);
+
+  // Assemble: in dev mode use a row layout; otherwise game-area is the only child
+  if (devModeActive) {
+    const layoutRow = document.createElement('div');
+    layoutRow.className = 'game-layout-row';
+    layoutRow.appendChild(gameArea);
+
+    const devContainer = document.createElement('div');
+    devContainer.id = 'dev-panel-container';
+    layoutRow.appendChild(devContainer);
+
+    outer.appendChild(layoutRow);
+
+    // Lazy-load devPanel module
+    import('./app/ui/devPanel').then(({ renderDevPanel }) => {
+      renderDevPanel(devContainer, currentState!.level, (newLevel: number) => {
+        stopGameLoop();
+        startGame(currentConfig!, newLevel);
+      });
+    });
+  } else {
+    outer.appendChild(gameArea);
+  }
 
   app.appendChild(outer);
 
@@ -170,9 +199,9 @@ function buildGameDOM(): void {
   const ctx = canvas.getContext('2d')!;
   resizeCanvas(canvas, currentState);
 
-  // Setup input + pause
+  // Setup input + space key handler
   inputHandler.start();
-  inputHandler.onPause(() => togglePause());
+  inputHandler.onPause(() => handleSpaceKey());
 
   // Initial HUD render
   updateHUD();
@@ -181,9 +210,31 @@ function buildGameDOM(): void {
   startGameLoop(ctx, canvas);
 }
 
+/**
+ * Central handler for Space key.
+ * Context-sensitive: resume from pause, continue from level-end, or pause.
+ */
+function handleSpaceKey(): void {
+  if (waitingLevelEnd) {
+    // Level-end modal is showing → continue
+    continueAfterLevelEnd();
+    return;
+  }
+  togglePause();
+}
+
 function togglePause(): void {
-  paused = !paused;
-  updateHUD();
+  if (paused) {
+    // Resume
+    paused = false;
+    hideModal();
+    updateHUD();
+  } else {
+    // Pause
+    paused = true;
+    updateHUD();
+    showPauseModal(() => togglePause());
+  }
 }
 
 function updateHUD(): void {
@@ -258,24 +309,58 @@ function handleLevelComplete(canvas: HTMLCanvasElement): void {
   const aliveSnakes = currentState.snakes.filter(s => s.alive);
   const totalSnakes = currentState.snakes.length;
 
+  // Determine if the game can continue
+  let canAdvance = false;
   if (totalSnakes === 1) {
-    // Single player
-    const snake = currentState.snakes[0];
-    if (snake.alive) {
-      advanceToNextLevel(canvas);
-      return;
-    } else {
-      finishGame();
-    }
+    canAdvance = currentState.snakes[0].alive;
   } else {
-    // Multiplayer
-    if (aliveSnakes.length >= 1) {
-      advanceToNextLevel(canvas);
-      return;
+    canAdvance = aliveSnakes.length >= 1;
+  }
+
+  // Stop the game loop while modal is shown
+  stopGameLoop();
+  waitingLevelEnd = true;
+
+  if (canAdvance) {
+    // Show level-end modal with "Continue" button
+    showLevelCompleteModal(currentState, () => continueAfterLevelEnd());
+  } else {
+    // Game over — show game over modal
+    if (devModeActive) {
+      // Dev mode: just show level-end modal, no results screen
+      showLevelCompleteModal(currentState, () => {
+        hideModal();
+        waitingLevelEnd = false;
+      });
     } else {
-      finishGame();
+      showGameOverModal(currentState, () => {
+        hideModal();
+        waitingLevelEnd = false;
+        finishGame();
+      });
     }
   }
+}
+
+/** Called when user presses Continue after level-end. */
+function continueAfterLevelEnd(): void {
+  if (!currentState || !currentConfig) return;
+
+  hideModal();
+  waitingLevelEnd = false;
+
+  const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
+  if (!canvas) return;
+
+  // Check if game is actually over (no alive snakes)
+  const aliveSnakes = currentState.snakes.filter(s => s.alive);
+  if (aliveSnakes.length === 0) {
+    finishGame();
+    return;
+  }
+
+  // Advance to next level
+  advanceToNextLevel(canvas);
 }
 
 function advanceToNextLevel(canvas: HTMLCanvasElement): void {
@@ -295,18 +380,17 @@ function advanceToNextLevel(canvas: HTMLCanvasElement): void {
   }
 
   resizeCanvas(canvas, currentState);
+
+  // Restart game loop
+  const ctx = canvas.getContext('2d')!;
+  updateHUD();
+  startGameLoop(ctx, canvas);
 }
 
 function finishGame(): void {
   if (!currentState) return;
 
-  // In dev mode with settings panel: skip results, just stop
-  if (devModeActive) {
-    stopGameLoop();
-    // Show "game over" inline — just update HUD, don't navigate
-    updateHUD();
-    return;
-  }
+  stopGameLoop();
 
   // Save scores to localStorage
   for (const snake of currentState.snakes) {
@@ -319,7 +403,6 @@ function finishGame(): void {
     });
   }
 
-  stopGameLoop();
   router.navigate('results');
 }
 

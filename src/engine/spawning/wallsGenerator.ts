@@ -1,19 +1,26 @@
 import { Position, GameState } from '../types';
 import { inBounds, createEmptyBoard } from '../board';
+import { gameSettings } from '../settings';
 
 /**
  * Generate wall clusters via random walk with branching.
  * Validates that all free cells remain reachable (BFS).
+ *
+ * @param exclusionZones — positions (snake heads / body) that walls must stay away from.
+ *   Walls cannot be placed within `1.5 × initialSnakeLength` cells (Chebyshev) of any zone centre.
  */
 export function generateWalls(
   width: number,
   height: number,
   clusterCount: number,
   wallLength: number,
+  exclusionZones: Position[] = [],
   maxAttempts: number = 50
 ): Position[] {
+  const safeRadius = Math.ceil(1.5 * gameSettings.initialSnakeLength);
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const walls = generateWallClusters(width, height, clusterCount, wallLength);
+    const walls = generateWallClusters(width, height, clusterCount, wallLength, exclusionZones, safeRadius);
     if (validateWalls(walls, width, height)) {
       return walls;
     }
@@ -22,21 +29,35 @@ export function generateWalls(
   return [];
 }
 
+/** Check whether a position is inside any exclusion zone (Chebyshev distance). */
+function insideExclusionZone(pos: Position, zones: Position[], radius: number): boolean {
+  for (const z of zones) {
+    if (Math.max(Math.abs(pos.x - z.x), Math.abs(pos.y - z.y)) <= radius) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function generateWallClusters(
   width: number,
   height: number,
   clusterCount: number,
-  wallLength: number
+  wallLength: number,
+  exclusionZones: Position[],
+  safeRadius: number,
 ): Position[] {
   const walls: Position[] = [];
   const wallSet = new Set<string>();
 
-  const addWall = (pos: Position) => {
+  const addWall = (pos: Position): boolean => {
     const key = `${pos.x},${pos.y}`;
-    if (!wallSet.has(key) && pos.x > 0 && pos.x < width - 1 && pos.y > 0 && pos.y < height - 1) {
-      walls.push(pos);
-      wallSet.add(key);
-    }
+    if (wallSet.has(key)) return false;
+    if (pos.x <= 0 || pos.x >= width - 1 || pos.y <= 0 || pos.y >= height - 1) return false;
+    if (insideExclusionZone(pos, exclusionZones, safeRadius)) return false;
+    walls.push(pos);
+    wallSet.add(key);
+    return true;
   };
 
   for (let c = 0; c < clusterCount; c++) {
@@ -44,7 +65,9 @@ function generateWallClusters(
     const startX = 2 + Math.floor(Math.random() * (width - 4));
     const startY = 2 + Math.floor(Math.random() * (height - 4));
     let current: Position = { x: startX, y: startY };
-    addWall(current);
+
+    // If start falls in exclusion zone, skip this cluster
+    if (!addWall(current)) continue;
 
     for (let i = 1; i < wallLength; i++) {
       const dirs: Position[] = [
@@ -54,9 +77,10 @@ function generateWallClusters(
         { x: current.x, y: current.y - 1 },
       ];
 
-      // Filter valid directions
+      // Filter valid directions (inside board AND outside exclusion zones)
       const validDirs = dirs.filter(d =>
         d.x > 0 && d.x < width - 1 && d.y > 0 && d.y < height - 1
+        && !insideExclusionZone(d, exclusionZones, safeRadius)
       );
 
       if (validDirs.length === 0) break;

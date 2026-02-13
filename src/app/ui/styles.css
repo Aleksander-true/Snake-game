@@ -194,6 +194,24 @@ canvas {
   width: 100%;
 }
 
+/* Row layout when dev panel is present: [game-area | dev-panel] */
+.game-layout-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Game area — the region covered by the modal overlay */
+.game-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
 .game-top-bar {
   width: 100%;
 }
@@ -311,8 +329,8 @@ canvas {
 
 /* ===== Dev panel ===== */
 .dev-panel {
-  width: 280px;
-  min-width: 260px;
+  width: 300px;
+  min-width: 280px;
   max-height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
@@ -325,7 +343,7 @@ canvas {
 .dev-panel-title {
   text-align: center;
   font-size: 1em;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--color-primary-bright);
 }
 
@@ -333,29 +351,51 @@ canvas {
   flex: 1;
   overflow-y: auto;
   margin-bottom: 8px;
+  padding-right: 4px;
 }
 
-.dev-grid {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 5px 8px;
-  align-items: center;
+/* -- Section -- */
+.dev-section {
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-panel-border);
+  padding-bottom: 4px;
 }
 
-.dev-label {
-  font-size: 0.78em;
-  text-align: right;
-  color: var(--color-text-muted);
+.dev-section:last-child {
+  border-bottom: none;
 }
 
-.dev-label-wide {
-  grid-column: 1 / -1;
+.dev-section-title {
   text-align: center;
-  color: var(--color-text);
-  margin-top: 6px;
+  font-size: 0.82em;
   font-weight: bold;
+  color: var(--color-primary-bright);
+  padding: 4px 0 2px;
 }
 
+/* -- Row: label left, input right -- */
+.dev-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+  gap: 8px;
+}
+
+.dev-row:hover {
+  background: var(--color-row-hover);
+  border-radius: 3px;
+}
+
+.dev-row-label {
+  font-size: 0.78em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -- Inputs -- */
 .dev-input {
   background: var(--color-input-bg);
   color: var(--color-text);
@@ -363,23 +403,30 @@ canvas {
   border-radius: 3px;
   padding: 3px 5px;
   font-size: 0.8em;
+  flex-shrink: 0;
 }
 
 .dev-input-num {
-  width: 70px;
+  width: 72px;
+  text-align: right;
 }
 
 .dev-input-color {
-  width: 50px;
-  height: 26px;
+  width: 52px;
+  height: 24px;
   padding: 1px;
   cursor: pointer;
 }
 
+/* -- Buttons -- */
 .dev-buttons {
   display: flex;
   gap: 6px;
   justify-content: center;
+}
+
+.dev-buttons-row2 {
+  margin-top: 4px;
 }
 
 /* Dev mode button in menu */
@@ -392,4 +439,129 @@ canvas {
   font-size: 0.85em;
   background: #663399;
   color: #fff;
+}
+
+/* Dev toast notification */
+.dev-toast {
+  text-align: center;
+  padding: 6px 12px;
+  margin-top: 6px;
+  background: var(--color-primary);
+  color: var(--color-bg);
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: bold;
+  animation: toast-fade 1.5s ease-out forwards;
+}
+
+@keyframes toast-fade {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ===== Modal overlay ===== */
+/* Positioned inside #game-area (relative) so it covers only the game, not the dev panel */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  animation: modal-fade-in 0.2s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-box {
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 12px;
+  padding: 30px 40px;
+  text-align: center;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modal-scale-in 0.2s ease-out;
+}
+
+.modal-box--wide {
+  min-width: 400px;
+}
+
+@keyframes modal-scale-in {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.modal-title {
+  color: var(--color-primary-bright);
+  font-size: 1.6em;
+  margin-bottom: 12px;
+}
+
+.modal-title--danger {
+  color: var(--color-danger);
+}
+
+.modal-subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.95em;
+  margin-bottom: 16px;
+}
+
+.modal-hint {
+  color: var(--color-text-muted);
+  font-size: 0.8em;
+  margin-top: 10px;
+}
+
+.modal-hint kbd {
+  background: var(--color-btn-bg);
+  border: 1px solid var(--color-input-border);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: 0.95em;
+}
+
+.modal-btn {
+  margin-top: 20px;
+}
+
+/* Modal table */
+.modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.modal-table th {
+  color: var(--color-text-muted);
+  font-weight: normal;
+  font-size: 0.85em;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.modal-table td {
+  padding: 6px 10px;
+  font-size: 0.95em;
+}
+
+.modal-table tbody tr:hover {
+  background: var(--color-row-hover);
+}
+
+.modal-status-alive {
+  color: var(--color-primary-bright);
+  font-weight: bold;
+}
+
+.modal-status-dead {
+  color: var(--color-danger);
 }
