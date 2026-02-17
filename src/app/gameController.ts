@@ -9,7 +9,6 @@ import { GameState, GameConfig } from '../engine/types';
 import { EngineContext } from '../engine/context';
 import { GameSettings } from '../engine/settings';
 import { GameEngine } from '../engine/GameEngine';
-import { applyDirection } from '../engine/systems/movementSystem';
 import { TickResult } from '../engine/events';
 import { renderGame, calculateCellSize } from '../renderer/canvasRenderer';
 import { InputHandler } from './inputHandler';
@@ -18,11 +17,12 @@ import {
   showPauseModal,
   hideModal,
 } from './ui/modal';
-import { saveScore } from '../storage/scoreStorage';
-import { processBots } from '../ai/botController';
 import { GameLoopScheduler } from './services/GameLoopScheduler';
 import { HudPresenter } from './services/HudPresenter';
 import { LevelCompletionService } from './services/LevelCompletionService';
+import { InputApplicationService } from './services/InputApplicationService';
+import { SessionProgressionService } from './services/SessionProgressionService';
+import { ScorePersistenceService } from './services/ScorePersistenceService';
 
 export interface GameControllerCallbacks {
   /** Called when controller wants to show the results screen. */
@@ -43,6 +43,9 @@ export class GameController {
   private loopScheduler = new GameLoopScheduler();
   private hudPresenter = new HudPresenter();
   private levelCompletionService = new LevelCompletionService();
+  private inputApplicationService = new InputApplicationService();
+  private sessionProgressionService = new SessionProgressionService();
+  private scorePersistenceService = new ScorePersistenceService();
 
   private canvas: HTMLCanvasElement | null = null;
   private canvasCtx: CanvasRenderingContext2D | null = null;
@@ -170,16 +173,7 @@ export class GameController {
     this.stopGameLoop();
     hideModal();
     if (this.state) {
-      // Save scores
-      for (const snake of this.state.snakes) {
-        saveScore({
-          playerName: snake.name,
-          score: snake.score,
-          levelsWon: snake.levelsWon,
-          date: new Date().toLocaleDateString('ru-RU'),
-          isBot: snake.isBot,
-        });
-      }
+      this.scorePersistenceService.saveSessionScores(this.state);
       this.callbacks.onShowResults(this.state);
     }
   }
@@ -211,32 +205,18 @@ export class GameController {
   private executeTick(): void {
     if (!this.state || !this.config) return;
 
-    // 1. Consume input buffer at tick boundary
+    // 1. Consume input buffer and apply all direction commands
     const inputSnapshot = this.inputHandler.consumeAll();
-    for (let playerIndex = 0; playerIndex < this.config.playerCount; playerIndex++) {
-      const requestedDirection = inputSnapshot.directions[playerIndex];
-      if (requestedDirection && this.state.snakes[playerIndex] && this.state.snakes[playerIndex].alive) {
-        applyDirection(this.state.snakes[playerIndex], requestedDirection);
-      }
-    }
+    this.inputApplicationService.applyTickCommands(this.state, this.config, this.ctx.settings, inputSnapshot);
 
-    // 2. Apply bot decisions
-    const botDirections = processBots(this.state, this.ctx.settings);
-    for (const [botSnakeId, requestedDirection] of botDirections) {
-      const botSnake = this.state.snakes.find(snake => snake.id === botSnakeId);
-      if (botSnake && botSnake.alive) {
-        applyDirection(botSnake, requestedDirection);
-      }
-    }
-
-    // 3. Process tick (engine — returns domain events)
+    // 2. Process tick (engine — returns domain events)
     const result: TickResult = this.gameEngine.processTick(this.state);
 
-    // 4. Render
+    // 3. Render
     this.renderFrame();
     this.updateHUD();
 
-    // 5. Handle domain events
+    // 4. Handle domain events
     this.handleDomainEvents(result);
   }
 
@@ -280,18 +260,7 @@ export class GameController {
   private advanceToNextLevel(): void {
     if (!this.state || !this.config || !this.canvas) return;
 
-    const nextLevel = this.state.level + 1;
-    const oldSnakes = this.state.snakes;
-    this.state = this.gameEngine.createGameState(this.config, nextLevel);
-    this.gameEngine.initLevel(this.state, this.config);
-
-    // Carry over stats
-    for (let snakeIndex = 0; snakeIndex < this.state.snakes.length; snakeIndex++) {
-      if (oldSnakes[snakeIndex]) {
-        this.state.snakes[snakeIndex].score = oldSnakes[snakeIndex].score;
-        this.state.snakes[snakeIndex].levelsWon = oldSnakes[snakeIndex].levelsWon;
-      }
-    }
+    this.state = this.sessionProgressionService.advanceToNextLevel(this.state, this.config, this.gameEngine);
 
     this.resizeCanvas();
     this.updateHUD();

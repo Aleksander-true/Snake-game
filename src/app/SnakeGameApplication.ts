@@ -1,7 +1,7 @@
 import { Router } from './router';
 import { hideModal } from './ui/modal';
 import { GameConfig, GameState } from '../engine/types';
-import { gameSettings } from '../engine/settings';
+import { gameSettings, resetSettings } from '../engine/settings';
 import { InputHandler } from './inputHandler';
 import { EngineContext } from '../engine/context';
 import { mathRng } from './adapters/mathRandomAdapter';
@@ -39,7 +39,6 @@ export class SnakeGameApplication {
   }
 
   init(): void {
-    loadSettingsFromStorage();
     this.router.onScreenChange((screen, data) => this.handleScreenChange(screen, data));
     this.showMenu();
   }
@@ -67,10 +66,15 @@ export class SnakeGameApplication {
 
     this.menuScreenService.show({
       onStart: (config: GameConfig) => {
+        // In normal mode we always use spec defaults (without persisted dev overrides).
+        resetSettings();
         this.currentConfig = config;
         this.router.navigate('game', config);
       },
       onStartDevMode: () => {
+        // Dev mode restores persisted tuning from localStorage.
+        resetSettings();
+        loadSettingsFromStorage();
         this.devModeActive = true;
         if (!this.currentConfig) {
           this.currentConfig = this.menuScreenService.readCurrentMenuConfig();

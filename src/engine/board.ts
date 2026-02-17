@@ -34,7 +34,6 @@ export function buildBoard(state: GameState): CellContent[][] {
 
   // Place snakes
   for (const snake of state.snakes) {
-    if (!snake.alive) continue;
     for (const seg of snake.segments) {
       if (inBounds(seg, state.width, state.height)) {
         board[seg.y][seg.x] = '#';

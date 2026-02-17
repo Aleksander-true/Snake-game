@@ -4,7 +4,8 @@ import { GameEngine } from '../src/engine/GameEngine';
 import { getTargetScore, getCumulativeTargetScore, getInitialRabbitCount } from '../src/engine/formulas';
 import { EngineContext } from '../src/engine/context';
 import { RandomPort } from '../src/engine/ports';
-import { createDefaultSettings } from '../src/engine/settings';
+import { createDefaultSettings, gameSettings, resetSettings } from '../src/engine/settings';
+import { GameFSM } from '../src/app/gameFSM';
 
 /** Deterministic RNG for tests — always returns 0.5 / floor(0.5 * max). */
 const testRng: RandomPort = {
@@ -72,5 +73,20 @@ describe('Smoke tests — project skeleton', () => {
     const expected2 = Math.floor(settings.rabbitCountPerSnakeCoeff * 2 + (settings.rabbitCountBase - 3));
     expect(getInitialRabbitCount(1, 5, settings)).toBe(expected1);
     expect(getInitialRabbitCount(2, 3, settings)).toBe(expected2);
+  });
+
+  test('resetSettings restores singleton runtime settings', () => {
+    const original = createDefaultSettings().hungerThreshold;
+    gameSettings.hungerThreshold = original + 99;
+    resetSettings();
+    expect(gameSettings.hungerThreshold).toBe(original);
+  });
+
+  test('GameFSM handles basic transitions and invalid transition safely', () => {
+    const fsm = new GameFSM();
+    expect(fsm.send('START_GAME')).toBe('Playing');
+    expect(fsm.handleSpace()).toBe('PAUSE');
+    expect(fsm.send('PAUSE')).toBe('Paused');
+    expect(fsm.send('GO_TO_MENU')).toBeNull();
   });
 });

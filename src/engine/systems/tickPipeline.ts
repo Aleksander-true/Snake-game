@@ -32,7 +32,9 @@ function movementSystem(state: GameState, events: DomainEvent[]): void {
       continue;
     }
 
-    if (collidesWithSnake(nextHeadPosition, state.snakes, snake.id, false)) {
+    // "Collision with other snakes" must not include the snake itself.
+    // Self-collision is checked later, after movement, per tick order.
+    if (collidesWithSnake(nextHeadPosition, state.snakes.filter(otherSnake => otherSnake.id !== snake.id))) {
       markSnakeDead(snake, 'Столкнулась с другой змейкой', events);
       continue;
     }
