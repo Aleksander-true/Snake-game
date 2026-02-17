@@ -16,36 +16,24 @@ const PLAYER2_KEYS: KeyMap = {
   'ArrowRight': 'right',
 };
 
+/** Consumed directions for all players in a single tick. */
+export interface InputSnapshot {
+  directions: (Direction | null)[];
+}
+
 /**
- * Input handler that captures keyboard input and stores pending directions
- * for each player. Also handles pause toggle (Space).
+ * InputBuffer — captures keyboard input and stores pending directions.
+ *
+ * DOM event handlers only write commands into the buffer.
+ * On each tick boundary, `consumeAll()` is called to drain
+ * the last valid direction for each player.
+ *
+ * Space is handled separately via `onPause` callback.
  */
 export class InputHandler {
   private pendingDirections: (Direction | null)[] = [null, null];
-  private keydownHandler: (e: KeyboardEvent) => void;
+  private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
   private pauseCallback: (() => void) | null = null;
-
-  constructor() {
-    this.keydownHandler = (e: KeyboardEvent) => {
-      // Pause
-      if (e.code === 'Space') {
-        e.preventDefault();
-        if (this.pauseCallback) this.pauseCallback();
-        return;
-      }
-
-      // Player 1
-      if (PLAYER1_KEYS[e.code]) {
-        e.preventDefault();
-        this.pendingDirections[0] = PLAYER1_KEYS[e.code];
-      }
-      // Player 2
-      if (PLAYER2_KEYS[e.code]) {
-        e.preventDefault();
-        this.pendingDirections[1] = PLAYER2_KEYS[e.code];
-      }
-    };
-  }
 
   /** Register a callback to be called when Space is pressed. */
   onPause(callback: () => void): void {
@@ -53,20 +41,59 @@ export class InputHandler {
   }
 
   start(): void {
+    if (this.keydownHandler) return; // already started
+
+    this.keydownHandler = (event: KeyboardEvent) => {
+      // Pause (Space) — separate from direction buffer
+      if (event.code === 'Space') {
+        event.preventDefault();
+        if (this.pauseCallback) this.pauseCallback();
+        return;
+      }
+
+      // Player 1
+      if (PLAYER1_KEYS[event.code]) {
+        event.preventDefault();
+        this.pendingDirections[0] = PLAYER1_KEYS[event.code];
+      }
+      // Player 2
+      if (PLAYER2_KEYS[event.code]) {
+        event.preventDefault();
+        this.pendingDirections[1] = PLAYER2_KEYS[event.code];
+      }
+    };
+
     document.addEventListener('keydown', this.keydownHandler);
   }
 
   stop(): void {
-    document.removeEventListener('keydown', this.keydownHandler);
+    if (this.keydownHandler) {
+      document.removeEventListener('keydown', this.keydownHandler);
+      this.keydownHandler = null;
+    }
     this.pauseCallback = null;
+    this.pendingDirections = [null, null];
   }
 
   /**
-   * Get and consume the pending direction for a player (0-indexed).
+   * Consume all pending directions at tick boundary.
+   * Returns the last valid direction for each player slot, then clears the buffer.
+   */
+  consumeAll(): InputSnapshot {
+    const snapshot: InputSnapshot = {
+      directions: [...this.pendingDirections],
+    };
+    this.pendingDirections = [null, null];
+    return snapshot;
+  }
+
+  /**
+   * Get and consume the pending direction for a single player (0-indexed).
+   * Legacy helper — prefer consumeAll() in new code.
    */
   consumeDirection(playerIndex: number): Direction | null {
-    const dir = this.pendingDirections[playerIndex];
+    const pendingDirection = this.pendingDirections[playerIndex];
     this.pendingDirections[playerIndex] = null;
-    return dir;
+    return pendingDirection;
   }
 }

@@ -43,7 +43,7 @@ export function clearScores(): void {
 export function saveName(name: string): void {
   if (!name.trim()) return;
   const names = getSavedNames();
-  const filtered = names.filter(n => n !== name.trim());
+  const filtered = names.filter(savedName => savedName !== name.trim());
   filtered.unshift(name.trim());
   const trimmed = filtered.slice(0, 20);
   localStorage.setItem(NAMES_KEY, JSON.stringify(trimmed));

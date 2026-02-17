@@ -1,10 +1,11 @@
-import { GameState, Snake } from '../../engine/types';
-import { getCumulativeTargetScore } from '../../engine/game';
+import { GameState, Snake } from '../../../engine/types';
+import { GameSettings } from '../../../engine/settings';
+import { getCumulativeTargetScore } from '../../../engine/formulas';
 
 /**
  * Render a single snake stats block.
  */
-function snakeStatsHTML(snake: Snake): string {
+function buildSnakeStatsHtml(snake: Snake): string {
   const cssClass = snake.alive ? 'hud-snake-alive' : 'hud-snake-dead';
   const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
   return `
@@ -31,12 +32,13 @@ export function renderHUD(
   rightPanel: HTMLElement | null,
   bottomPanel: HTMLElement | null,
   state: GameState,
-  paused: boolean
+  paused: boolean,
+  settings: GameSettings
 ): void {
   const minutes = Math.floor(state.levelTimeLeft / 60);
   const seconds = state.levelTimeLeft % 60;
   const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  const cumulativeTarget = getCumulativeTargetScore(state.level);
+  const cumulativeTarget = getCumulativeTargetScore(state.level, settings);
 
   topBar.innerHTML = `
     <div class="hud-bar">
@@ -49,23 +51,23 @@ export function renderHUD(
   `;
 
   // Separate snakes into humans (ordered) and bots
-  const humans = state.snakes.filter(s => !s.isBot);
-  const bots = state.snakes.filter(s => s.isBot);
+  const humanSnakes = state.snakes.filter(snake => !snake.isBot);
+  const botSnakes = state.snakes.filter(snake => snake.isBot);
 
   // Left panel → player 1 (first human)
   if (leftPanel) {
-    leftPanel.innerHTML = humans[0] ? snakeStatsHTML(humans[0]) : '';
+    leftPanel.innerHTML = humanSnakes[0] ? buildSnakeStatsHtml(humanSnakes[0]) : '';
   }
 
   // Right panel → player 2 (second human)
   if (rightPanel) {
-    rightPanel.innerHTML = humans[1] ? snakeStatsHTML(humans[1]) : '';
+    rightPanel.innerHTML = humanSnakes[1] ? buildSnakeStatsHtml(humanSnakes[1]) : '';
   }
 
   // Bottom panel → all bots
   if (bottomPanel) {
-    if (bots.length > 0) {
-      bottomPanel.innerHTML = bots.map(b => snakeStatsHTML(b)).join('');
+    if (botSnakes.length > 0) {
+      bottomPanel.innerHTML = botSnakes.map(botSnake => buildSnakeStatsHtml(botSnake)).join('');
     } else {
       bottomPanel.innerHTML = '';
     }

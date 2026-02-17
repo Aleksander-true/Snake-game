@@ -1,23 +1,23 @@
 import { Snake } from '../types';
-import { gameSettings } from '../settings';
+import { EngineContext } from '../context';
 
 /**
  * Process hunger for a snake each tick.
  * Returns true if the snake starved to death.
  */
-export function processHunger(snake: Snake): boolean {
+export function processHunger(snake: Snake, ctx: EngineContext): boolean {
   if (!snake.alive) return false;
 
-  snake.ticksWithoutFood++;
+  const settings = ctx.settings;
+  snake.incrementHungerTick();
 
-  if (snake.ticksWithoutFood >= gameSettings.hungerThreshold) {
+  if (snake.ticksWithoutFood >= settings.hungerThreshold) {
     // Lose one segment from the tail
-    snake.segments.pop();
-    snake.ticksWithoutFood = 0;
+    snake.trimTail();
+    snake.resetHunger();
 
-    if (snake.segments.length < gameSettings.minSnakeLength) {
-      snake.alive = false;
-      snake.deathReason = 'Умерла с голоду';
+    if (snake.segments.length < settings.minSnakeLength) {
+      snake.die('Умерла с голоду');
       return true;
     }
   }
@@ -29,5 +29,5 @@ export function processHunger(snake: Snake): boolean {
  * Reset hunger counter (called when snake eats a rabbit).
  */
 export function resetHunger(snake: Snake): void {
-  snake.ticksWithoutFood = 0;
+  snake.resetHunger();
 }

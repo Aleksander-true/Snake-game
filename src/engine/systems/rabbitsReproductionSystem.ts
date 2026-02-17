@@ -1,20 +1,27 @@
 import { Rabbit, Position, GameState, RabbitPhase } from '../types';
-import { gameSettings } from '../settings';
+import { EngineContext } from '../context';
+import { GameSettings } from '../settings';
 import { inBounds } from '../board';
+import { RabbitEntity } from '../entities/RabbitEntity';
+
+export interface RabbitBirth {
+  parentPos: Position;
+  child: Rabbit;
+}
 
 /**
  * Chebyshev distance between two positions.
  */
-export function chebyshevDistance(a: Position, b: Position): number {
-  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+export function chebyshevDistance(positionA: Position, positionB: Position): number {
+  return Math.max(Math.abs(positionA.x - positionB.x), Math.abs(positionA.y - positionB.y));
 }
 
 /**
  * Determine the lifecycle phase of a rabbit based on its age.
  */
-export function getRabbitPhase(rabbit: Rabbit): RabbitPhase {
-  if (rabbit.age < gameSettings.rabbitYoungAge) return 'young';
-  if (rabbit.age < gameSettings.rabbitAdultAge) return 'adult';
+export function getRabbitPhase(rabbit: Rabbit, settings: GameSettings): RabbitPhase {
+  if (rabbit.age < settings.rabbitYoungAge) return 'young';
+  if (rabbit.age < settings.rabbitAdultAge) return 'adult';
   return 'old';
 }
 
@@ -23,9 +30,9 @@ export function getRabbitPhase(rabbit: Rabbit): RabbitPhase {
  */
 export function countNearbyRabbits(pos: Position, rabbits: Rabbit[], radius: number, excludeSelf?: Rabbit): number {
   let count = 0;
-  for (const r of rabbits) {
-    if (r === excludeSelf) continue;
-    if (chebyshevDistance(pos, r.pos) <= radius) {
+  for (const rabbit of rabbits) {
+    if (rabbit === excludeSelf) continue;
+    if (chebyshevDistance(pos, rabbit.pos) <= radius) {
       count++;
     }
   }
@@ -42,12 +49,12 @@ export function isValidRabbitPosition(
   if (!inBounds(pos, state.width, state.height)) return false;
 
   // Not on wall
-  if (state.walls.some(w => w.x === pos.x && w.y === pos.y)) return false;
+  if (state.walls.some(wall => wall.x === pos.x && wall.y === pos.y)) return false;
 
   // Not on snake
   for (const snake of state.snakes) {
     if (!snake.alive) continue;
-    if (snake.segments.some(s => s.x === pos.x && s.y === pos.y)) return false;
+    if (snake.segments.some(segment => segment.x === pos.x && segment.y === pos.y)) return false;
   }
 
   // Chebyshev distance > 1 from all existing rabbits
@@ -64,77 +71,81 @@ export function isValidRabbitPosition(
  * - Reproduction only during adult phase
  * - Removes rabbits that reached max age
  */
-export function processRabbitReproduction(state: GameState): Rabbit[] {
-  const newRabbits: Rabbit[] = [];
+export function processRabbitReproduction(state: GameState, ctx: EngineContext): RabbitBirth[] {
+  const settings = ctx.settings;
+  const randomPort = ctx.rng;
+  const births: RabbitBirth[] = [];
 
   for (const rabbit of state.rabbits) {
-    rabbit.age++;
-    rabbit.clockNum++;
+    rabbit.tickLifecycle();
   }
 
   // Reproduction (adults only)
   for (const rabbit of state.rabbits) {
-    const phase = getRabbitPhase(rabbit);
+    const phase = getRabbitPhase(rabbit, settings);
     if (phase !== 'adult') continue;
 
-    if (rabbit.clockNum < gameSettings.reproductionMinCooldown) continue;
-    if (rabbit.reproductionCount >= gameSettings.maxReproductions) continue;
+    if (rabbit.clockNum < settings.reproductionMinCooldown) continue;
+    if (rabbit.reproductionCount >= settings.maxReproductions) continue;
 
     // Count neighbors in the configured radius
     const nearbyCount = countNearbyRabbits(
       rabbit.pos, state.rabbits,
-      gameSettings.neighborReproductionRadius, rabbit
+      settings.neighborReproductionRadius, rabbit
     );
-    if (nearbyCount >= gameSettings.maxReproductionNeighbors) continue;
+    if (nearbyCount >= settings.maxReproductionNeighbors) continue;
 
-    let probability = gameSettings.reproductionProbabilityBase * rabbit.clockNum;
-    probability *= (1 - gameSettings.neighborReproductionPenalty * nearbyCount);
+    let probability = settings.reproductionProbabilityBase * rabbit.clockNum;
+    probability *= (1 - settings.neighborReproductionPenalty * nearbyCount);
 
-    if (Math.random() < probability) {
-      const offspring = trySpawnOffspring(rabbit, state);
+    if (randomPort.next() < probability) {
+      const offspring = trySpawnOffspring(rabbit, state, randomPort);
       if (offspring) {
-        newRabbits.push(offspring);
-        rabbit.clockNum = 0;
-        rabbit.reproductionCount++;
+        births.push({
+          parentPos: { ...rabbit.pos },
+          child: offspring,
+        });
+        rabbit.resetReproductionClock();
+        rabbit.incrementReproductionCount();
       }
     }
   }
 
   // Add new rabbits
-  state.rabbits.push(...newRabbits);
+  state.rabbits.push(...births.map(birth => birth.child));
 
   // Remove dead (old) rabbits
-  state.rabbits = state.rabbits.filter(r => r.age < gameSettings.rabbitMaxAge);
+  state.rabbits = state.rabbits.filter(rabbit => rabbit.age < settings.rabbitMaxAge);
 
-  return newRabbits;
+  return births;
 }
 
 /**
  * Try to find a valid position for offspring near the parent.
  */
-function trySpawnOffspring(parent: Rabbit, state: GameState): Rabbit | null {
-  const directions: Position[] = [];
+function trySpawnOffspring(parent: Rabbit, state: GameState, rng: { next(): number; nextInt(max: number): number }): Rabbit | null {
+  const candidatePositions: Position[] = [];
 
   // All positions at distance 1 and 2 (Chebyshev)
-  for (let dx = -2; dx <= 2; dx++) {
-    for (let dy = -2; dy <= 2; dy++) {
-      if (dx === 0 && dy === 0) continue;
-      const dist = Math.max(Math.abs(dx), Math.abs(dy));
-      if (dist >= 1 && dist <= 2) {
-        directions.push({ x: parent.pos.x + dx, y: parent.pos.y + dy });
+  for (let deltaX = -2; deltaX <= 2; deltaX++) {
+    for (let deltaY = -2; deltaY <= 2; deltaY++) {
+      if (deltaX === 0 && deltaY === 0) continue;
+      const distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+      if (distance >= 1 && distance <= 2) {
+        candidatePositions.push({ x: parent.pos.x + deltaX, y: parent.pos.y + deltaY });
       }
     }
   }
 
-  // Shuffle
-  for (let i = directions.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [directions[i], directions[j]] = [directions[j], directions[i]];
+  // Fisher-Yates shuffle using rng
+  for (let currentIndex = candidatePositions.length - 1; currentIndex > 0; currentIndex--) {
+    const randomIndex = rng.nextInt(currentIndex + 1);
+    [candidatePositions[currentIndex], candidatePositions[randomIndex]] = [candidatePositions[randomIndex], candidatePositions[currentIndex]];
   }
 
-  for (const pos of directions) {
-    if (isValidRabbitPosition(pos, state)) {
-      return { pos, age: 0, clockNum: 0, reproductionCount: 0 };
+  for (const candidatePosition of candidatePositions) {
+    if (isValidRabbitPosition(candidatePosition, state)) {
+      return RabbitEntity.newborn(candidatePosition);
     }
   }
 

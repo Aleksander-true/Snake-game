@@ -1,0 +1,102 @@
+.game-outer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.game-layout-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.game-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.game-top-bar {
+  width: 100%;
+}
+
+.game-middle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+}
+
+.game-middle--dev {
+  justify-content: flex-start;
+}
+
+.game-side-panel {
+  width: 140px;
+  min-width: 120px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 0.8em;
+  line-height: 1.6;
+}
+
+.game-bottom-panel {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 4px 8px;
+  flex-wrap: wrap;
+}
+
+.game-bottom-panel > div {
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8em;
+  line-height: 1.6;
+  min-width: 120px;
+}
+
+.hud-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-panel-border);
+  font-size: 0.9em;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hud-paused {
+  color: var(--color-danger);
+  font-weight: bold;
+  animation: hud-blink 1s step-start infinite;
+}
+
+.hud-hint {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+
+@keyframes hud-blink {
+  50% { opacity: 0; }
+}
+
+.hud-snake-alive {
+  color: var(--color-primary-bright);
+}
+
+.hud-snake-dead {
+  color: var(--color-danger);
+}

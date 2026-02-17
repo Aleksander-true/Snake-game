@@ -5,7 +5,7 @@ import { CellContent, GameState, Position } from './types';
  */
 export function createEmptyBoard(width: number, height: number): CellContent[][] {
   const board: CellContent[][] = [];
-  for (let y = 0; y < height; y++) {
+  for (let rowIndex = 0; rowIndex < height; rowIndex++) {
     board.push(new Array<CellContent>(width).fill(' '));
   }
   return board;

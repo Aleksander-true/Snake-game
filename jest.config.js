@@ -5,6 +5,7 @@ module.exports = {
   roots: ['<rootDir>/tests'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   testMatch: ['**/*.test.ts'],
+  testSequencer: '<rootDir>/tests/sequencer.js',
   moduleNameMapper: {
     '^(.+)\\.css$': '<rootDir>/tests/__mocks__/styleMock.js',
   },

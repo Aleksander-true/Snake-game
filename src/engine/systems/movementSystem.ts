@@ -1,5 +1,4 @@
 import { Snake, Direction, Position } from '../types';
-import { isReverseDirection } from '../collision';
 
 /**
  * Get the next head position given current head and direction.
@@ -17,18 +16,12 @@ export function getNextHeadPosition(head: Position, direction: Direction): Posit
  * Apply a direction change to a snake, blocking 180° reversals.
  */
 export function applyDirection(snake: Snake, newDirection: Direction): void {
-  if (!isReverseDirection(snake.direction, newDirection)) {
-    snake.direction = newDirection;
-  }
+  snake.applyDirection(newDirection);
 }
 
 /**
  * Move the snake forward: add new head, remove tail (unless growing).
  */
 export function moveSnake(snake: Snake, grow: boolean): void {
-  const newHead = getNextHeadPosition(snake.segments[0], snake.direction);
-  snake.segments.unshift(newHead);
-  if (!grow) {
-    snake.segments.pop();
-  }
+  snake.move(grow);
 }

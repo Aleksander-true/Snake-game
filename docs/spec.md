@@ -1334,93 +1334,139 @@ continueAfterLevelEnd()
   → если game over → finishGame → экран результатов
   → иначе → advanceToNextLevel → startGameLoop
 ```
-## 15. Архитектура проекта
 
-### Файловая структура
+## 15 Принципы архитектуры (обязательные)
 
-```
-src/
-├── index.ts                    # Точка входа: управление экранами, game loop, паузы, модалки
-├── index.html                  # HTML-шаблон (без inline-стилей)
-├── global.d.ts                 # Объявление глобальной переменной __DEV_MODE__
-├── app/
-│   ├── router.ts               # Простой JS-роутер (menu → game → results)
-│   ├── inputHandler.ts         # Обработка клавиатуры (WASD + стрелки + Space)
-│   └── ui/
-│       ├── menuView.ts         # Экран «Меню» (форма, dropdown имён)
-│       ├── hudView.ts          # HUD (верхняя, левая, правая, нижняя панели)
-│       ├── resultView.ts       # Экран «Результаты» (таблицы, кнопки)
-│       ├── devPanel.ts         # Панель настроек (dev mode) — lazy-loaded
-│       ├── modalOverlay.ts     # Модальные окна (пауза, конец уровня, game over)
-│       └── styles.css          # Все стили (CSS custom properties, классы)
-├── engine/
-│   ├── types.ts                # Типы: Direction, Snake, Rabbit, GameState, GameConfig, etc.
-│   ├── gameDefaults.json       # Единый JSON со ВСЕМИ параметрами игры
-│   ├── settings.ts             # Runtime-настройки: gameSettings, reset, export/import, localStorage
-│   ├── game.ts                 # createGameState, initLevel, processTick, формулы
-│   ├── board.ts                # createEmptyBoard, buildBoard, inBounds
-│   ├── collision.ts            # collidesWithWall, collidesWithSnake, selfCollision, isReverseDirection
-│   ├── spawning/
-│   │   ├── wallsGenerator.ts   # generateWalls (random walk + BFS-валидация + зоны безопасности)
-│   │   └── rabbitsSpawner.ts   # spawnRabbits (начальный спавн с проверками)
-│   └── systems/
-│       ├── movementSystem.ts   # getNextHeadPosition, moveSnake, applyDirection
-│       ├── hungerSystem.ts     # processHunger, resetHunger
-│       ├── rabbitsReproductionSystem.ts  # processRabbitReproduction, getRabbitPhase, chebyshevDistance
-│       ├── scoringSystem.ts    # awardRabbitPoints
-│       └── levelSystem.ts      # checkLevelComplete, getLevelWinner, getOverallWinner
-├── ai/
-│   ├── vision.ts               # buildVisionMatrix, rotateToWorld
-│   └── botController.ts        # botDecide, getBotDirection
-├── renderer/
-│   └── canvasRenderer.ts       # renderGame, calculateCellSize, drawSnakes, drawRabbits, drawEyes
-└── storage/
-    └── scoreStorage.ts         # getScores, addScore, getSavedNames, saveName
+### 15.1 Цели качества
 
-tests/
-├── __mocks__/styleMock.js      # Мок для CSS-импортов в Jest
-└── smoke.test.ts               # Smoke-тесты (базовые проверки)
+Код проекта должен быть:
 
-docs/
-├── rules.md                    # Правила игры (краткое описание)
-├── ai.md                       # Описание AI (vision, heuristic)
-└── spec.md                     # ← Этот файл (полное ТЗ)
-```
-
-### Принципы архитектуры
-
-1. **Engine отделён от Renderer**: модули в `engine/` не импортируют ничего из `renderer/`, `app/`, DOM API. Engine — чистая логика, покрываемая unit-тестами без jsdom.
-
-2. **Renderer не содержит логики**: `canvasRenderer.ts` только читает `GameState` и рисует. Никаких мутаций состояния.
-
-3. **Мастер-данные vs производные**: `state.snakes`, `state.rabbits`, `state.walls` — мастер-данные. `state.board[][]` — производное (пересобирается каждый тик). Все коллизии считаются по мастер-данным.
-
-4. **Единый синглтон настроек**: все системы читают параметры из `gameSettings` (не из JSON, не из констант). Dev-панель модифицирует `gameSettings` → при следующем тике или перезапуске изменения вступают в силу.
-
-5. **Lazy-loading dev-панели**: `devPanel.ts` загружается через dynamic import (`import('./app/ui/devPanel')`) только в dev-режиме. В production-сборке код не попадает в бандл.
-
-6. **Типизация**: все ключевые структуры описаны в `types.ts`. Интерфейсы `Snake`, `Rabbit`, `GameState`, `GameConfig`, `BotInput`, `ScoreRecord` и типы `Direction`, `BotDecision`, `CellContent`, `RabbitPhase`.
-
-### Конфигурационные файлы
-
-| Файл | Назначение |
-|------|-----------|
-| `package.json` | Зависимости, скрипты (`start`, `build`, `test`, `dev:debug`) |
-| `tsconfig.json` | TypeScript strict mode, resolveJsonModule, target ES2020 |
-| `webpack.config.js` | Dev server, production build, DefinePlugin (`__DEV_MODE__`) |
-| `jest.config.js` | ts-jest, jsdom, CSS mock |
-| `.gitignore` | node_modules, dist, .DS_Store |
-
-### Скрипты npm
-
-| Скрипт | Команда |
-|--------|---------|
-| `npm start` | `webpack serve --mode development --open` |
-| `npm run build` | `webpack --mode production` |
-| `npm test` | `jest` |
-| `npm run dev:debug` | `webpack serve --mode development --env devmode --open` |
+1. **Чистый**: понятные имена, короткие функции, минимум дублирования, единый стиль.
+2. **Поддерживаемый**: изменения в одной подсистеме не должны требовать правок во многих файлах.
+3. **Тестируемый**: ключевая логика engine покрывается unit-тестами без DOM/Canvas; тесты детерминированы.
+4. **Расширяемый**: новые механики/сущности/экраны добавляются через новые модули/системы, а не через разрастание условий в центральных файлах.
+5. **Читаемый**: управление жизненным циклом игры и UI (экраны/модалки/пауза) описано явно и однозначно, без противоречивых комбинаций флагов.
+6. **Слабо связанный**: доменная логика (engine) не импортирует и не использует адаптеры окружения (DOM, Canvas, localStorage, таймеры).
 
 ---
+
+### 15.2 Разделение на слои (Layering)
+
+#### Engine (домен)
+
+1. Engine — чистая логика симуляции: состояние, формулы, движение, коллизии, спавн, механики.
+2. Engine **не использует**: DOM API, Canvas API, `localStorage`, `setInterval`, прямой `Math.random()`.
+3. Engine допускает только:
+   - чтение/мутацию `GameState`;
+   - генерацию доменных событий (см. 15.6);
+   - чтение параметров только из `gameSettings`/`EngineContext`.
+
+#### App/UI (приложение)
+
+1. App/UI отвечает за:
+   - роутинг по экранам;
+   - обработку пользовательского ввода;
+   - показ модалок и управление паузой;
+   - запуск/остановку game loop;
+   - работу со storage (рекорды, имена, dev-настройки).
+2. App/UI **не мутирует** `GameState` напрямую (см. 15.4).
+
+#### Renderer
+
+1. Renderer читает состояние и рисует; **не содержит логики** симуляции и не мутирует `GameState`.
+2. Любые визуальные эффекты (если появятся) хранятся в отдельном “visual state” renderer-слоя и **не влияют** на правила игры.
+
+---
+
+### 15.3 Порты и адаптеры (Hexagonal / Ports & Adapters)
+
+1. Все зависимости на окружение оформляются как **порты (интерфейсы)** в Engine и реализуются **адаптерами** в App/Infra.
+2. Минимально обязательный порт: `RandomPort` (RNG).
+   - Все операции случайности в Engine используют `ctx.rng.next()`.
+   - Прямой `Math.random()` в модулях `engine/**` запрещён.
+3. Дополнительные порты (рекомендуются): `StoragePort`, `SchedulerPort`/`ClockPort`, `LoggerPort`.
+
+---
+
+### 15.4 Единый источник истины (Single Source of Truth) — вариант A
+
+1. `GameState` — **единственный источник истины** для текущей партии (позиции, очки, возраст, статусы и т.д.).
+2. Мутация `GameState` разрешена только:
+   - внутри функций Engine (`initLevel`, `processTick`, системы);
+   - через единый use-case слой приложения (например `GameController`), который вызывает Engine в правильном порядке.
+3. UI/Renderer/InputHandler **не имеют права** мутировать `GameState` напрямую.
+4. Производные структуры (`board[][]`, occupancy-кэши и т.п.) должны быть **пересчитываемыми** и не являются мастер-данными.
+
+---
+
+### 15.5 Pipeline / Systems (конвейер систем тика)
+
+1. `processTick` реализуется как последовательность **систем** (pipeline), каждая отвечает за одну механику/фазу.
+2. Система имеет единый контракт (рекомендуется): `run(state, ctx, out)` и не взаимодействует с DOM/Canvas.
+3. Порядок выполнения систем соответствует регламенту тика из раздела 14 и задаётся явным списком систем.
+4. Добавление новых механик выполняется через:
+   - добавление новой системы;
+   - или расширение одной системы;
+   без разрастания монолитной функции.
+
+---
+
+### 15.6 Доменные события (Domain Events)
+
+1. Engine не вызывает UI/звуки/анимации напрямую. Вместо этого Engine формирует **Domain Events** (события фактов).
+2. `processTick` возвращает `TickResult { events: DomainEvent[] }` (или эквивалентный механизм), содержащий события тика.
+3. Примеры доменных событий (минимальный обязательный набор):
+   - `SNAKE_DIED` (snakeId, reason)
+   - `RABBIT_EATEN` (snakeId, pos, newScore)
+   - `RABBIT_BORN` (parentPos, childPos)
+   - `LEVEL_COMPLETED` (reason, winnerId?)
+   - `GAME_OVER` (если применимо)
+4. App-слой обрабатывает Domain Events и выполняет побочные эффекты: модалки, звук, storage, переходы экранов.
+
+---
+
+### 15.7 Ввод пользователя: Command Buffer + применение на границе тика
+
+1. Обработчики DOM-событий не меняют `GameState`. Они складывают команды в буфер (`InputBuffer`).
+2. На каждом тике команды **потребляются** и применяются строго в начале тика (в соответствии с правилами ввода из раздела 3 и регламентом тика из раздела 14).
+3. Буфер ввода должен поддерживать правило: “последнее валидное направление за тик” и запрет разворота на 180°.
+
+---
+
+### 15.8 UI/экраны/пауза: конечный автомат (FSM)
+
+1. Логика экранов и модалок реализуется через **Finite State Machine (FSM)**.
+2. `Space` и кнопки работают как события FSM; поведение Space определяется текущим состоянием автомата (раздел 3. Пауза).
+3. Противоречивые комбинации флагов (например, “paused=true и одновременно модалка конца уровня”) не допускаются; валидность обеспечивается моделью состояний.
+4. Переходы (menu → game → results, playing ↔ paused, levelComplete, gameOver) описываются явно (таблица переходов или reducer-функция).
+
+---
+
+### 15.9 Контекст зависимостей (явная DI без контейнеров)
+
+1. Engine получает зависимости через `EngineContext` (например: `settings`, `rng`, опционально `scratch`).
+2. Тесты могут подменять зависимости (seeded RNG, настройки) без моков DOM.
+
+---
+
+### 15.10 Derived-данные и оптимизации
+
+1. `board[][]` и любые occupancy-индексы являются derived-структурами и могут пересобираться из мастер-данных (по ТЗ — каждый тик).
+2. Коллизии и правила симуляции должны опираться на мастер-данные (`snakes`, `rabbits`, `walls`) либо на корректно синхронизированные derived-индексы, построенные из мастер-данных в пределах тика.
+
+---
+
+### 15.11 Обязательные OOP-требования
+
+1. Ключевые доменные сущности реализуются как классы с инкапсулированным поведением (например, `SnakeEntity`, `RabbitEntity`), а не как набор разрозненных процедур.
+2. Файл `engine/types.ts` содержит только типы/интерфейсы TypeScript. Конкретные реализации классов в него не помещаются.
+3. Публичный API классов должен выражать доменные действия (`move`, `applyDirection`, `die`, `tickLifecycle`), а не технические детали хранения.
+4. Инварианты сущностей (запрет разворота на 180°, корректная смерть, корректное изменение длины, счётчиков и т.п.) поддерживаются внутри методов классов.
+5. Оркестрация use-case уровня (`GameController`, `SnakeGameApplication`) не содержит доменных вычислений сущностей, а координирует вызовы сервисов/engine.
+6. Классы должны соответствовать SRP: при росте сложности ответственность выносится в отдельные сервисы/координаторы, а не накапливается в одном «god object».
+7. Предпочтение отдаётся композиции над наследованием; наследование допускается только при явной и устойчивой модели «is-a».
+8. Зависимости передаются явно (DI через контекст/конструктор); скрытые глобальные зависимости внутри классов не допускаются.
+
 
 ## 16. Тесты (Jest)
 

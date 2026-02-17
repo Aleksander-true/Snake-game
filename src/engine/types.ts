@@ -16,15 +16,22 @@ export interface Position {
 /** Rabbit lifecycle phase */
 export type RabbitPhase = 'young' | 'adult' | 'old';
 
-/** A single rabbit entity */
+/**
+ * Rabbit shape used by engine systems.
+ */
 export interface Rabbit {
   pos: Position;
   age: number;             // absolute ticks since birth (never resets)
   clockNum: number;        // ticks since birth / last reproduction (resets on repro)
   reproductionCount: number;
+  tickLifecycle(): void;
+  resetReproductionClock(): void;
+  incrementReproductionCount(): void;
 }
 
-/** A single snake entity */
+/**
+ * Snake shape used by engine systems.
+ */
 export interface Snake {
   id: number;
   name: string;
@@ -36,6 +43,15 @@ export interface Snake {
   ticksWithoutFood: number;
   isBot: boolean;
   deathReason?: string;
+  readonly head: Position;
+  applyDirection(newDirection: Direction): void;
+  getNextHeadPosition(): Position;
+  move(grow: boolean): void;
+  incrementScore(): void;
+  incrementHungerTick(): void;
+  resetHunger(): void;
+  trimTail(): void;
+  die(reason: string): void;
 }
 
 /** Full game state for one level */

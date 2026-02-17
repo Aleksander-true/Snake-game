@@ -84,56 +84,56 @@ export interface GameSettings {
 /* ====== Build defaults from JSON ====== */
 
 export function createDefaultSettings(): GameSettings {
-  const d = defaults;
+  const defaultJson = defaults;
   return {
-    hungerThreshold:              d.snake.hungerThreshold,
-    minSnakeLength:               d.snake.minSnakeLength,
-    initialSnakeLength:           d.snake.initialSnakeLength,
+    hungerThreshold:              defaultJson.snake.hungerThreshold,
+    minSnakeLength:               defaultJson.snake.minSnakeLength,
+    initialSnakeLength:           defaultJson.snake.initialSnakeLength,
 
-    rabbitYoungAge:               d.rabbit.youngAge,
-    rabbitAdultAge:               d.rabbit.adultAge,
-    rabbitMaxAge:                 d.rabbit.maxAge,
-    rabbitMinDistance:             d.rabbit.minDistance,
-    reproductionMinCooldown:      d.rabbit.reproductionMinCooldown,
-    reproductionProbabilityBase:  d.rabbit.reproductionProbabilityBase,
-    maxReproductions:             d.rabbit.maxReproductions,
-    neighborReproductionRadius:   d.rabbit.neighborReproductionRadius,
-    neighborReproductionPenalty:  d.rabbit.neighborReproductionPenalty,
-    maxReproductionNeighbors:     d.rabbit.maxReproductionNeighbors,
-    rabbitCountPerSnakeCoeff:     d.rabbit.countPerSnakeCoeff,
-    rabbitCountBase:              d.rabbit.countBase,
+    rabbitYoungAge:               defaultJson.rabbit.youngAge,
+    rabbitAdultAge:               defaultJson.rabbit.adultAge,
+    rabbitMaxAge:                 defaultJson.rabbit.maxAge,
+    rabbitMinDistance:             defaultJson.rabbit.minDistance,
+    reproductionMinCooldown:      defaultJson.rabbit.reproductionMinCooldown,
+    reproductionProbabilityBase:  defaultJson.rabbit.reproductionProbabilityBase,
+    maxReproductions:             defaultJson.rabbit.maxReproductions,
+    neighborReproductionRadius:   defaultJson.rabbit.neighborReproductionRadius,
+    neighborReproductionPenalty:  defaultJson.rabbit.neighborReproductionPenalty,
+    maxReproductionNeighbors:     defaultJson.rabbit.maxReproductionNeighbors,
+    rabbitCountPerSnakeCoeff:     defaultJson.rabbit.countPerSnakeCoeff,
+    rabbitCountBase:              defaultJson.rabbit.countBase,
 
-    wallClusterCoeff:             d.walls.clusterCoeff,
-    wallClusterBase:              d.walls.clusterBase,
-    wallLengthCoeff:              d.walls.lengthCoeff,
-    wallLengthBase:               d.walls.lengthBase,
+    wallClusterCoeff:             defaultJson.walls.clusterCoeff,
+    wallClusterBase:              defaultJson.walls.clusterBase,
+    wallLengthCoeff:              defaultJson.walls.lengthCoeff,
+    wallLengthBase:               defaultJson.walls.lengthBase,
 
-    targetScoreCoeff:             d.scoring.targetScoreCoeff,
-    targetScoreBase:              d.scoring.targetScoreBase,
+    targetScoreCoeff:             defaultJson.scoring.targetScoreCoeff,
+    targetScoreBase:              defaultJson.scoring.targetScoreBase,
 
-    baseWidth:                    d.board.baseWidth,
-    baseHeight:                   d.board.baseHeight,
-    levelSizeIncrement:           d.board.levelSizeIncrement,
-    levelTimeLimit:               d.board.levelTimeLimit,
-    tickIntervalMs:               d.board.tickIntervalMs,
+    baseWidth:                    defaultJson.board.baseWidth,
+    baseHeight:                   defaultJson.board.baseHeight,
+    levelSizeIncrement:           defaultJson.board.levelSizeIncrement,
+    levelTimeLimit:               defaultJson.board.levelTimeLimit,
+    tickIntervalMs:               defaultJson.board.tickIntervalMs,
 
-    visionSize:                   d.ai.visionSize,
-    obstacleSignalClose:          d.ai.obstacleSignalClose,
-    obstacleSignalDecay:          d.ai.obstacleSignalDecay,
-    rabbitSignalClose:            d.ai.rabbitSignalClose,
-    rabbitSignalDecay:            d.ai.rabbitSignalDecay,
-    rabbitSignalMin:              d.ai.rabbitSignalMin,
+    visionSize:                   defaultJson.ai.visionSize,
+    obstacleSignalClose:          defaultJson.ai.obstacleSignalClose,
+    obstacleSignalDecay:          defaultJson.ai.obstacleSignalDecay,
+    rabbitSignalClose:            defaultJson.ai.rabbitSignalClose,
+    rabbitSignalDecay:            defaultJson.ai.rabbitSignalDecay,
+    rabbitSignalMin:              defaultJson.ai.rabbitSignalMin,
 
-    colorBg:                      d.colors.bg,
-    colorGrid:                    d.colors.grid,
-    colorWall:                    d.colors.wall,
-    colorRabbit:                  d.colors.rabbit,
-    colorRabbitYoung:             d.colors.rabbitYoung,
-    colorRabbitOld:               d.colors.rabbitOld,
-    colorHeadStroke:              d.colors.headStroke,
-    snakeColors:                  [...d.colors.snakeColors],
+    colorBg:                      defaultJson.colors.bg,
+    colorGrid:                    defaultJson.colors.grid,
+    colorWall:                    defaultJson.colors.wall,
+    colorRabbit:                  defaultJson.colors.rabbit,
+    colorRabbitYoung:             defaultJson.colors.rabbitYoung,
+    colorRabbitOld:               defaultJson.colors.rabbitOld,
+    colorHeadStroke:              defaultJson.colors.headStroke,
+    snakeColors:                  [...defaultJson.colors.snakeColors],
 
-    levelOverrides:               { ...(d.levelOverrides as Record<string, LevelOverride>) },
+    levelOverrides:               { ...(defaultJson.levelOverrides as Record<string, LevelOverride>) },
   };
 }
 
@@ -143,34 +143,6 @@ export const gameSettings: GameSettings = createDefaultSettings();
 /** Reset all settings to defaults (from JSON). */
 export function resetSettings(): void {
   Object.assign(gameSettings, createDefaultSettings());
-}
-
-/* ====== localStorage persistence for dev settings ====== */
-
-const DEV_SETTINGS_KEY = 'snake-dev-settings';
-
-/** Save current gameSettings to localStorage. */
-export function saveSettingsToStorage(): void {
-  const data = settingsToJSON();
-  localStorage.setItem(DEV_SETTINGS_KEY, JSON.stringify(data));
-}
-
-/** Load settings from localStorage (if present). Returns true if loaded. */
-export function loadSettingsFromStorage(): boolean {
-  try {
-    const raw = localStorage.getItem(DEV_SETTINGS_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
-    applyJSONToSettings(data);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Clear dev settings from localStorage. */
-export function clearSettingsStorage(): void {
-  localStorage.removeItem(DEV_SETTINGS_KEY);
 }
 
 /* ====== JSON export/import helpers ====== */
@@ -239,63 +211,63 @@ export interface GameDefaultsJSON {
  * matching the format of gameDefaults.json — always ALL fields.
  */
 export function settingsToJSON(): GameDefaultsJSON {
-  const s = gameSettings;
+  const settings = gameSettings;
   return {
     snake: {
-      hungerThreshold: s.hungerThreshold,
-      minSnakeLength: s.minSnakeLength,
-      initialSnakeLength: s.initialSnakeLength,
+      hungerThreshold: settings.hungerThreshold,
+      minSnakeLength: settings.minSnakeLength,
+      initialSnakeLength: settings.initialSnakeLength,
     },
     rabbit: {
-      youngAge: s.rabbitYoungAge,
-      adultAge: s.rabbitAdultAge,
-      maxAge: s.rabbitMaxAge,
-      minDistance: s.rabbitMinDistance,
-      reproductionMinCooldown: s.reproductionMinCooldown,
-      reproductionProbabilityBase: s.reproductionProbabilityBase,
-      maxReproductions: s.maxReproductions,
-      neighborReproductionRadius: s.neighborReproductionRadius,
-      neighborReproductionPenalty: s.neighborReproductionPenalty,
-      maxReproductionNeighbors: s.maxReproductionNeighbors,
-      countPerSnakeCoeff: s.rabbitCountPerSnakeCoeff,
-      countBase: s.rabbitCountBase,
+      youngAge: settings.rabbitYoungAge,
+      adultAge: settings.rabbitAdultAge,
+      maxAge: settings.rabbitMaxAge,
+      minDistance: settings.rabbitMinDistance,
+      reproductionMinCooldown: settings.reproductionMinCooldown,
+      reproductionProbabilityBase: settings.reproductionProbabilityBase,
+      maxReproductions: settings.maxReproductions,
+      neighborReproductionRadius: settings.neighborReproductionRadius,
+      neighborReproductionPenalty: settings.neighborReproductionPenalty,
+      maxReproductionNeighbors: settings.maxReproductionNeighbors,
+      countPerSnakeCoeff: settings.rabbitCountPerSnakeCoeff,
+      countBase: settings.rabbitCountBase,
     },
     walls: {
-      clusterCoeff: s.wallClusterCoeff,
-      clusterBase: s.wallClusterBase,
-      lengthCoeff: s.wallLengthCoeff,
-      lengthBase: s.wallLengthBase,
+      clusterCoeff: settings.wallClusterCoeff,
+      clusterBase: settings.wallClusterBase,
+      lengthCoeff: settings.wallLengthCoeff,
+      lengthBase: settings.wallLengthBase,
     },
     scoring: {
-      targetScoreCoeff: s.targetScoreCoeff,
-      targetScoreBase: s.targetScoreBase,
+      targetScoreCoeff: settings.targetScoreCoeff,
+      targetScoreBase: settings.targetScoreBase,
     },
     board: {
-      baseWidth: s.baseWidth,
-      baseHeight: s.baseHeight,
-      levelSizeIncrement: s.levelSizeIncrement,
-      levelTimeLimit: s.levelTimeLimit,
-      tickIntervalMs: s.tickIntervalMs,
+      baseWidth: settings.baseWidth,
+      baseHeight: settings.baseHeight,
+      levelSizeIncrement: settings.levelSizeIncrement,
+      levelTimeLimit: settings.levelTimeLimit,
+      tickIntervalMs: settings.tickIntervalMs,
     },
     ai: {
-      visionSize: s.visionSize,
-      obstacleSignalClose: s.obstacleSignalClose,
-      obstacleSignalDecay: s.obstacleSignalDecay,
-      rabbitSignalClose: s.rabbitSignalClose,
-      rabbitSignalDecay: s.rabbitSignalDecay,
-      rabbitSignalMin: s.rabbitSignalMin,
+      visionSize: settings.visionSize,
+      obstacleSignalClose: settings.obstacleSignalClose,
+      obstacleSignalDecay: settings.obstacleSignalDecay,
+      rabbitSignalClose: settings.rabbitSignalClose,
+      rabbitSignalDecay: settings.rabbitSignalDecay,
+      rabbitSignalMin: settings.rabbitSignalMin,
     },
     colors: {
-      bg: s.colorBg,
-      grid: s.colorGrid,
-      wall: s.colorWall,
-      rabbit: s.colorRabbit,
-      rabbitYoung: s.colorRabbitYoung,
-      rabbitOld: s.colorRabbitOld,
-      headStroke: s.colorHeadStroke,
-      snakeColors: [...s.snakeColors],
+      bg: settings.colorBg,
+      grid: settings.colorGrid,
+      wall: settings.colorWall,
+      rabbit: settings.colorRabbit,
+      rabbitYoung: settings.colorRabbitYoung,
+      rabbitOld: settings.colorRabbitOld,
+      headStroke: settings.colorHeadStroke,
+      snakeColors: [...settings.snakeColors],
     },
-    levelOverrides: { ...s.levelOverrides },
+    levelOverrides: { ...settings.levelOverrides },
   };
 }
 
@@ -304,71 +276,73 @@ export function settingsToJSON(): GameDefaultsJSON {
  * Handles partial data gracefully — only overwrites fields that exist in the input.
  */
 export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
-  const s = gameSettings;
+  const settings = gameSettings;
   if (data.snake) {
-    if (data.snake.hungerThreshold != null)    s.hungerThreshold = data.snake.hungerThreshold;
-    if (data.snake.minSnakeLength != null)     s.minSnakeLength = data.snake.minSnakeLength;
-    if (data.snake.initialSnakeLength != null)  s.initialSnakeLength = data.snake.initialSnakeLength;
+    if (data.snake.hungerThreshold != null)    settings.hungerThreshold = data.snake.hungerThreshold;
+    if (data.snake.minSnakeLength != null)     settings.minSnakeLength = data.snake.minSnakeLength;
+    if (data.snake.initialSnakeLength != null)  settings.initialSnakeLength = data.snake.initialSnakeLength;
   }
   if (data.rabbit) {
-    if (data.rabbit.youngAge != null)                    s.rabbitYoungAge = data.rabbit.youngAge;
-    if (data.rabbit.adultAge != null)                    s.rabbitAdultAge = data.rabbit.adultAge;
-    if (data.rabbit.maxAge != null)                      s.rabbitMaxAge = data.rabbit.maxAge;
-    if (data.rabbit.minDistance != null)                  s.rabbitMinDistance = data.rabbit.minDistance;
-    if (data.rabbit.reproductionMinCooldown != null)     s.reproductionMinCooldown = data.rabbit.reproductionMinCooldown;
-    if (data.rabbit.reproductionProbabilityBase != null)  s.reproductionProbabilityBase = data.rabbit.reproductionProbabilityBase;
-    if (data.rabbit.maxReproductions != null)             s.maxReproductions = data.rabbit.maxReproductions;
-    if (data.rabbit.neighborReproductionRadius != null)   s.neighborReproductionRadius = data.rabbit.neighborReproductionRadius;
-    if (data.rabbit.neighborReproductionPenalty != null)   s.neighborReproductionPenalty = data.rabbit.neighborReproductionPenalty;
-    if (data.rabbit.maxReproductionNeighbors != null)     s.maxReproductionNeighbors = data.rabbit.maxReproductionNeighbors;
-    if (data.rabbit.countPerSnakeCoeff != null)           s.rabbitCountPerSnakeCoeff = data.rabbit.countPerSnakeCoeff;
-    if (data.rabbit.countBase != null)                    s.rabbitCountBase = data.rabbit.countBase;
+    if (data.rabbit.youngAge != null)                    settings.rabbitYoungAge = data.rabbit.youngAge;
+    if (data.rabbit.adultAge != null)                    settings.rabbitAdultAge = data.rabbit.adultAge;
+    if (data.rabbit.maxAge != null)                      settings.rabbitMaxAge = data.rabbit.maxAge;
+    if (data.rabbit.minDistance != null)                  settings.rabbitMinDistance = data.rabbit.minDistance;
+    if (data.rabbit.reproductionMinCooldown != null)     settings.reproductionMinCooldown = data.rabbit.reproductionMinCooldown;
+    if (data.rabbit.reproductionProbabilityBase != null)  settings.reproductionProbabilityBase = data.rabbit.reproductionProbabilityBase;
+    if (data.rabbit.maxReproductions != null)             settings.maxReproductions = data.rabbit.maxReproductions;
+    if (data.rabbit.neighborReproductionRadius != null)   settings.neighborReproductionRadius = data.rabbit.neighborReproductionRadius;
+    if (data.rabbit.neighborReproductionPenalty != null)   settings.neighborReproductionPenalty = data.rabbit.neighborReproductionPenalty;
+    if (data.rabbit.maxReproductionNeighbors != null)     settings.maxReproductionNeighbors = data.rabbit.maxReproductionNeighbors;
+    if (data.rabbit.countPerSnakeCoeff != null)           settings.rabbitCountPerSnakeCoeff = data.rabbit.countPerSnakeCoeff;
+    if (data.rabbit.countBase != null)                    settings.rabbitCountBase = data.rabbit.countBase;
   }
   if (data.walls) {
-    if (data.walls.clusterCoeff != null)  s.wallClusterCoeff = data.walls.clusterCoeff;
-    if (data.walls.clusterBase != null)   s.wallClusterBase = data.walls.clusterBase;
-    if (data.walls.lengthCoeff != null)   s.wallLengthCoeff = data.walls.lengthCoeff;
-    if (data.walls.lengthBase != null)    s.wallLengthBase = data.walls.lengthBase;
+    if (data.walls.clusterCoeff != null)  settings.wallClusterCoeff = data.walls.clusterCoeff;
+    if (data.walls.clusterBase != null)   settings.wallClusterBase = data.walls.clusterBase;
+    if (data.walls.lengthCoeff != null)   settings.wallLengthCoeff = data.walls.lengthCoeff;
+    if (data.walls.lengthBase != null)    settings.wallLengthBase = data.walls.lengthBase;
   }
   if (data.scoring) {
-    if (data.scoring.targetScoreCoeff != null)  s.targetScoreCoeff = data.scoring.targetScoreCoeff;
-    if (data.scoring.targetScoreBase != null)   s.targetScoreBase = data.scoring.targetScoreBase;
+    if (data.scoring.targetScoreCoeff != null)  settings.targetScoreCoeff = data.scoring.targetScoreCoeff;
+    if (data.scoring.targetScoreBase != null)   settings.targetScoreBase = data.scoring.targetScoreBase;
   }
   if (data.board) {
-    if (data.board.baseWidth != null)          s.baseWidth = data.board.baseWidth;
-    if (data.board.baseHeight != null)         s.baseHeight = data.board.baseHeight;
-    if (data.board.levelSizeIncrement != null)  s.levelSizeIncrement = data.board.levelSizeIncrement;
-    if (data.board.levelTimeLimit != null)      s.levelTimeLimit = data.board.levelTimeLimit;
-    if (data.board.tickIntervalMs != null)      s.tickIntervalMs = data.board.tickIntervalMs;
+    if (data.board.baseWidth != null)          settings.baseWidth = data.board.baseWidth;
+    if (data.board.baseHeight != null)         settings.baseHeight = data.board.baseHeight;
+    if (data.board.levelSizeIncrement != null)  settings.levelSizeIncrement = data.board.levelSizeIncrement;
+    if (data.board.levelTimeLimit != null)      settings.levelTimeLimit = data.board.levelTimeLimit;
+    if (data.board.tickIntervalMs != null)      settings.tickIntervalMs = data.board.tickIntervalMs;
   }
   if (data.ai) {
-    if (data.ai.visionSize != null)           s.visionSize = data.ai.visionSize;
-    if (data.ai.obstacleSignalClose != null)  s.obstacleSignalClose = data.ai.obstacleSignalClose;
-    if (data.ai.obstacleSignalDecay != null)  s.obstacleSignalDecay = data.ai.obstacleSignalDecay;
-    if (data.ai.rabbitSignalClose != null)    s.rabbitSignalClose = data.ai.rabbitSignalClose;
-    if (data.ai.rabbitSignalDecay != null)    s.rabbitSignalDecay = data.ai.rabbitSignalDecay;
-    if (data.ai.rabbitSignalMin != null)      s.rabbitSignalMin = data.ai.rabbitSignalMin;
+    if (data.ai.visionSize != null)           settings.visionSize = data.ai.visionSize;
+    if (data.ai.obstacleSignalClose != null)  settings.obstacleSignalClose = data.ai.obstacleSignalClose;
+    if (data.ai.obstacleSignalDecay != null)  settings.obstacleSignalDecay = data.ai.obstacleSignalDecay;
+    if (data.ai.rabbitSignalClose != null)    settings.rabbitSignalClose = data.ai.rabbitSignalClose;
+    if (data.ai.rabbitSignalDecay != null)    settings.rabbitSignalDecay = data.ai.rabbitSignalDecay;
+    if (data.ai.rabbitSignalMin != null)      settings.rabbitSignalMin = data.ai.rabbitSignalMin;
   }
   if (data.colors) {
-    if (data.colors.bg != null)          s.colorBg = data.colors.bg;
-    if (data.colors.grid != null)        s.colorGrid = data.colors.grid;
-    if (data.colors.wall != null)        s.colorWall = data.colors.wall;
-    if (data.colors.rabbit != null)      s.colorRabbit = data.colors.rabbit;
-    if (data.colors.rabbitYoung != null)  s.colorRabbitYoung = data.colors.rabbitYoung;
-    if (data.colors.rabbitOld != null)   s.colorRabbitOld = data.colors.rabbitOld;
-    if (data.colors.headStroke != null)  s.colorHeadStroke = data.colors.headStroke;
-    if (data.colors.snakeColors)         s.snakeColors = [...data.colors.snakeColors];
+    if (data.colors.bg != null)          settings.colorBg = data.colors.bg;
+    if (data.colors.grid != null)        settings.colorGrid = data.colors.grid;
+    if (data.colors.wall != null)        settings.colorWall = data.colors.wall;
+    if (data.colors.rabbit != null)      settings.colorRabbit = data.colors.rabbit;
+    if (data.colors.rabbitYoung != null)  settings.colorRabbitYoung = data.colors.rabbitYoung;
+    if (data.colors.rabbitOld != null)   settings.colorRabbitOld = data.colors.rabbitOld;
+    if (data.colors.headStroke != null)  settings.colorHeadStroke = data.colors.headStroke;
+    if (data.colors.snakeColors)         settings.snakeColors = [...data.colors.snakeColors];
   }
   if (data.levelOverrides) {
-    s.levelOverrides = { ...data.levelOverrides };
+    settings.levelOverrides = { ...data.levelOverrides };
   }
 }
 
 /**
  * Get the level override for a specific level, or empty defaults.
+ * If settings is provided, reads from it; otherwise falls back to the singleton.
  */
-export function getLevelOverride(level: number): LevelOverride {
-  return gameSettings.levelOverrides[String(level)] || {};
+export function getLevelOverride(level: number, settings?: GameSettings): LevelOverride {
+  const settingsSource = settings ?? gameSettings;
+  return settingsSource.levelOverrides[String(level)] || {};
 }
 
 /**

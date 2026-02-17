@@ -1,18 +1,19 @@
 import { GameState, Snake } from '../types';
-import { getCumulativeTargetScore } from '../game';
+import { EngineContext } from '../context';
+import { getCumulativeTargetScore } from '../formulas';
 
 /**
  * Check if the current level is complete.
  * Single player: cumulative target score reached or snake dead.
  * Multiplayer: 1 snake left OR time expired.
  */
-export function checkLevelComplete(state: GameState): boolean {
-  const aliveSnakes = state.snakes.filter(s => s.alive);
+export function checkLevelComplete(state: GameState, ctx: EngineContext): boolean {
+  const aliveSnakes = state.snakes.filter(snake => snake.alive);
   const totalSnakes = state.snakes.length;
 
   if (totalSnakes === 1) {
     // Single-player: check cumulative target score
-    const target = getCumulativeTargetScore(state.level);
+    const target = getCumulativeTargetScore(state.level, ctx.settings);
     const snake = state.snakes[0];
     if (snake.score >= target) {
       return true;
@@ -42,7 +43,7 @@ export function checkLevelComplete(state: GameState): boolean {
  * Returns the winner snake id, or null for draw/no winner.
  */
 export function getLevelWinner(state: GameState): number | null {
-  const aliveSnakes = state.snakes.filter(s => s.alive);
+  const aliveSnakes = state.snakes.filter(snake => snake.alive);
 
   if (aliveSnakes.length === 1) {
     return aliveSnakes[0].id;

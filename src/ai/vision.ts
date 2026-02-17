@@ -1,5 +1,5 @@
 import { Direction, Position, GameState } from '../engine/types';
-import { gameSettings } from '../engine/settings';
+import { GameSettings } from '../engine/settings';
 import { inBounds } from '../engine/board';
 
 /**
@@ -10,53 +10,54 @@ export function generateVision(
   headPos: Position,
   direction: Direction,
   state: GameState,
-  size: number = gameSettings.visionSize
+  settings: GameSettings,
+  size: number = settings.visionSize
 ): number[][] {
   const half = Math.floor(size / 2);
   const vision: number[][] = [];
 
-  for (let vy = 0; vy < size; vy++) {
+  for (let visionY = 0; visionY < size; visionY++) {
     vision.push(new Array(size).fill(0));
   }
 
   // Map vision coordinates to world coordinates based on direction
-  for (let vy = 0; vy < size; vy++) {
-    for (let vx = 0; vx < size; vx++) {
+  for (let visionY = 0; visionY < size; visionY++) {
+    for (let visionX = 0; visionX < size; visionX++) {
       // Vision-relative offset (center is head)
-      const relX = vx - half;
-      const relY = vy - half;
+      const relX = visionX - half;
+      const relY = visionY - half;
 
       // Rotate to world coordinates based on heading
       const worldPos = rotateToWorld(relX, relY, direction, headPos);
 
       // Calculate signals
       let signal = 0;
-      const dist = Math.max(Math.abs(relX), Math.abs(relY));
+      const distance = Math.max(Math.abs(relX), Math.abs(relY));
 
       if (!inBounds(worldPos, state.width, state.height)) {
         // Out of bounds = wall
-        signal += getObstacleSignal(dist);
+        signal += getObstacleSignal(distance, settings);
       } else {
         // Check walls
-        if (state.walls.some(w => w.x === worldPos.x && w.y === worldPos.y)) {
-          signal += getObstacleSignal(dist);
+        if (state.walls.some(wall => wall.x === worldPos.x && wall.y === worldPos.y)) {
+          signal += getObstacleSignal(distance, settings);
         }
 
         // Check snake bodies
         for (const snake of state.snakes) {
           if (!snake.alive) continue;
-          if (snake.segments.some(s => s.x === worldPos.x && s.y === worldPos.y)) {
-            signal += getObstacleSignal(dist);
+          if (snake.segments.some(segment => segment.x === worldPos.x && segment.y === worldPos.y)) {
+            signal += getObstacleSignal(distance, settings);
           }
         }
 
         // Check rabbits
-        if (state.rabbits.some(r => r.pos.x === worldPos.x && r.pos.y === worldPos.y)) {
-          signal += getRabbitSignal(dist);
+        if (state.rabbits.some(rabbit => rabbit.pos.x === worldPos.x && rabbit.pos.y === worldPos.y)) {
+          signal += getRabbitSignal(distance, settings);
         }
       }
 
-      vision[vy][vx] = signal;
+      vision[visionY][visionX] = signal;
     }
   }
 
@@ -84,16 +85,16 @@ export function rotateToWorld(
   }
 }
 
-function getObstacleSignal(dist: number): number {
-  if (dist <= 0) return gameSettings.obstacleSignalClose;
-  const signal = gameSettings.obstacleSignalClose + gameSettings.obstacleSignalDecay * dist;
+function getObstacleSignal(dist: number, settings: GameSettings): number {
+  if (dist <= 0) return settings.obstacleSignalClose;
+  const signal = settings.obstacleSignalClose + settings.obstacleSignalDecay * dist;
   return Math.min(signal, -5); // cap at -5
 }
 
-function getRabbitSignal(dist: number): number {
-  if (dist <= 0) return gameSettings.rabbitSignalClose;
-  const signal = gameSettings.rabbitSignalClose - gameSettings.rabbitSignalDecay * dist;
-  return Math.max(signal, gameSettings.rabbitSignalMin);
+function getRabbitSignal(dist: number, settings: GameSettings): number {
+  if (dist <= 0) return settings.rabbitSignalClose;
+  const signal = settings.rabbitSignalClose - settings.rabbitSignalDecay * dist;
+  return Math.max(signal, settings.rabbitSignalMin);
 }
 
 /**
@@ -104,10 +105,10 @@ export function rotateMatrix90CW<T>(matrix: T[][]): T[][] {
   const cols = matrix[0].length;
   const result: T[][] = [];
 
-  for (let c = 0; c < cols; c++) {
+  for (let colIndex = 0; colIndex < cols; colIndex++) {
     const newRow: T[] = [];
-    for (let r = rows - 1; r >= 0; r--) {
-      newRow.push(matrix[r][c]);
+    for (let rowIndex = rows - 1; rowIndex >= 0; rowIndex--) {
+      newRow.push(matrix[rowIndex][colIndex]);
     }
     result.push(newRow);
   }

@@ -6,7 +6,7 @@ import { inBounds } from './board';
  */
 export function collidesWithWall(pos: Position, state: GameState): boolean {
   if (!inBounds(pos, state.width, state.height)) return true; // out of bounds = wall
-  return state.walls.some(w => w.x === pos.x && w.y === pos.y);
+  return state.walls.some(wall => wall.x === pos.x && wall.y === pos.y);
 }
 
 /**

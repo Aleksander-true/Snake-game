@@ -1,6 +1,6 @@
-import { Position, GameState } from '../types';
-import { inBounds, createEmptyBoard } from '../board';
-import { gameSettings } from '../settings';
+import { Position } from '../types';
+import { EngineContext } from '../context';
+import { RandomPort } from '../ports';
 
 /**
  * Generate wall clusters via random walk with branching.
@@ -15,12 +15,13 @@ export function generateWalls(
   clusterCount: number,
   wallLength: number,
   exclusionZones: Position[] = [],
+  ctx: EngineContext,
   maxAttempts: number = 50
 ): Position[] {
-  const safeRadius = Math.ceil(1.5 * gameSettings.initialSnakeLength);
+  const safeRadius = Math.ceil(1.5 * ctx.settings.initialSnakeLength);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const walls = generateWallClusters(width, height, clusterCount, wallLength, exclusionZones, safeRadius);
+    const walls = generateWallClusters(width, height, clusterCount, wallLength, exclusionZones, safeRadius, ctx.rng);
     if (validateWalls(walls, width, height)) {
       return walls;
     }
@@ -31,8 +32,8 @@ export function generateWalls(
 
 /** Check whether a position is inside any exclusion zone (Chebyshev distance). */
 function insideExclusionZone(pos: Position, zones: Position[], radius: number): boolean {
-  for (const z of zones) {
-    if (Math.max(Math.abs(pos.x - z.x), Math.abs(pos.y - z.y)) <= radius) {
+  for (const zoneCenter of zones) {
+    if (Math.max(Math.abs(pos.x - zoneCenter.x), Math.abs(pos.y - zoneCenter.y)) <= radius) {
       return true;
     }
   }
@@ -46,30 +47,31 @@ function generateWallClusters(
   wallLength: number,
   exclusionZones: Position[],
   safeRadius: number,
+  randomPort: RandomPort,
 ): Position[] {
   const walls: Position[] = [];
   const wallSet = new Set<string>();
 
-  const addWall = (pos: Position): boolean => {
-    const key = `${pos.x},${pos.y}`;
-    if (wallSet.has(key)) return false;
-    if (pos.x <= 0 || pos.x >= width - 1 || pos.y <= 0 || pos.y >= height - 1) return false;
-    if (insideExclusionZone(pos, exclusionZones, safeRadius)) return false;
-    walls.push(pos);
-    wallSet.add(key);
+  const addWall = (position: Position): boolean => {
+    const positionKey = `${position.x},${position.y}`;
+    if (wallSet.has(positionKey)) return false;
+    if (position.x <= 0 || position.x >= width - 1 || position.y <= 0 || position.y >= height - 1) return false;
+    if (insideExclusionZone(position, exclusionZones, safeRadius)) return false;
+    walls.push(position);
+    wallSet.add(positionKey);
     return true;
   };
 
-  for (let c = 0; c < clusterCount; c++) {
+  for (let clusterIndex = 0; clusterIndex < clusterCount; clusterIndex++) {
     // Random starting position (not on edges)
-    const startX = 2 + Math.floor(Math.random() * (width - 4));
-    const startY = 2 + Math.floor(Math.random() * (height - 4));
+    const startX = 2 + randomPort.nextInt(width - 4);
+    const startY = 2 + randomPort.nextInt(height - 4);
     let current: Position = { x: startX, y: startY };
 
     // If start falls in exclusion zone, skip this cluster
     if (!addWall(current)) continue;
 
-    for (let i = 1; i < wallLength; i++) {
+    for (let wallSegmentIndex = 1; wallSegmentIndex < wallLength; wallSegmentIndex++) {
       const dirs: Position[] = [
         { x: current.x + 1, y: current.y },
         { x: current.x - 1, y: current.y },
@@ -78,24 +80,24 @@ function generateWallClusters(
       ];
 
       // Filter valid directions (inside board AND outside exclusion zones)
-      const validDirs = dirs.filter(d =>
-        d.x > 0 && d.x < width - 1 && d.y > 0 && d.y < height - 1
-        && !insideExclusionZone(d, exclusionZones, safeRadius)
+      const validDirections = dirs.filter(directionCandidate =>
+        directionCandidate.x > 0 && directionCandidate.x < width - 1 && directionCandidate.y > 0 && directionCandidate.y < height - 1
+        && !insideExclusionZone(directionCandidate, exclusionZones, safeRadius)
       );
 
-      if (validDirs.length === 0) break;
+      if (validDirections.length === 0) break;
 
       // Random walk with occasional branching
-      const next = validDirs[Math.floor(Math.random() * validDirs.length)];
-      addWall(next);
+      const nextPosition = validDirections[randomPort.nextInt(validDirections.length)];
+      addWall(nextPosition);
 
       // Branch with 30% probability
-      if (Math.random() < 0.3 && i < wallLength - 1) {
-        const branchDir = validDirs[Math.floor(Math.random() * validDirs.length)];
-        addWall(branchDir);
+      if (randomPort.next() < 0.3 && wallSegmentIndex < wallLength - 1) {
+        const branchPosition = validDirections[randomPort.nextInt(validDirections.length)];
+        addWall(branchPosition);
       }
 
-      current = next;
+      current = nextPosition;
     }
   }
 
@@ -106,14 +108,14 @@ function generateWallClusters(
  * Validate walls using BFS — all free cells must be reachable from any free cell.
  */
 export function validateWalls(walls: Position[], width: number, height: number): boolean {
-  const wallSet = new Set<string>(walls.map(w => `${w.x},${w.y}`));
+  const wallSet = new Set<string>(walls.map(wall => `${wall.x},${wall.y}`));
 
   // Find first free cell
   let start: Position | null = null;
-  for (let y = 0; y < height && !start; y++) {
-    for (let x = 0; x < width && !start; x++) {
-      if (!wallSet.has(`${x},${y}`)) {
-        start = { x, y };
+  for (let rowIndex = 0; rowIndex < height && !start; rowIndex++) {
+    for (let colIndex = 0; colIndex < width && !start; colIndex++) {
+      if (!wallSet.has(`${colIndex},${rowIndex}`)) {
+        start = { x: colIndex, y: rowIndex };
       }
     }
   }
@@ -134,12 +136,12 @@ export function validateWalls(walls: Position[], width: number, height: number):
       { x: current.x, y: current.y - 1 },
     ];
 
-    for (const n of neighbors) {
-      const key = `${n.x},${n.y}`;
-      if (n.x >= 0 && n.x < width && n.y >= 0 && n.y < height &&
-          !wallSet.has(key) && !visited.has(key)) {
-        visited.add(key);
-        queue.push(n);
+    for (const neighbor of neighbors) {
+      const neighborKey = `${neighbor.x},${neighbor.y}`;
+      if (neighbor.x >= 0 && neighbor.x < width && neighbor.y >= 0 && neighbor.y < height &&
+          !wallSet.has(neighborKey) && !visited.has(neighborKey)) {
+        visited.add(neighborKey);
+        queue.push(neighbor);
       }
     }
   }

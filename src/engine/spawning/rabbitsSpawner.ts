@@ -1,6 +1,7 @@
 import { Position, Rabbit, GameState } from '../types';
-import { inBounds } from '../board';
+import { EngineContext } from '../context';
 import { chebyshevDistance } from '../systems/rabbitsReproductionSystem';
+import { RabbitEntity } from '../entities/RabbitEntity';
 
 /**
  * Spawn initial rabbits for a level.
@@ -8,8 +9,10 @@ import { chebyshevDistance } from '../systems/rabbitsReproductionSystem';
  */
 export function spawnRabbits(
   count: number,
-  state: GameState
+  state: GameState,
+  ctx: EngineContext
 ): Rabbit[] {
+  const randomPort = ctx.rng;
   const rabbits: Rabbit[] = [];
   const occupiedSet = new Set<string>();
 
@@ -30,27 +33,22 @@ export function spawnRabbits(
 
   while (rabbits.length < count && attempts < maxAttempts) {
     attempts++;
-    const pos: Position = {
-      x: Math.floor(Math.random() * state.width),
-      y: Math.floor(Math.random() * state.height),
+    const candidatePosition: Position = {
+      x: randomPort.nextInt(state.width),
+      y: randomPort.nextInt(state.height),
     };
 
-    const key = `${pos.x},${pos.y}`;
-    if (occupiedSet.has(key)) continue;
+    const positionKey = `${candidatePosition.x},${candidatePosition.y}`;
+    if (occupiedSet.has(positionKey)) continue;
 
     // Check Chebyshev distance > 1 from all existing rabbits
-    const tooClose = rabbits.some(r => chebyshevDistance(pos, r.pos) <= 1);
+    const tooClose = rabbits.some(rabbit => chebyshevDistance(candidatePosition, rabbit.pos) <= 1);
     if (tooClose) continue;
 
-    const rabbit: Rabbit = {
-      pos,
-      age: 0,
-      clockNum: 0,
-      reproductionCount: 0,
-    };
+    const rabbit = RabbitEntity.newborn(candidatePosition);
 
     rabbits.push(rabbit);
-    occupiedSet.add(key);
+    occupiedSet.add(positionKey);
   }
 
   return rabbits;

@@ -1,5 +1,6 @@
-import { GameState, Snake } from '../../engine/types';
-import { getCumulativeTargetScore } from '../../engine/game';
+import { GameState, Snake } from '../../../engine/types';
+import { GameSettings } from '../../../engine/settings';
+import { getCumulativeTargetScore } from '../../../engine/formulas';
 
 /* ================================================================
  *  Shared overlay helpers
@@ -63,12 +64,13 @@ export function showPauseModal(onResume: () => void): void {
 export function showLevelCompleteModal(
   state: GameState,
   onContinue: () => void,
+  settings: GameSettings,
 ): void {
   const overlay = createOverlay();
 
-  const target = getCumulativeTargetScore(state.level);
+  const target = getCumulativeTargetScore(state.level, settings);
 
-  const snakeRows = state.snakes.map(s => snakeResultRow(s)).join('');
+  const snakeRows = state.snakes.map(snake => snakeResultRow(snake)).join('');
 
   overlay.innerHTML = `
     <div class="modal-box modal-box--wide">
@@ -107,7 +109,7 @@ export function showGameOverModal(
 ): void {
   const overlay = createOverlay();
 
-  const snakeRows = state.snakes.map(s => snakeResultRow(s)).join('');
+  const snakeRows = state.snakes.map(snake => snakeResultRow(snake)).join('');
 
   overlay.innerHTML = `
     <div class="modal-box modal-box--wide">

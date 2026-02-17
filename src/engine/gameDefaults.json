@@ -17,7 +17,7 @@
     "neighborReproductionPenalty": 0.25,
     "maxReproductionNeighbors": 4,
     "countPerSnakeCoeff": 1.5,
-    "countBase": 10
+    "countBase": 5
   },
 
   "walls": {

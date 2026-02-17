@@ -1,5 +1,5 @@
-import { GameState } from '../../engine/types';
-import { getScores } from '../../storage/scoreStorage';
+import { GameState } from '../../../engine/types';
+import { getScores } from '../../../storage/scoreStorage';
 
 /**
  * Render the results screen.
@@ -59,14 +59,14 @@ export function renderResults(
         <tbody>
     `;
 
-    for (let i = 0; i < Math.min(scores.length, 10); i++) {
-      const s = scores[i];
+    for (let rankIndex = 0; rankIndex < Math.min(scores.length, 10); rankIndex++) {
+      const scoreRecord = scores[rankIndex];
       html += `
         <tr>
-          <td>${i + 1}</td>
-          <td>${s.playerName}</td>
-          <td>${s.score}</td>
-          <td>${s.date}</td>
+          <td>${rankIndex + 1}</td>
+          <td>${scoreRecord.playerName}</td>
+          <td>${scoreRecord.score}</td>
+          <td>${scoreRecord.date}</td>
         </tr>
       `;
     }

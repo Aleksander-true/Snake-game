@@ -1,7 +1,6 @@
-import { BotDecision, BotInput, Snake, GameState, Direction, Position } from '../engine/types';
+import { BotDecision, BotInput, GameState, Direction } from '../engine/types';
+import { GameSettings } from '../engine/settings';
 import { generateVision } from './vision';
-import { getNextHeadPosition } from '../engine/systems/movementSystem';
-import { collidesWithWall, collidesWithSnake } from '../engine/collision';
 
 /**
  * Main bot decision function.
@@ -24,10 +23,10 @@ export function botDecide(input: BotInput): BotDecision {
   let best: BotDecision = 'front';
   let bestScore = -Infinity;
 
-  for (const d of decisions) {
-    if (scores[d] > bestScore) {
-      bestScore = scores[d];
-      best = d;
+  for (const decisionOption of decisions) {
+    if (scores[decisionOption] > bestScore) {
+      bestScore = scores[decisionOption];
+      best = decisionOption;
     }
   }
 
@@ -52,4 +51,29 @@ export function getBotDirection(current: Direction, decision: BotDecision): Dire
     right: { front: 'right', left: 'up', right: 'down' },
   };
   return turnMap[current][decision];
+}
+
+/**
+ * Process all bot snakes: generate vision, decide, and return the directions.
+ * Does NOT mutate state — returns a map of snakeId → Direction.
+ */
+export function processBots(state: GameState, settings: GameSettings): Map<number, Direction> {
+  const result = new Map<number, Direction>();
+
+  for (const snake of state.snakes) {
+    if (!snake.isBot || !snake.alive) continue;
+
+    const vision = generateVision(snake.segments[0], snake.direction, state, settings);
+    const input: BotInput = {
+      vision,
+      snakeLength: snake.segments.length,
+      ticksWithoutFood: snake.ticksWithoutFood,
+    };
+
+    const decision = botDecide(input);
+    const newDir = getBotDirection(snake.direction, decision);
+    result.set(snake.id, newDir);
+  }
+
+  return result;
 }
