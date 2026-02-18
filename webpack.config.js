@@ -5,6 +5,7 @@ const webpack = require('webpack');
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
   const isDevMode = !!(env && env.devmode);
+  const publicPath = env && env.publicPath ? env.publicPath : '/';
 
   return {
     entry: './src/index.ts',
@@ -12,6 +13,7 @@ module.exports = (env, argv) => {
       filename: isProduction ? 'bundle.[contenthash].js' : 'bundle.js',
       path: path.resolve(__dirname, 'dist'),
       clean: true,
+      publicPath,
     },
     resolve: {
       extensions: ['.ts', '.js'],

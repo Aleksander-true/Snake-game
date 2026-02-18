@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+branch_name="$(git rev-parse --abbrev-ref HEAD)"
+
+case "$branch_name" in
+  release*)
+    echo "Release branch detected ($branch_name). Running lint and tests..."
+    npm run lint
+    npm test
+    ;;
+  *)
+    echo "Skipping release checks on branch: $branch_name"
+    ;;
+esac
