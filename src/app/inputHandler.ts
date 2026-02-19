@@ -34,10 +34,30 @@ export class InputHandler {
   private pendingDirections: (Direction | null)[] = [null, null];
   private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
   private pauseCallback: (() => void) | null = null;
+  private escapeCallback: (() => void) | null = null;
+  private confirmCallback: (() => void) | null = null;
+  private playerCount = 1;
 
   /** Register a callback to be called when Space is pressed. */
   onPause(callback: () => void): void {
     this.pauseCallback = callback;
+  }
+
+  onEscape(callback: () => void): void {
+    this.escapeCallback = callback;
+  }
+
+  onConfirm(callback: () => void): void {
+    this.confirmCallback = callback;
+  }
+
+  setPlayerCount(playerCount: number): void {
+    this.playerCount = Math.max(0, Math.min(2, playerCount));
+  }
+
+  queueDirection(playerIndex: number, direction: Direction): void {
+    if (playerIndex < 0 || playerIndex > 1) return;
+    this.pendingDirections[playerIndex] = direction;
   }
 
   start(): void {
@@ -50,16 +70,30 @@ export class InputHandler {
         if (this.pauseCallback) this.pauseCallback();
         return;
       }
+      if (event.code === 'Escape') {
+        event.preventDefault();
+        if (this.escapeCallback) this.escapeCallback();
+        return;
+      }
+      if (event.code === 'Enter' || event.code === 'NumpadEnter') {
+        event.preventDefault();
+        if (this.confirmCallback) this.confirmCallback();
+        return;
+      }
 
       // Player 1
       if (PLAYER1_KEYS[event.code]) {
         event.preventDefault();
         this.pendingDirections[0] = PLAYER1_KEYS[event.code];
       }
-      // Player 2
+      // Player 2 (in single-player arrow keys also control player 1)
       if (PLAYER2_KEYS[event.code]) {
         event.preventDefault();
-        this.pendingDirections[1] = PLAYER2_KEYS[event.code];
+        if (this.playerCount === 1) {
+          this.pendingDirections[0] = PLAYER2_KEYS[event.code];
+        } else {
+          this.pendingDirections[1] = PLAYER2_KEYS[event.code];
+        }
       }
     };
 
@@ -72,6 +106,8 @@ export class InputHandler {
       this.keydownHandler = null;
     }
     this.pauseCallback = null;
+    this.escapeCallback = null;
+    this.confirmCallback = null;
     this.pendingDirections = [null, null];
   }
 

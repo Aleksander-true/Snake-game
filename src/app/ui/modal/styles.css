@@ -70,6 +70,16 @@
   margin-top: 20px;
 }
 
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-actions .modal-btn {
+  margin-top: 16px;
+}
+
 .modal-table {
   width: 100%;
   border-collapse: collapse;

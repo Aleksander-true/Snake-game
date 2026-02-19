@@ -31,6 +31,7 @@ export class SnakeGameApplication {
   private currentConfig: GameConfig | null = null;
   private devModeActive = false;
   private gameController: GameController | null = null;
+  private globalKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor(private readonly appRoot: HTMLElement) {
     this.gameLayoutBuilder = new GameLayoutBuilder(appRoot);
@@ -39,8 +40,21 @@ export class SnakeGameApplication {
   }
 
   init(): void {
+    this.bindGlobalKeyboardShortcuts();
     this.router.onScreenChange((screen, data) => this.handleScreenChange(screen, data));
     this.showMenu();
+  }
+
+  private bindGlobalKeyboardShortcuts(): void {
+    if (this.globalKeydownHandler) return;
+    this.globalKeydownHandler = (event: KeyboardEvent) => {
+      // Escape on results screen always returns to main menu.
+      if (event.code === 'Escape' && this.router.getCurrentScreen() === 'results') {
+        event.preventDefault();
+        this.router.navigate('menu');
+      }
+    };
+    document.addEventListener('keydown', this.globalKeydownHandler);
   }
 
   private handleScreenChange(screen: 'menu' | 'game' | 'results', data?: unknown): void {

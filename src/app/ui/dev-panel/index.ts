@@ -2,6 +2,7 @@ import {
   gameSettings, GameSettings, LevelOverride,
   resetSettings,
   settingsToJSON, getLevelOverride, setLevelOverride,
+  getLevelSettingsOverride, setLevelSettingOverride, clearLevelSettingOverride,
 } from '../../../engine/settings';
 import {
   saveSettingsToStorage, loadSettingsFromStorage, clearSettingsStorage,
@@ -35,6 +36,16 @@ function buildRow(label: string, input: string): string {
     </div>`;
 }
 
+function buildScopeCheckbox(key: string, checked: boolean): string {
+  const checkedAttr = checked ? 'checked' : '';
+  return `
+    <label class="dev-scope-label">
+      <input type="checkbox" id="dev-scope-${key}" ${checkedAttr}>
+      <span>Для всех уровней</span>
+    </label>
+  `;
+}
+
 /** Number input. */
 function buildNumberInput(id: string, value: number | string, step = 1, min?: number): string {
   const minAttr = min != null ? ` min="${min}"` : '';
@@ -47,13 +58,42 @@ function buildColorInput(id: string, value: string): string {
 }
 
 /** Shortcut: row with a number from gameSettings. */
-function settingsRow(key: keyof GameSettings, label: string, step = 1): string {
-  return buildRow(label, buildNumberInput(`dev-${key}`, gameSettings[key] as number, step));
+function getLevelAwareValue(key: keyof GameSettings, currentLevel: number): number | string {
+  const levelOverride = getLevelSettingsOverride(currentLevel);
+  if (levelOverride[key as string] != null) {
+    return levelOverride[key as string];
+  }
+  return gameSettings[key] as number | string;
+}
+
+function buildScopedRow(
+  key: keyof GameSettings,
+  label: string,
+  input: string,
+  currentLevel: number
+): string {
+  const levelOverride = getLevelSettingsOverride(currentLevel);
+  const isGlobal = levelOverride[key as string] == null;
+  return buildRow(label, `${input}${buildScopeCheckbox(key as string, isGlobal)}`);
+}
+
+function settingsRow(key: keyof GameSettings, label: string, currentLevel: number, step = 1): string {
+  return buildScopedRow(
+    key,
+    label,
+    buildNumberInput(`dev-${key}`, getLevelAwareValue(key, currentLevel), step),
+    currentLevel
+  );
 }
 
 /** Shortcut: row with a color from gameSettings. */
-function settingsColorRow(key: keyof GameSettings, label: string): string {
-  return buildRow(label, buildColorInput(`dev-${key}`, gameSettings[key] as string));
+function settingsColorRow(key: keyof GameSettings, label: string, currentLevel: number): string {
+  return buildScopedRow(
+    key,
+    label,
+    buildColorInput(`dev-${key}`, getLevelAwareValue(key, currentLevel) as string),
+    currentLevel
+  );
 }
 
 /* ================================================================
@@ -144,79 +184,79 @@ function buildLevelOverridesSection(currentLevel: number, sessionConfig: DevPane
   );
 }
 
-function buildSnakeSection(): string {
+function buildSnakeSection(currentLevel: number): string {
   return buildSection('🐍 Змейка',
-    settingsRow('hungerThreshold',    'Тики голода') +
-    settingsRow('initialSnakeLength', 'Нач. длина') +
-    settingsRow('minSnakeLength',     'Мин. длина (смерть)')
+    settingsRow('hungerThreshold',    'Тики голода', currentLevel) +
+    settingsRow('initialSnakeLength', 'Нач. длина', currentLevel) +
+    settingsRow('minSnakeLength',     'Мин. длина (смерть)', currentLevel)
   );
 }
 
-function buildRabbitLifecycleSection(): string {
+function buildRabbitLifecycleSection(currentLevel: number): string {
   return buildSection('🐇 Жизненный цикл',
-    settingsRow('rabbitYoungAge', 'Молодость до (тик)') +
-    settingsRow('rabbitAdultAge', 'Взрослый до (тик)') +
-    settingsRow('rabbitMaxAge',   'Смерть на тике')
+    settingsRow('rabbitYoungAge', 'Молодость до (тик)', currentLevel) +
+    settingsRow('rabbitAdultAge', 'Взрослый до (тик)', currentLevel) +
+    settingsRow('rabbitMaxAge',   'Смерть на тике', currentLevel)
   );
 }
 
-function buildRabbitSpawnSection(): string {
+function buildRabbitSpawnSection(currentLevel: number): string {
   return buildSection('🐇 Спавн и размножение',
-    settingsRow('rabbitMinDistance',            'Мин. дистанция')      +
-    settingsRow('reproductionMinCooldown',     'Кулдаун размнож.')     +
-    settingsRow('reproductionProbabilityBase', 'Вероятность',    0.01) +
-    settingsRow('maxReproductions',            'Макс. потомство')      +
-    settingsRow('neighborReproductionRadius',  'Радиус соседей')       +
-    settingsRow('maxReproductionNeighbors',    'Макс. соседей')        +
-    settingsRow('neighborReproductionPenalty', 'Штраф за соседа', 0.05)
+    settingsRow('rabbitMinDistance',            'Мин. дистанция', currentLevel)      +
+    settingsRow('reproductionMinCooldown',     'Кулдаун размнож.', currentLevel)     +
+    settingsRow('reproductionProbabilityBase', 'Вероятность', currentLevel, 0.01) +
+    settingsRow('maxReproductions',            'Макс. потомство', currentLevel)      +
+    settingsRow('neighborReproductionRadius',  'Радиус соседей', currentLevel)       +
+    settingsRow('maxReproductionNeighbors',    'Макс. соседей', currentLevel)        +
+    settingsRow('neighborReproductionPenalty', 'Штраф за соседа', currentLevel, 0.05)
   );
 }
 
-function buildRabbitGenSection(): string {
+function buildRabbitGenSection(currentLevel: number): string {
   return buildSection('🐇 Генерация (формулы)',
-    settingsRow('rabbitCountPerSnakeCoeff', 'Коэфф. на змейку', 0.1) +
-    settingsRow('rabbitCountBase',          'Базовое кол-во')
+    settingsRow('rabbitCountPerSnakeCoeff', 'Коэфф. на змейку', currentLevel, 0.1) +
+    settingsRow('rabbitCountBase',          'Базовое кол-во', currentLevel)
   );
 }
 
-function buildWallsSection(): string {
+function buildWallsSection(currentLevel: number): string {
   return buildSection('🧱 Стены (формулы)',
-    settingsRow('wallClusterCoeff',  'Коэфф. кластеров', 0.1) +
-    settingsRow('wallClusterBase',   'Базовые кластеры')       +
-    settingsRow('wallLengthCoeff',   'Коэфф. длины',     0.1) +
-    settingsRow('wallLengthBase',    'Базовая длина')
+    settingsRow('wallClusterCoeff',  'Коэфф. кластеров', currentLevel, 0.1) +
+    settingsRow('wallClusterBase',   'Базовые кластеры', currentLevel)       +
+    settingsRow('wallLengthCoeff',   'Коэфф. длины', currentLevel, 0.1) +
+    settingsRow('wallLengthBase',    'Базовая длина', currentLevel)
   );
 }
 
-function buildScoringSection(): string {
+function buildScoringSection(currentLevel: number): string {
   return buildSection('🎯 Очки (формулы)',
-    settingsRow('targetScoreCoeff', 'Коэфф. цели', 0.1) +
-    settingsRow('targetScoreBase',  'Базовая цель')
+    settingsRow('targetScoreCoeff', 'Коэфф. цели', currentLevel, 0.1) +
+    settingsRow('targetScoreBase',  'Базовая цель', currentLevel)
   );
 }
 
-function buildBoardSection(): string {
+function buildBoardSection(currentLevel: number): string {
   return buildSection('📐 Поле',
-    settingsRow('baseWidth',          'Ширина')            +
-    settingsRow('baseHeight',         'Высота')            +
-    settingsRow('levelSizeIncrement', 'Рост за уровень')   +
-    settingsRow('levelTimeLimit',     'Время уровня (с)')  +
-    settingsRow('tickIntervalMs',     'Интервал тика (мс)')
+    settingsRow('baseWidth',          'Ширина', currentLevel)            +
+    settingsRow('baseHeight',         'Высота', currentLevel)            +
+    settingsRow('levelSizeIncrement', 'Рост за уровень', currentLevel)   +
+    settingsRow('levelTimeLimit',     'Время уровня (с)', currentLevel)  +
+    settingsRow('tickIntervalMs',     'Интервал тика (мс)', currentLevel)
   );
 }
 
-function buildAiSection(): string {
+function buildAiSection(currentLevel: number): string {
   return buildSection('🤖 ИИ / Зрение',
-    settingsRow('visionSize',          'Размер обзора')           +
-    settingsRow('obstacleSignalClose', 'Сигнал преп. (близко)')   +
-    settingsRow('obstacleSignalDecay', 'Затухание преп.')          +
-    settingsRow('rabbitSignalClose',   'Сигнал кролика (близко)') +
-    settingsRow('rabbitSignalDecay',   'Затухание кролика')        +
-    settingsRow('rabbitSignalMin',     'Мин. сигнал кролика')
+    settingsRow('visionSize',          'Размер обзора', currentLevel)           +
+    settingsRow('obstacleSignalClose', 'Сигнал преп. (близко)', currentLevel)   +
+    settingsRow('obstacleSignalDecay', 'Затухание преп.', currentLevel)          +
+    settingsRow('rabbitSignalClose',   'Сигнал кролика (близко)', currentLevel) +
+    settingsRow('rabbitSignalDecay',   'Затухание кролика', currentLevel)        +
+    settingsRow('rabbitSignalMin',     'Мин. сигнал кролика', currentLevel)
   );
 }
 
-function buildColorsSection(): string {
+function buildColorsSection(currentLevel: number): string {
   let snakeColorRows = '';
   for (let snakeColorIndex = 0; snakeColorIndex < gameSettings.snakeColors.length; snakeColorIndex++) {
     snakeColorRows += buildRow(
@@ -226,13 +266,13 @@ function buildColorsSection(): string {
   }
 
   return buildSection('🎨 Цвета',
-    settingsColorRow('colorBg',          'Фон')             +
-    settingsColorRow('colorGrid',        'Сетка')           +
-    settingsColorRow('colorWall',        'Стены')           +
-    settingsColorRow('colorRabbit',      'Взрослый кролик') +
-    settingsColorRow('colorRabbitYoung', 'Молодой кролик')  +
-    settingsColorRow('colorRabbitOld',   'Пожилой кролик')  +
-    settingsColorRow('colorHeadStroke',  'Обводка головы')  +
+    settingsColorRow('colorBg',          'Фон', currentLevel)             +
+    settingsColorRow('colorGrid',        'Сетка', currentLevel)           +
+    settingsColorRow('colorWall',        'Стены', currentLevel)           +
+    settingsColorRow('colorRabbit',      'Взрослый кролик', currentLevel) +
+    settingsColorRow('colorRabbitYoung', 'Молодой кролик', currentLevel)  +
+    settingsColorRow('colorRabbitOld',   'Пожилой кролик', currentLevel)  +
+    settingsColorRow('colorHeadStroke',  'Обводка головы', currentLevel)  +
     snakeColorRows
   );
 }
@@ -267,15 +307,15 @@ export function renderDevPanel(
       <div class="dev-panel-scroll">
         ${buildLevelSection(currentLevel)}
         ${buildLevelOverridesSection(currentLevel, sessionConfig)}
-        ${buildSnakeSection()}
-        ${buildRabbitLifecycleSection()}
-        ${buildRabbitSpawnSection()}
-        ${buildRabbitGenSection()}
-        ${buildWallsSection()}
-        ${buildScoringSection()}
-        ${buildBoardSection()}
-        ${buildAiSection()}
-        ${buildColorsSection()}
+        ${buildSnakeSection(currentLevel)}
+        ${buildRabbitLifecycleSection(currentLevel)}
+        ${buildRabbitSpawnSection(currentLevel)}
+        ${buildRabbitGenSection(currentLevel)}
+        ${buildWallsSection(currentLevel)}
+        ${buildScoringSection(currentLevel)}
+        ${buildBoardSection(currentLevel)}
+        ${buildAiSection(currentLevel)}
+        ${buildColorsSection(currentLevel)}
       </div>
       ${buildButtons()}
     </div>`;
@@ -300,7 +340,7 @@ function bindPanelEvents(
 
   // Level change → re-render with new level's overrides
   levelInput.addEventListener('change', () => {
-    readPanelIntoSettings(container);
+    readPanelIntoSettings(container, currentLevel);
     renderDevPanel(container, parseInt(levelInput.value, 10) || 1, sessionConfig, onApply);
   });
 
@@ -336,19 +376,30 @@ function bindPanelEvents(
 
 /** Read all inputs from the panel into gameSettings + save to localStorage. Returns chosen level. */
 function readAndSave(container: HTMLElement, levelInput: HTMLInputElement): number {
-  readPanelIntoSettings(container);
   const level = parseInt(levelInput.value, 10) || 1;
+  readPanelIntoSettings(container, level);
   saveLevelOverride(container, level);
   saveSettingsToStorage();
   return level;
 }
 
 /** Read all panel inputs into the gameSettings singleton. */
-function readPanelIntoSettings(container: HTMLElement): void {
+function readPanelIntoSettings(container: HTMLElement, level: number): void {
   for (const field of ALL_FIELDS) {
     const inputElement = container.querySelector(`#dev-${field.key}`) as HTMLInputElement | null;
     if (!inputElement) continue;
-    (gameSettings as any)[field.key] = field.type === 'color' ? inputElement.value : parseFloat(inputElement.value);
+    const rawValue = field.type === 'color' ? inputElement.value : parseFloat(inputElement.value);
+    const scopeCheckbox = container.querySelector(`#dev-scope-${field.key}`) as HTMLInputElement | null;
+    const isGlobalScope = scopeCheckbox ? scopeCheckbox.checked : true;
+
+    // Scope checkboxes exist for all fields except snake palette colors.
+    gameSettings.fieldScopes[field.key as string] = isGlobalScope;
+    if (isGlobalScope) {
+      (gameSettings as any)[field.key] = rawValue;
+      clearLevelSettingOverride(level, field.key as string);
+    } else {
+      setLevelSettingOverride(level, field.key as string, rawValue);
+    }
   }
   // Snake colors
   for (let snakeColorIndex = 0; snakeColorIndex < gameSettings.snakeColors.length; snakeColorIndex++) {

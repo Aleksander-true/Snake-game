@@ -1,102 +1,48 @@
-# 🐍 Snake Eats Rabbits
+# Hungry Snakes 🐍
 
-A modern Snake game built with TypeScript and HTML5 Canvas where snakes hunt rabbits that breed and multiply.
+An arcade Snake game where snakes hunt food on a bounded grid with obstacles.
+The key gameplay twist is food lifecycle and progressively increasing difficulty.
 
-## Features
-
-- **Classic snake gameplay** with additional rabbit breeding mechanics
-- **Multiplayer**: 0–2 human players + 0–4 AI bots
-- **Progressive difficulty**: growing field size, more walls, smarter rabbits
-- **AI bots** with configurable vision and heuristic decision-making
-- **Score tracking** with localStorage persistence
-
-## Tech Stack
-
-- **Language**: TypeScript
-- **Rendering**: HTML5 Canvas
-- **Build**: Webpack (dev server + production)
-- **Tests**: Jest
-
-## Getting Started
+## Build
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
-npm run dev
-
-# Run tests
-npm test
-
-# Production build
 npm run build
 ```
 
-## Project Structure
+Build output is generated in the `dist/` directory.
 
-```
-src/
-├── index.ts                    # Entry point
-├── app/
-│   ├── router.ts               # Screen navigation
-│   └── ui/
-│       ├── menuView.ts         # Main menu screen
-│       ├── hudView.ts          # In-game HUD
-│       ├── resultView.ts       # Results screen
-│       └── styles.css          # Global styles
-├── engine/
-│   ├── types.ts                # Core type definitions
-│   ├── constants.ts            # Game constants
-│   ├── game.ts                 # Main game loop controller
-│   ├── board.ts                # Board state management
-│   ├── collision.ts            # Collision detection
-│   ├── spawning/
-│   │   ├── wallsGenerator.ts   # Wall generation (random walk + BFS)
-│   │   └── rabbitsSpawner.ts   # Rabbit placement
-│   └── systems/
-│       ├── movementSystem.ts   # Snake movement
-│       ├── hungerSystem.ts     # Hunger/shrinking logic
-│       ├── rabbitsReproductionSystem.ts  # Rabbit breeding
-│       ├── scoringSystem.ts    # Score tracking
-│       └── levelSystem.ts      # Level progression
-├── ai/
-│   ├── vision.ts               # Vision matrix generation
-│   └── botController.ts        # Bot decision-making
-├── renderer/
-│   └── canvasRenderer.ts       # Canvas rendering
-└── storage/
-    └── scoreStorage.ts         # localStorage persistence
+## Deployment
 
-tests/                          # Jest test files
-docs/
-├── rules.md                    # Game rules documentation
-└── ai.md                       # AI system documentation
-```
+[https://aleksander-true.github.io/Snake-game/](https://aleksander-true.github.io/Snake-game/)
+
+## Game Description
+
+The game supports multiple snakes at once: human players and AI bots.
+Each snake moves on a cell-based board, eats food, gains score, and tries to survive longer than opponents.
+The map includes walls and hard boundaries, and collisions can eliminate a snake.
+As the match progresses, difficulty rises: the environment gets denser and decisions become more tactical.
+
+To play effectively, you need to balance aggression and survival:
+- hunt food for growth and points;
+- avoid collisions with walls and snakes;
+- plan routes ahead to avoid dead ends.
+
+## Game Rules
+
+1. **Match objective** - score as many points as possible and outlast opponents.
+2. **Movement** - snakes move cell by cell; a 180-degree turn in one tick is not allowed.
+3. **Collisions**:
+   - with walls or map boundaries - defeat;
+   - with a snake body (your own or another snake) - defeat.
+4. **Food**:
+   - spawn on free cells;
+   - grant points when eaten and help snake growth;
+   - can reproduce, making the board state dynamic.
+5. **Difficulty progression** - match conditions become more intense over time.
+6. **Victory** - determined by the active mode rules: survival, score, or a combination.
 
 ## Controls
 
-| Player | Keys |
-|--------|------|
-| Player 1 | W A S D |
-| Player 2 | Arrow keys |
-
-## Architecture
-
-The project follows a clean separation between **engine** (game logic, pure calculations) and **renderer** (canvas drawing). The engine maintains entities (snakes, rabbits, walls) separately and assembles the `board[][]` grid from them each tick for collision checks and rendering.
-
-### Game Loop (tick-based)
-
-1. Gather input (players + bots)
-2. Apply turns (block 180° reversal)
-3. Move snakes & detect collisions
-4. Eat rabbits / grow / score
-5. Apply hunger / shrink / starvation death
-6. Rabbit reproduction
-7. Check level/game end conditions
-8. Build `board[][]` from entities
-9. Render
-
-## License
-
-MIT
+- Single-player: Player 1 supports both `W`, `A`, `S`, `D` and arrow keys `↑`, `←`, `↓`, `→`
+- Two players: Player 1 uses `W`, `A`, `S`, `D`, Player 2 uses arrow keys

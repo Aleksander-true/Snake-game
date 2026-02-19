@@ -1,6 +1,6 @@
-import { GameState, Snake, Rabbit } from '../engine/types';
+import { GameState, Snake, Food } from '../engine/types';
 import { GameSettings } from '../engine/settings';
-import { getRabbitPhase } from '../engine/systems/rabbitsReproductionSystem';
+import { getFoodPhase } from '../engine/systems/foodSystem';
 
 /* ====== Color helpers ====== */
 
@@ -109,8 +109,8 @@ export function renderGame(
     ctx.fillRect(wall.x * cellSize, wall.y * cellSize, cellSize, cellSize);
   }
 
-  // Draw rabbits (circles with lifecycle coloring/sizing)
-  drawRabbits(ctx, state.rabbits, cellSize, settings);
+  // Draw food
+  drawFoods(ctx, state.foods, cellSize, settings);
 
   // Draw snakes (alive and dead)
   drawSnakes(ctx, state.snakes, cellSize, settings);
@@ -118,20 +118,43 @@ export function renderGame(
 
 /* ====== Rabbits ====== */
 
-function drawRabbits(
+function drawFoods(
   ctx: CanvasRenderingContext2D,
-  rabbits: Rabbit[],
+  foods: Food[],
   cellSize: number,
   settings: GameSettings
 ): void {
-  for (const rabbit of rabbits) {
-    const phase = getRabbitPhase(rabbit, settings);
-    const rabbitCenterX = rabbit.pos.x * cellSize + cellSize / 2;
-    const rabbitCenterY = rabbit.pos.y * cellSize + cellSize / 2;
+  for (const food of foods) {
+    const phase = getFoodPhase(food, settings);
+    const foodCenterX = food.pos.x * cellSize + cellSize / 2;
+    const foodCenterY = food.pos.y * cellSize + cellSize / 2;
+
+    if (food.kind === 'apple') {
+      const icon = phase === 'young' ? '🍏' : '🍎';
+      const baseIconSize = Math.max(8, Math.floor(cellSize));
+      const iconScale = phase === 'young' ? 0.72 : 1;
+
+      ctx.save();
+      ctx.translate(foodCenterX, foodCenterY + 1);
+      ctx.scale(iconScale, iconScale);
+      ctx.font = `${baseIconSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Old apples use filter-based toning: darker and less saturated.
+      if (phase === 'old') {
+        ctx.filter = 'grayscale(.1) sepia(.5) saturate(0.8) brightness(0.8)';
+      } else {
+        ctx.filter = 'none';
+      }
+
+      ctx.fillText(icon, 0, 0);
+      ctx.restore();
+      continue;
+    }
 
     let color: string;
     let radius: number;
-
     switch (phase) {
       case 'young':
         color = settings.colorRabbitYoung;
@@ -149,7 +172,7 @@ function drawRabbits(
 
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(rabbitCenterX, rabbitCenterY, radius, 0, Math.PI * 2);
+    ctx.arc(foodCenterX, foodCenterY, radius, 0, Math.PI * 2);
     ctx.fill();
   }
 }

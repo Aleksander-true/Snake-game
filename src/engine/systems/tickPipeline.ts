@@ -5,15 +5,16 @@ import { buildBoard } from '../board';
 import { moveSnake } from './movementSystem';
 import { collidesWithWall, collidesWithSnake, selfCollision } from '../collision';
 import { processHunger, resetHunger } from './hungerSystem';
-import { awardRabbitPoints } from './scoringSystem';
+import { awardFoodPoints } from './scoringSystem';
 import { processRabbitReproduction } from './rabbitsReproductionSystem';
 import { checkLevelComplete } from './levelSystem';
+import { autoReplenishFood, getFoodReward, syncLegacyFoodAlias } from './foodSystem';
 
 /**
  * Run all tick systems in the required order.
  */
 export function runTickPipeline(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
-  movementSystem(state, events);
+  movementSystem(state, ctx, events);
   hungerSystem(state, ctx, events);
   reproductionSystem(state, ctx, events);
   boardSystem(state);
@@ -21,7 +22,7 @@ export function runTickPipeline(state: GameState, ctx: EngineContext, events: Do
 }
 
 /* ---- System 1: Movement + collisions + eating ---- */
-function movementSystem(state: GameState, events: DomainEvent[]): void {
+function movementSystem(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
   for (const snake of state.snakes) {
     if (!snake.alive) continue;
 
@@ -39,27 +40,37 @@ function movementSystem(state: GameState, events: DomainEvent[]): void {
       continue;
     }
 
-    const rabbitIndex = state.rabbits.findIndex(
-      rabbit => rabbit.pos.x === nextHeadPosition.x && rabbit.pos.y === nextHeadPosition.y
+    const foodIndex = state.foods.findIndex(
+      food => food.pos.x === nextHeadPosition.x && food.pos.y === nextHeadPosition.y
     );
-    const hasEatenRabbit = rabbitIndex !== -1;
+    const eatenFood = foodIndex !== -1 ? state.foods[foodIndex] : null;
+    const growth = eatenFood ? getFoodReward(eatenFood, ctx.settings).growth : 0;
+    const hasEatenFood = growth > 0;
 
-    moveSnake(snake, hasEatenRabbit);
+    moveSnake(snake, hasEatenFood);
+    if (growth > 1) {
+      const tail = snake.segments[snake.segments.length - 1];
+      for (let growthStep = 1; growthStep < growth; growthStep++) {
+        snake.segments.push({ ...tail });
+      }
+    }
 
     if (selfCollision(snake)) {
       markSnakeDead(snake, 'Съела саму себя', events);
       continue;
     }
 
-    if (hasEatenRabbit) {
-      const eatenRabbitPosition = state.rabbits[rabbitIndex].pos;
-      state.rabbits.splice(rabbitIndex, 1);
-      awardRabbitPoints(snake);
+    if (eatenFood) {
+      const eatenFoodPosition = eatenFood.pos;
+      const reward = getFoodReward(eatenFood, ctx.settings);
+      state.foods.splice(foodIndex, 1);
+      awardFoodPoints(snake, reward.points);
       resetHunger(snake);
+      syncLegacyFoodAlias(state);
       events.push({
         type: 'RABBIT_EATEN',
         snakeId: snake.id,
-        pos: eatenRabbitPosition,
+        pos: eatenFoodPosition,
         newScore: snake.score,
       });
     }
@@ -87,6 +98,7 @@ function reproductionSystem(state: GameState, ctx: EngineContext, events: Domain
       childPos: birth.child.pos,
     });
   }
+  autoReplenishFood(state, ctx);
 }
 
 /* ---- System 4: Board rebuild ---- */

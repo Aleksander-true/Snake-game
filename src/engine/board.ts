@@ -12,7 +12,7 @@ export function createEmptyBoard(width: number, height: number): CellContent[][]
 }
 
 /**
- * Builds the board[][] from current entities (walls, rabbits, snakes).
+ * Builds the board[][] from current entities (walls, food, snakes).
  * This is called each tick after all logic updates.
  */
 export function buildBoard(state: GameState): CellContent[][] {
@@ -25,10 +25,10 @@ export function buildBoard(state: GameState): CellContent[][] {
     }
   }
 
-  // Place rabbits
-  for (const rabbit of state.rabbits) {
-    if (inBounds(rabbit.pos, state.width, state.height)) {
-      board[rabbit.pos.y][rabbit.pos.x] = '&';
+  // Place food
+  for (const food of state.foods) {
+    if (inBounds(food.pos, state.width, state.height)) {
+      board[food.pos.y][food.pos.x] = '&';
     }
   }
 

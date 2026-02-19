@@ -100,3 +100,80 @@
 .hud-snake-dead {
   color: var(--color-danger);
 }
+
+.touch-controls-single {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  padding: 0 12px;
+}
+
+.touch-controls-single--visible {
+  display: flex;
+}
+
+.touch-controls-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.touch-controls-group--right {
+  flex-direction: column;
+  justify-content: center;
+}
+
+.touch-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.touch-controls-duo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  display: none;
+  justify-content: space-between;
+  pointer-events: none;
+  padding: 0 12px;
+}
+
+.touch-controls-duo--visible {
+  display: flex;
+}
+
+.touch-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.touch-player-row {
+  display: flex;
+  gap: 8px;
+}
+
+.game-side-panel--touch-left {
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.game-side-panel--touch-right {
+  transform: rotate(90deg);
+  transform-origin: center;
+}

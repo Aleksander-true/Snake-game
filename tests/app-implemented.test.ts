@@ -2,6 +2,7 @@ import { InputHandler } from '../src/app/inputHandler';
 import { InputApplicationService } from '../src/app/services/InputApplicationService';
 import { SessionProgressionService } from '../src/app/services/SessionProgressionService';
 import { ScorePersistenceService } from '../src/app/services/ScorePersistenceService';
+import { GameController } from '../src/app/gameController';
 import { GameEngine } from '../src/engine/GameEngine';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
 import { EngineContext } from '../src/engine/context';
@@ -11,6 +12,7 @@ import { GameConfig, GameState } from '../src/engine/types';
 import { createEmptyBoard } from '../src/engine/board';
 import { clearScores, getScores } from '../src/storage/scoreStorage';
 import { processBots } from '../src/ai/botController';
+import { hideModal } from '../src/app/ui/modal';
 
 jest.mock('../src/ai/botController', () => ({
   processBots: jest.fn(),
@@ -34,11 +36,13 @@ function createState(width = 12, height = 12): GameState {
     width,
     height,
     snakes: [],
+    foods: [],
     rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
     tickCount: 0,
+    lastAutoFoodSpawnTick: 0,
     levelTimeLeft: 180,
     gameOver: false,
     levelComplete: false,
@@ -56,6 +60,7 @@ describe('App implemented behavior', () => {
   describe('InputHandler', () => {
     test('stores last direction per player and clears buffer on consume', () => {
       const input = new InputHandler();
+      input.setPlayerCount(2);
       input.start();
 
       document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
@@ -81,6 +86,23 @@ describe('App implemented behavior', () => {
 
       document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
       expect(pauseSpy).toHaveBeenCalledTimes(1);
+      expect(input.consumeAll().directions).toEqual([null, null]);
+
+      input.stop();
+    });
+
+    test('escape triggers escape callback and enter triggers confirm callback', () => {
+      const input = new InputHandler();
+      const escapeSpy = jest.fn();
+      const confirmSpy = jest.fn();
+      input.onEscape(escapeSpy);
+      input.onConfirm(confirmSpy);
+      input.start();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }));
+      expect(escapeSpy).toHaveBeenCalledTimes(1);
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
       expect(input.consumeAll().directions).toEqual([null, null]);
 
       input.stop();
@@ -187,6 +209,39 @@ describe('App implemented behavior', () => {
       expect(scores).toHaveLength(2);
       expect(scores.some(score => score.playerName === 'Игрок 1' && score.score === 7 && !score.isBot)).toBe(true);
       expect(scores.some(score => score.playerName === 'Бот 1' && score.score === 3 && score.isBot)).toBe(true);
+    });
+  });
+
+  describe('GameController keyboard exit flows', () => {
+    test('Escape in paused state exits to menu immediately', () => {
+      const callbacks = {
+        onShowResults: jest.fn(),
+        onGoToMenu: jest.fn(),
+      };
+      const controller = new GameController(createCtx(), new InputHandler(), callbacks, false);
+      controller.getFSM().reset('Paused');
+
+      controller.handleEscapeKey();
+
+      expect(callbacks.onGoToMenu).toHaveBeenCalledTimes(1);
+    });
+
+    test('Escape in playing opens confirm modal, Enter confirms exit to menu', () => {
+      const callbacks = {
+        onShowResults: jest.fn(),
+        onGoToMenu: jest.fn(),
+      };
+      const controller = new GameController(createCtx(), new InputHandler(), callbacks, false);
+      controller.getFSM().reset('Playing');
+
+      controller.handleEscapeKey();
+      expect(document.getElementById('modal-overlay')).not.toBeNull();
+      expect(document.getElementById('modal-confirm')).not.toBeNull();
+      expect(callbacks.onGoToMenu).toHaveBeenCalledTimes(0);
+
+      controller.handleConfirmKey();
+      expect(callbacks.onGoToMenu).toHaveBeenCalledTimes(1);
+      hideModal();
     });
   });
 });

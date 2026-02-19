@@ -19,11 +19,13 @@ function createState(width = 20, height = 20): GameState {
     width,
     height,
     snakes: [],
+    foods: [],
     rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
     tickCount: 0,
+    lastAutoFoodSpawnTick: 0,
     levelTimeLeft: 180,
     gameOver: false,
     levelComplete: false,
@@ -60,7 +62,8 @@ describe('Rabbit lifecycle and reproduction', () => {
     const state = createState(10, 10);
     state.walls = [{ x: 2, y: 2 }];
     state.snakes = [new SnakeEntity(0, 'P1', [{ x: 3, y: 3 }, { x: 3, y: 4 }], 'up', false)];
-    state.rabbits = [new RabbitEntity({ x: 5, y: 5 }, 0, 0, 0)];
+    state.foods = [new RabbitEntity({ x: 5, y: 5 }, 0, 0, 0)];
+    state.rabbits = state.foods;
 
     expect(isValidRabbitPosition({ x: -1, y: 0 }, state)).toBe(false);
     expect(isValidRabbitPosition({ x: 2, y: 2 }, state)).toBe(false);
@@ -84,7 +87,8 @@ describe('Rabbit lifecycle and reproduction', () => {
     const ctx: EngineContext = { settings, rng };
     const state = createState(30, 30);
     const parent = new RabbitEntity({ x: 15, y: 15 }, settings.rabbitYoungAge, 1, 0);
-    state.rabbits = [parent];
+    state.foods = [parent];
+    state.rabbits = state.foods;
 
     const births = processRabbitReproduction(state, ctx);
 
@@ -92,7 +96,7 @@ describe('Rabbit lifecycle and reproduction', () => {
     expect(parent.clockNum).toBe(0);
     expect(parent.reproductionCount).toBe(1);
     expect(births.length).toBe(1);
-    expect(state.rabbits.length).toBe(2);
+    expect(state.foods.length).toBe(2);
     expect(births[0].child.age).toBe(0);
     expect(births[0].child.clockNum).toBe(0);
     expect(births[0].child.reproductionCount).toBe(0);
@@ -120,12 +124,13 @@ describe('Rabbit lifecycle and reproduction', () => {
     const adult = new RabbitEntity({ x: 10, y: 10 }, settings.rabbitYoungAge, 2, 0);
     const neighbor = new RabbitEntity({ x: 11, y: 10 }, settings.rabbitYoungAge, 2, 0);
     const old = new RabbitEntity({ x: 2, y: 2 }, settings.rabbitMaxAge - 1, 0, 0);
-    state.rabbits = [adult, neighbor, old];
+    state.foods = [adult, neighbor, old];
+    state.rabbits = state.foods;
 
     const births = processRabbitReproduction(state, ctx);
     expect(births.length).toBe(0);
-    expect(state.rabbits.some(r => r.pos.x === 2 && r.pos.y === 2)).toBe(false);
-    expect(state.rabbits.length).toBe(2);
+    expect(state.foods.some(r => r.pos.x === 2 && r.pos.y === 2)).toBe(false);
+    expect(state.foods.length).toBe(2);
   });
 
   test('processRabbitReproduction does not spawn when maxReproductions is reached', () => {
@@ -149,11 +154,12 @@ describe('Rabbit lifecycle and reproduction', () => {
       settings.reproductionMinCooldown,
       settings.maxReproductions
     );
-    state.rabbits = [adultAtLimit];
+    state.foods = [adultAtLimit];
+    state.rabbits = state.foods;
 
     const births = processRabbitReproduction(state, ctx);
     expect(births).toHaveLength(0);
-    expect(state.rabbits).toHaveLength(1);
-    expect(state.rabbits[0].reproductionCount).toBe(settings.maxReproductions);
+    expect(state.foods).toHaveLength(1);
+    expect(state.foods[0].reproductionCount).toBe(settings.maxReproductions);
   });
 });

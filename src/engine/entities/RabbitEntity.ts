@@ -1,27 +1,9 @@
-import { Position, Rabbit } from '../types';
+import { Position } from '../types';
+import { RabbitFoodEntity } from './RabbitFoodEntity';
 
-export class RabbitEntity implements Rabbit {
-  constructor(
-    public pos: Position,
-    public age: number,
-    public clockNum: number,
-    public reproductionCount: number
-  ) {}
-
+// Backward-compatible name used by older tests/modules.
+export class RabbitEntity extends RabbitFoodEntity {
   static newborn(pos: Position): RabbitEntity {
     return new RabbitEntity(pos, 0, 0, 0);
-  }
-
-  tickLifecycle(): void {
-    this.age++;
-    this.clockNum++;
-  }
-
-  resetReproductionClock(): void {
-    this.clockNum = 0;
-  }
-
-  incrementReproductionCount(): void {
-    this.reproductionCount++;
   }
 }

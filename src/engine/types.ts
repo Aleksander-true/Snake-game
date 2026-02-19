@@ -14,13 +14,16 @@ export interface Position {
 }
 
 /** Rabbit lifecycle phase */
-export type RabbitPhase = 'young' | 'adult' | 'old';
+export type FoodPhase = 'young' | 'adult' | 'old';
+export type RabbitPhase = FoodPhase;
+export type FoodKind = 'apple' | 'rabbit';
 
 /**
- * Rabbit shape used by engine systems.
+ * Food shape used by engine systems.
  */
-export interface Rabbit {
+export interface Food {
   pos: Position;
+  kind: FoodKind;
   age: number;             // absolute ticks since birth (never resets)
   clockNum: number;        // ticks since birth / last reproduction (resets on repro)
   reproductionCount: number;
@@ -47,7 +50,7 @@ export interface Snake {
   applyDirection(newDirection: Direction): void;
   getNextHeadPosition(): Position;
   move(grow: boolean): void;
-  incrementScore(): void;
+  incrementScore(points?: number): void;
   incrementHungerTick(): void;
   resetHunger(): void;
   trimTail(): void;
@@ -60,11 +63,13 @@ export interface GameState {
   width: number;
   height: number;
   snakes: Snake[];
-  rabbits: Rabbit[];
+  foods: Food[];
+  rabbits: Food[]; // legacy alias kept for compatibility in tests/modules
   walls: Position[];
   level: number;
   difficultyLevel: number;
   tickCount: number;
+  lastAutoFoodSpawnTick: number;
   levelTimeLeft: number;   // in seconds
   gameOver: boolean;
   levelComplete: boolean;

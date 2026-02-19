@@ -38,11 +38,13 @@ function createState(width = 10, height = 10): GameState {
     width,
     height,
     snakes: [],
+    foods: [],
     rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
     tickCount: 0,
+    lastAutoFoodSpawnTick: 0,
     levelTimeLeft: 180,
     gameOver: false,
     levelComplete: false,
@@ -182,9 +184,11 @@ describe('Engine implemented behavior', () => {
 
       const rabbits = spawnRabbits(6, state, spawningCtx);
       expect(rabbits.length).toBe(6);
+      const adultStartAge = spawningCtx.settings.rabbitYoungAge;
+      expect(rabbits.filter(food => food.age === adultStartAge).length).toBeGreaterThanOrEqual(1);
       for (const rabbit of rabbits) {
-        expect(rabbit.age).toBe(0);
-        expect(rabbit.clockNum).toBe(0);
+        expect(rabbit.age).toBeGreaterThanOrEqual(0);
+        expect(rabbit.clockNum).toBe(rabbit.age);
         expect(rabbit.reproductionCount).toBe(0);
         expect(rabbit.pos.x).toBeGreaterThanOrEqual(0);
         expect(rabbit.pos.x).toBeLessThan(state.width);
@@ -325,13 +329,14 @@ describe('Engine implemented behavior', () => {
       const snake = new SnakeEntity(0, 'P1', [{ x: 2, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 2 }], 'right', false);
       snake.ticksWithoutFood = 10;
       state.snakes = [snake];
-      state.rabbits = [RabbitEntity.newborn({ x: 3, y: 2 })];
+      state.foods = [RabbitEntity.newborn({ x: 3, y: 2 })];
+      state.rabbits = state.foods;
 
       const beforeLen = snake.segments.length;
       engine.processTick(state);
       expect(snake.score).toBe(1);
       expect(snake.segments.length).toBe(beforeLen + 1);
-      expect(state.rabbits.length).toBe(0);
+      expect(state.foods.length).toBe(1);
     });
 
     test('moving into own tail cell is allowed when tail moves away', () => {

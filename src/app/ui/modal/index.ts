@@ -58,6 +58,40 @@ export function showPauseModal(onResume: () => void): void {
 }
 
 /* ================================================================
+ *  Confirm modal (Yes / No)
+ * ================================================================ */
+
+export function showConfirmModal(
+  title: string,
+  message: string,
+  onConfirm: () => void,
+  onCancel: () => void,
+  confirmLabel = 'Да',
+  cancelLabel = 'Нет'
+): void {
+  const overlay = createOverlay();
+
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2 class="modal-title">${title}</h2>
+      <p class="modal-subtitle">${message}</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary modal-btn" id="modal-confirm">${confirmLabel}</button>
+        <button class="btn btn-secondary modal-btn" id="modal-cancel">${cancelLabel}</button>
+      </div>
+      <p class="modal-hint"><kbd>Enter</kbd> — подтвердить, <kbd>Esc</kbd> — отменить</p>
+    </div>`;
+
+  getOverlayParent().appendChild(overlay);
+
+  overlay.querySelector('#modal-confirm')!.addEventListener('click', onConfirm);
+  overlay.querySelector('#modal-cancel')!.addEventListener('click', onCancel);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) onCancel();
+  });
+}
+
+/* ================================================================
  *  Level complete modal
  * ================================================================ */
 

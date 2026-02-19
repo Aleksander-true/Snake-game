@@ -74,6 +74,44 @@ export class GameLayoutBuilder {
     bottomPanel.className = 'game-bottom-panel';
     gameArea.appendChild(bottomPanel);
 
+    const touchControls = document.createElement('div');
+    touchControls.id = 'touch-controls-single';
+    touchControls.className = 'touch-controls-single';
+    touchControls.innerHTML = `
+      <div class="touch-controls-group touch-controls-group--left">
+        <button type="button" class="touch-btn" data-dir="left">←</button>
+        <button type="button" class="touch-btn" data-dir="right">→</button>
+      </div>
+      <div class="touch-controls-group touch-controls-group--right">
+        <button type="button" class="touch-btn" data-dir="up">↑</button>
+        <button type="button" class="touch-btn" data-dir="down">↓</button>
+      </div>
+    `;
+    gameArea.appendChild(touchControls);
+
+    const touchControlsDuo = document.createElement('div');
+    touchControlsDuo.id = 'touch-controls-duo';
+    touchControlsDuo.className = 'touch-controls-duo';
+    touchControlsDuo.innerHTML = `
+      <div class="touch-player touch-player--left">
+        <button type="button" class="touch-btn" data-player="0" data-dir="up">↑</button>
+        <div class="touch-player-row">
+          <button type="button" class="touch-btn" data-player="0" data-dir="left">←</button>
+          <button type="button" class="touch-btn" data-player="0" data-dir="right">→</button>
+        </div>
+        <button type="button" class="touch-btn" data-player="0" data-dir="down">↓</button>
+      </div>
+      <div class="touch-player touch-player--right">
+        <button type="button" class="touch-btn" data-player="1" data-dir="up">↑</button>
+        <div class="touch-player-row">
+          <button type="button" class="touch-btn" data-player="1" data-dir="left">←</button>
+          <button type="button" class="touch-btn" data-player="1" data-dir="right">→</button>
+        </div>
+        <button type="button" class="touch-btn" data-player="1" data-dir="down">↓</button>
+      </div>
+    `;
+    gameArea.appendChild(touchControlsDuo);
+
     return gameArea;
   }
 }

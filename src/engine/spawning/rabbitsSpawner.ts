@@ -1,19 +1,19 @@
-import { Position, Rabbit, GameState } from '../types';
+import { Position, Food, GameState } from '../types';
 import { EngineContext } from '../context';
 import { chebyshevDistance } from '../systems/rabbitsReproductionSystem';
-import { RabbitEntity } from '../entities/RabbitEntity';
+import { createLevelFood } from '../systems/foodSystem';
 
 /**
- * Spawn initial rabbits for a level.
- * Rabbits cannot be on walls, snakes, or within Chebyshev distance 1 of each other.
+ * Spawn initial food for a level.
+ * Food cannot be on walls, snakes, or within Chebyshev distance 1 of each other.
  */
 export function spawnRabbits(
   count: number,
   state: GameState,
   ctx: EngineContext
-): Rabbit[] {
+): Food[] {
   const randomPort = ctx.rng;
-  const rabbits: Rabbit[] = [];
+  const foods: Food[] = [];
   const occupiedSet = new Set<string>();
 
   // Mark walls as occupied
@@ -31,7 +31,7 @@ export function spawnRabbits(
   let attempts = 0;
   const maxAttempts = count * 100;
 
-  while (rabbits.length < count && attempts < maxAttempts) {
+  while (foods.length < count && attempts < maxAttempts) {
     attempts++;
     const candidatePosition: Position = {
       x: randomPort.nextInt(state.width),
@@ -41,15 +41,17 @@ export function spawnRabbits(
     const positionKey = `${candidatePosition.x},${candidatePosition.y}`;
     if (occupiedSet.has(positionKey)) continue;
 
-    // Check Chebyshev distance > 1 from all existing rabbits
-    const tooClose = rabbits.some(rabbit => chebyshevDistance(candidatePosition, rabbit.pos) <= 1);
+    // Check Chebyshev distance > 1 from all existing food items
+    const tooClose = foods.some(food => chebyshevDistance(candidatePosition, food.pos) <= 1);
     if (tooClose) continue;
 
-    const rabbit = RabbitEntity.newborn(candidatePosition);
+    const adultQuota = state.snakes.length;
+    const phase = foods.length < adultQuota ? 'adult' : 'young';
+    const food = createLevelFood(state.level, candidatePosition, ctx.settings, phase);
 
-    rabbits.push(rabbit);
+    foods.push(food);
     occupiedSet.add(positionKey);
   }
 
-  return rabbits;
+  return foods;
 }

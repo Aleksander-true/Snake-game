@@ -1,8 +1,8 @@
 import { Snake } from '../types';
 
 /**
- * Award points to a snake for eating a rabbit.
+ * Award points to a snake for eating food.
  */
-export function awardRabbitPoints(snake: Snake): void {
-  snake.incrementScore();
+export function awardFoodPoints(snake: Snake, points: number): void {
+  snake.incrementScore(points);
 }

@@ -5,7 +5,7 @@
  * Manages: game loop (setInterval), timer, event handling, modal display.
  * Does NOT own: DOM structure (built externally and passed in).
  */
-import { GameState, GameConfig } from '../engine/types';
+import { GameState, GameConfig, Direction } from '../engine/types';
 import { EngineContext } from '../engine/context';
 import { GameSettings } from '../engine/settings';
 import { GameEngine } from '../engine/GameEngine';
@@ -15,6 +15,7 @@ import { InputHandler } from './inputHandler';
 import { GameFSM, GameFSMEvent } from './gameFSM';
 import {
   showPauseModal,
+  showConfirmModal,
   hideModal,
 } from './ui/modal';
 import { GameLoopScheduler } from './services/GameLoopScheduler';
@@ -49,6 +50,8 @@ export class GameController {
 
   private canvas: HTMLCanvasElement | null = null;
   private canvasCtx: CanvasRenderingContext2D | null = null;
+  private touchCleanup: (() => void) | null = null;
+  private exitConfirmActive = false;
 
   constructor(
     ctx: EngineContext,
@@ -88,8 +91,12 @@ export class GameController {
     this.resizeCanvas();
 
     // Wire input
+    this.inputHandler.setPlayerCount(config.playerCount);
     this.inputHandler.start();
     this.inputHandler.onPause(() => this.handleSpaceKey());
+    this.inputHandler.onEscape(() => this.handleEscapeKey());
+    this.inputHandler.onConfirm(() => this.handleConfirmKey());
+    this.setupTouchControls(config);
 
     this.fsm.reset('Playing');
     this.updateHUD();
@@ -100,14 +107,37 @@ export class GameController {
   /** Stop and cleanup everything. */
   stop(): void {
     this.stopGameLoop();
+    this.teardownTouchControls();
     this.inputHandler.stop();
   }
 
   /** Handle Space key press — context-dependent via FSM. */
   handleSpaceKey(): void {
+    if (this.exitConfirmActive) return;
     const event = this.fsm.handleSpace();
     if (!event) return;
     this.handleFSMEvent(event);
+  }
+
+  handleEscapeKey(): void {
+    if (this.exitConfirmActive) {
+      this.cancelExitConfirmation();
+      return;
+    }
+
+    const fsmState = this.fsm.getState();
+    if (fsmState === 'Playing') {
+      this.showExitConfirmationFromPlaying();
+      return;
+    }
+    if (fsmState === 'Paused') {
+      this.exitToMenu();
+    }
+  }
+
+  handleConfirmKey(): void {
+    if (!this.exitConfirmActive) return;
+    this.confirmExitToMenu();
   }
 
   /** Restart the game at a specific level (for dev panel). */
@@ -147,6 +177,7 @@ export class GameController {
   }
 
   private onEnterPlaying(event: GameFSMEvent): void {
+    this.exitConfirmActive = false;
     hideModal();
     if (event === 'RESUME') {
       // Resume from pause — restart game loop
@@ -164,6 +195,7 @@ export class GameController {
   }
 
   private onEnterPaused(): void {
+    this.exitConfirmActive = false;
     this.stopGameLoop();
     this.updateHUD();
     showPauseModal(() => this.handleFSMEvent('RESUME'));
@@ -293,5 +325,159 @@ export class GameController {
     this.canvas.width = this.state.width * cellSize;
     this.canvas.height = this.state.height * cellSize;
     (this.canvas as any).__cellSize = cellSize;
+  }
+
+  private isTouchDevice(): boolean {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+  }
+
+  private setupTouchControls(config: GameConfig): void {
+    this.teardownTouchControls();
+    const touchRootSingle = document.getElementById('touch-controls-single');
+    const touchRootDuo = document.getElementById('touch-controls-duo');
+    if (!touchRootSingle || !touchRootDuo) return;
+
+    if (!this.isTouchDevice()) {
+      touchRootSingle.classList.remove('touch-controls-single--visible');
+      touchRootDuo.classList.remove('touch-controls-duo--visible');
+      this.setTouchHudOrientation(false);
+      return;
+    }
+
+    if (config.playerCount === 1) {
+      this.setupSinglePlayerTouchControls(touchRootSingle);
+      touchRootDuo.classList.remove('touch-controls-duo--visible');
+      this.setTouchHudOrientation(false);
+      return;
+    }
+
+    if (config.playerCount >= 2) {
+      this.setupMultiPlayerTouchControls(touchRootDuo);
+      touchRootSingle.classList.remove('touch-controls-single--visible');
+      this.setTouchHudOrientation(true);
+      return;
+    }
+  }
+
+  private setupSinglePlayerTouchControls(touchRoot: HTMLElement): void {
+    touchRoot.classList.add('touch-controls-single--visible');
+    const disposeHandlers: Array<() => void> = [];
+    const bind = (selector: string, direction: Direction) => {
+      const button = touchRoot.querySelector(selector) as HTMLButtonElement | null;
+      if (!button) return;
+      const onPress = (event: Event) => {
+        event.preventDefault();
+        this.inputHandler.queueDirection(0, direction);
+      };
+      button.addEventListener('pointerdown', onPress);
+      disposeHandlers.push(() => button.removeEventListener('pointerdown', onPress));
+    };
+
+    bind('[data-dir="left"]', 'left');
+    bind('[data-dir="right"]', 'right');
+    bind('[data-dir="up"]', 'up');
+    bind('[data-dir="down"]', 'down');
+
+    this.touchCleanup = () => {
+      for (const dispose of disposeHandlers) dispose();
+      touchRoot.classList.remove('touch-controls-single--visible');
+    };
+  }
+
+  private setupMultiPlayerTouchControls(touchRoot: HTMLElement): void {
+    touchRoot.classList.add('touch-controls-duo--visible');
+    const disposeHandlers: Array<() => void> = [];
+    const buttons = touchRoot.querySelectorAll('[data-player][data-dir]');
+
+    buttons.forEach(buttonElement => {
+      const button = buttonElement as HTMLButtonElement;
+      const playerIndex = parseInt(button.dataset.player || '', 10);
+      const localDirection = button.dataset.dir as Direction | undefined;
+      if (!Number.isFinite(playerIndex) || !localDirection) return;
+
+      const onPress = (event: Event) => {
+        event.preventDefault();
+        const worldDirection = this.mapLocalDirectionForSidePlayer(playerIndex, localDirection);
+        this.inputHandler.queueDirection(playerIndex, worldDirection);
+      };
+      button.addEventListener('pointerdown', onPress);
+      disposeHandlers.push(() => button.removeEventListener('pointerdown', onPress));
+    });
+
+    this.touchCleanup = () => {
+      for (const dispose of disposeHandlers) dispose();
+      touchRoot.classList.remove('touch-controls-duo--visible');
+      this.setTouchHudOrientation(false);
+    };
+  }
+
+  private mapLocalDirectionForSidePlayer(playerIndex: number, localDirection: Direction): Direction {
+    // Player 1 is assumed to stand at the left side (looking to the right),
+    // player 2 at the right side (looking to the left).
+    if (playerIndex === 0) {
+      const map: Record<Direction, Direction> = {
+        up: 'right',
+        down: 'left',
+        left: 'up',
+        right: 'down',
+      };
+      return map[localDirection];
+    }
+    const map: Record<Direction, Direction> = {
+      up: 'left',
+      down: 'right',
+      left: 'down',
+      right: 'up',
+    };
+    return map[localDirection];
+  }
+
+  private setTouchHudOrientation(enabled: boolean): void {
+    const leftPanel = document.getElementById('hud-left');
+    const rightPanel = document.getElementById('hud-right');
+    if (!leftPanel || !rightPanel) return;
+    leftPanel.classList.toggle('game-side-panel--touch-left', enabled);
+    rightPanel.classList.toggle('game-side-panel--touch-right', enabled);
+  }
+
+  private teardownTouchControls(): void {
+    if (this.touchCleanup) {
+      this.touchCleanup();
+      this.touchCleanup = null;
+    }
+    this.setTouchHudOrientation(false);
+  }
+
+  private showExitConfirmationFromPlaying(): void {
+    // Escape during active game pauses the simulation and asks for exit confirmation.
+    this.stopGameLoop();
+    this.fsm.reset('Paused');
+    this.updateHUD();
+    this.exitConfirmActive = true;
+    showConfirmModal(
+      'Выйти в меню?',
+      'Текущая игра будет остановлена. Продолжить?',
+      () => this.confirmExitToMenu(),
+      () => this.cancelExitConfirmation(),
+      'Да',
+      'Нет'
+    );
+  }
+
+  private confirmExitToMenu(): void {
+    this.exitConfirmActive = false;
+    this.exitToMenu();
+  }
+
+  private cancelExitConfirmation(): void {
+    this.exitConfirmActive = false;
+    this.handleFSMEvent('RESUME');
+  }
+
+  private exitToMenu(): void {
+    this.stopGameLoop();
+    this.exitConfirmActive = false;
+    hideModal();
+    this.callbacks.onGoToMenu();
   }
 }

@@ -40,11 +40,13 @@ function createState(width = 12, height = 12): GameState {
     width,
     height,
     snakes: [],
+    foods: [],
     rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
     tickCount: 0,
+    lastAutoFoodSpawnTick: 0,
     levelTimeLeft: 180,
     gameOver: false,
     levelComplete: false,
@@ -141,7 +143,8 @@ describe('Board integration - single player mode', () => {
     );
     snake.ticksWithoutFood = 9;
     state.snakes = [snake];
-    state.rabbits = [RabbitEntity.newborn({ x: 5, y: 4 })];
+    state.foods = [RabbitEntity.newborn({ x: 5, y: 4 })];
+    state.rabbits = state.foods;
 
     const lengthBefore = snake.segments.length;
     engine.processTick(state);
@@ -150,9 +153,9 @@ describe('Board integration - single player mode', () => {
     expect(snake.segments.length).toBe(lengthBefore + 1);
     // Hunger is reset on eat, then incremented during hunger phase in the same tick.
     expect(snake.ticksWithoutFood).toBe(1);
-    expect(state.rabbits.length).toBe(0);
+    expect(state.foods.length).toBe(1);
     expect(state.board[4][5]).toBe('#');
-    expect(countBoardCells(state.board, '&')).toBe(0);
+    expect(countBoardCells(state.board, '&')).toBe(1);
     expect(countBoardCells(state.board, '#')).toBe(snake.segments.length);
   });
 
@@ -193,7 +196,8 @@ describe('Board integration - single player mode', () => {
       false
     );
     state.snakes = [snake];
-    state.rabbits = [RabbitEntity.newborn({ x: 3, y: 2 })];
+    state.foods = [RabbitEntity.newborn({ x: 3, y: 2 })];
+    state.rabbits = state.foods;
 
     const result = engine.processTick(state);
     expect(state.levelComplete).toBe(true);
@@ -219,10 +223,11 @@ describe('Board integration - single player mode', () => {
       false
     );
     state.snakes = [snake];
-    state.rabbits = [
+    state.foods = [
       RabbitEntity.newborn({ x: 4, y: 6 }),
       RabbitEntity.newborn({ x: 4, y: 3 }),
     ];
+    state.rabbits = state.foods;
 
     // Tick 1: move right, eat first rabbit.
     engine.processTick(state);
@@ -231,7 +236,7 @@ describe('Board integration - single player mode', () => {
     expect(snake.segments.length).toBe(5);
     expect(snake.ticksWithoutFood).toBe(1);
     expect(state.board[6][4]).toBe('#');
-    expect(state.rabbits.some(r => r.pos.x === 4 && r.pos.y === 6)).toBe(false);
+    expect(state.foods.some(r => r.pos.x === 4 && r.pos.y === 6)).toBe(false);
 
     // Tick 2: command up, should turn and move up.
     inputService.applyTickCommands(
@@ -261,8 +266,8 @@ describe('Board integration - single player mode', () => {
     expect(snake.score).toBe(2);
     expect(snake.segments.length).toBe(lenBeforeSecondEat + 1);
     expect(snake.ticksWithoutFood).toBe(1);
-    expect(state.rabbits.some(r => r.pos.x === 4 && r.pos.y === 3)).toBe(false);
-    expect(countBoardCells(state.board, '&')).toBe(0);
+    expect(state.foods.some(r => r.pos.x === 4 && r.pos.y === 3)).toBe(false);
+    expect(countBoardCells(state.board, '&')).toBe(1);
     expect(countBoardCells(state.board, '#')).toBe(snake.segments.length);
     expect(state.levelComplete).toBe(false);
   });

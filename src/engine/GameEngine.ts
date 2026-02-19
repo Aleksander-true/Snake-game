@@ -1,13 +1,14 @@
 import { GameConfig, GameState, Direction, Snake } from './types';
 import { createEmptyBoard, buildBoard } from './board';
 import { EngineContext } from './context';
-import { getLevelOverride, GameSettings } from './settings';
+import { applyLevelSettingOverrides, getLevelOverride, GameSettings } from './settings';
 import { generateWalls } from './spawning/wallsGenerator';
 import { spawnRabbits } from './spawning/rabbitsSpawner';
 import { runTickPipeline } from './systems/tickPipeline';
 import { DomainEvent, TickResult } from './events';
 import { SnakeEntity } from './entities/SnakeEntity';
 import { getInitialRabbitCount, getWallClusterCount, getWallLength } from './formulas';
+import { syncLegacyFoodAlias } from './systems/foodSystem';
 
 /**
  * OOP facade for core game engine operations.
@@ -26,11 +27,13 @@ export class GameEngine {
       width,
       height,
       snakes: [],
+      foods: [],
       rabbits: [],
       walls: [],
       level,
       difficultyLevel: config.difficultyLevel,
       tickCount: 0,
+      lastAutoFoodSpawnTick: 0,
       levelTimeLeft: settings.levelTimeLimit,
       gameOver: false,
       levelComplete: false,
@@ -39,6 +42,7 @@ export class GameEngine {
 
   initLevel(state: GameState, config: GameConfig): void {
     const settings = this.context.settings;
+    applyLevelSettingOverrides(state.level, settings);
     const totalSnakes = config.playerCount + config.botCount;
     const startPositions = this.getStartPositions(state.width, state.height, totalSnakes, settings);
 
@@ -93,10 +97,12 @@ export class GameEngine {
 
     const rabbitCount =
       levelOverride.rabbitCount ?? getInitialRabbitCount(totalSnakes, state.difficultyLevel, settings);
-    state.rabbits = spawnRabbits(rabbitCount, state, this.context);
+    state.foods = spawnRabbits(rabbitCount, state, this.context);
+    syncLegacyFoodAlias(state);
 
     state.board = buildBoard(state);
     state.tickCount = 0;
+    state.lastAutoFoodSpawnTick = 0;
     state.levelTimeLeft = settings.levelTimeLimit;
     state.levelComplete = false;
     state.gameOver = false;

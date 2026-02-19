@@ -51,8 +51,8 @@ export function generateVision(
           }
         }
 
-        // Check rabbits
-        if (state.rabbits.some(rabbit => rabbit.pos.x === worldPos.x && rabbit.pos.y === worldPos.y)) {
+        // Check food
+        if (state.foods.some(food => food.pos.x === worldPos.x && food.pos.y === worldPos.y)) {
           signal += getRabbitSignal(distance, settings);
         }
       }

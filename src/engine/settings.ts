@@ -14,6 +14,8 @@ export interface LevelOverride {
   rabbitCount?: number;
 }
 
+export type LevelSettingsOverride = Record<string, number | string>;
+
 /* ====== Main settings interface ====== */
 
 export interface GameSettings {
@@ -79,12 +81,15 @@ export interface GameSettings {
 
   /* Per-level overrides (keyed by level number as string) */
   levelOverrides: Record<string, LevelOverride>;
+  levelSettingsOverrides: Record<string, LevelSettingsOverride>;
+  fieldScopes: Record<string, boolean>;
 }
 
 /* ====== Build defaults from JSON ====== */
 
 export function createDefaultSettings(): GameSettings {
   const defaultJson = defaults;
+  const fieldScopes = createDefaultFieldScopes();
   return {
     hungerThreshold:              defaultJson.snake.hungerThreshold,
     minSnakeLength:               defaultJson.snake.minSnakeLength,
@@ -134,6 +139,8 @@ export function createDefaultSettings(): GameSettings {
     snakeColors:                  [...defaultJson.colors.snakeColors],
 
     levelOverrides:               { ...(defaultJson.levelOverrides as Record<string, LevelOverride>) },
+    levelSettingsOverrides:       {},
+    fieldScopes,
   };
 }
 
@@ -204,6 +211,8 @@ export interface GameDefaultsJSON {
     snakeColors: string[];
   };
   levelOverrides: Record<string, LevelOverride>;
+  levelSettingsOverrides?: Record<string, LevelSettingsOverride>;
+  fieldScopes?: Record<string, boolean>;
 }
 
 /**
@@ -268,6 +277,8 @@ export function settingsToJSON(): GameDefaultsJSON {
       snakeColors: [...settings.snakeColors],
     },
     levelOverrides: { ...settings.levelOverrides },
+    levelSettingsOverrides: { ...settings.levelSettingsOverrides },
+    fieldScopes: { ...settings.fieldScopes },
   };
 }
 
@@ -334,6 +345,12 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
   if (data.levelOverrides) {
     settings.levelOverrides = { ...data.levelOverrides };
   }
+  if (data.levelSettingsOverrides) {
+    settings.levelSettingsOverrides = { ...data.levelSettingsOverrides };
+  }
+  if (data.fieldScopes) {
+    settings.fieldScopes = { ...settings.fieldScopes, ...data.fieldScopes };
+  }
 }
 
 /**
@@ -350,4 +367,55 @@ export function getLevelOverride(level: number, settings?: GameSettings): LevelO
  */
 export function setLevelOverride(level: number, override: LevelOverride): void {
   gameSettings.levelOverrides[String(level)] = override;
+}
+
+export function getLevelSettingsOverride(level: number, settings?: GameSettings): LevelSettingsOverride {
+  const src = settings ?? gameSettings;
+  return src.levelSettingsOverrides[String(level)] || {};
+}
+
+export function setLevelSettingOverride(level: number, key: string, value: number | string): void {
+  const levelKey = String(level);
+  if (!gameSettings.levelSettingsOverrides[levelKey]) {
+    gameSettings.levelSettingsOverrides[levelKey] = {};
+  }
+  gameSettings.levelSettingsOverrides[levelKey][key] = value;
+}
+
+export function clearLevelSettingOverride(level: number, key: string): void {
+  const levelKey = String(level);
+  const override = gameSettings.levelSettingsOverrides[levelKey];
+  if (!override) return;
+  delete override[key];
+  if (Object.keys(override).length === 0) {
+    delete gameSettings.levelSettingsOverrides[levelKey];
+  }
+}
+
+export function applyLevelSettingOverrides(level: number, settings?: GameSettings): void {
+  const target = settings ?? gameSettings;
+  const override = target.levelSettingsOverrides[String(level)];
+  if (!override) return;
+  for (const [key, value] of Object.entries(override)) {
+    (target as any)[key] = value;
+  }
+}
+
+function createDefaultFieldScopes(): Record<string, boolean> {
+  const keys = [
+    'hungerThreshold', 'initialSnakeLength', 'minSnakeLength',
+    'rabbitYoungAge', 'rabbitAdultAge', 'rabbitMaxAge',
+    'rabbitMinDistance', 'reproductionMinCooldown', 'reproductionProbabilityBase',
+    'maxReproductions', 'neighborReproductionRadius', 'maxReproductionNeighbors',
+    'neighborReproductionPenalty', 'rabbitCountPerSnakeCoeff', 'rabbitCountBase',
+    'wallClusterCoeff', 'wallClusterBase', 'wallLengthCoeff', 'wallLengthBase',
+    'targetScoreCoeff', 'targetScoreBase',
+    'baseWidth', 'baseHeight', 'levelSizeIncrement', 'levelTimeLimit', 'tickIntervalMs',
+    'visionSize', 'obstacleSignalClose', 'obstacleSignalDecay', 'rabbitSignalClose',
+    'rabbitSignalDecay', 'rabbitSignalMin',
+    'colorBg', 'colorGrid', 'colorWall', 'colorRabbit', 'colorRabbitYoung', 'colorRabbitOld', 'colorHeadStroke',
+  ];
+  const scopes: Record<string, boolean> = {};
+  for (const key of keys) scopes[key] = true;
+  return scopes;
 }

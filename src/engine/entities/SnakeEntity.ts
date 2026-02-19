@@ -47,8 +47,8 @@ export class SnakeEntity implements Snake {
     }
   }
 
-  incrementScore(): void {
-    this.score++;
+  incrementScore(points = 1): void {
+    this.score += points;
   }
 
   incrementHungerTick(): void {

@@ -12,7 +12,7 @@ export function renderMenu(
 ): void {
   container.innerHTML = `
     <div class="menu-wrapper">
-      <h1 class="menu-title">🐍 Змейка ест кроликов 🐇</h1>
+      <h1 class="menu-title">Голодные змейки 🐍</h1>
 
       <div class="menu-panel">
         <div class="menu-grid">
