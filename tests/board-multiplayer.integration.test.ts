@@ -4,7 +4,8 @@ import { GameEngine } from '../src/engine/GameEngine';
 import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
 import { RandomPort } from '../src/engine/ports';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
-import { GameState } from '../src/engine/types';
+import { GameConfig, GameState } from '../src/engine/types';
+import { InputApplicationService } from '../src/app/services/InputApplicationService';
 
 function createCtx(): EngineContext {
   const rng: RandomPort = {
@@ -33,6 +34,15 @@ function createState(width = 12, height = 12): GameState {
     levelTimeLeft: 180,
     gameOver: false,
     levelComplete: false,
+  };
+}
+
+function createTwoPlayerConfig(): GameConfig {
+  return {
+    playerCount: 2,
+    botCount: 0,
+    playerNames: ['Игрок 1', 'Игрок 2'],
+    difficultyLevel: 1,
   };
 }
 
@@ -120,5 +130,52 @@ describe('Board integration - multiplayer and edge cases', () => {
     const levelEvent = result.events.find(event => event.type === 'LEVEL_COMPLETED');
     expect(levelEvent && 'reason' in levelEvent ? levelEvent.reason : '').toBe('Время вышло');
     expect(levelEvent && 'winnerId' in levelEvent ? levelEvent.winnerId : undefined).toBeUndefined();
+  });
+
+  test('two players are controlled simultaneously in one tick', () => {
+    const ctx = createCtx();
+    const engine = new GameEngine(ctx);
+    const inputService = new InputApplicationService();
+    const state = createState(14, 14);
+    const config = createTwoPlayerConfig();
+
+    const player1 = new SnakeEntity(0, 'Игрок 1', [{ x: 3, y: 8 }, { x: 3, y: 9 }, { x: 3, y: 10 }], 'up', false);
+    const player2 = new SnakeEntity(1, 'Игрок 2', [{ x: 10, y: 8 }, { x: 10, y: 7 }, { x: 10, y: 6 }], 'down', false);
+    state.snakes = [player1, player2];
+
+    inputService.applyTickCommands(state, config, ctx.settings, {
+      directions: ['right', 'left'],
+    });
+    engine.processTick(state);
+
+    expect(player1.direction).toBe('right');
+    expect(player2.direction).toBe('left');
+    expect(player1.head).toEqual({ x: 4, y: 8 });
+    expect(player2.head).toEqual({ x: 9, y: 8 });
+    expect(state.board[8][4]).toBe('#');
+    expect(state.board[8][9]).toBe('#');
+  });
+
+  test('player collision after simultaneous control can kill one of the players', () => {
+    const ctx = createCtx();
+    const engine = new GameEngine(ctx);
+    const inputService = new InputApplicationService();
+    const state = createState(14, 14);
+    const config = createTwoPlayerConfig();
+
+    const player1 = new SnakeEntity(0, 'Игрок 1', [{ x: 6, y: 8 }, { x: 6, y: 9 }, { x: 6, y: 10 }], 'up', false);
+    const player2 = new SnakeEntity(1, 'Игрок 2', [{ x: 8, y: 8 }, { x: 8, y: 7 }, { x: 8, y: 6 }], 'down', false);
+    state.snakes = [player1, player2];
+
+    // Tick 1: both players turn toward each other.
+    inputService.applyTickCommands(state, config, ctx.settings, {
+      directions: ['right', 'left'],
+    });
+    const tick1Result = engine.processTick(state);
+
+    expect(player1.alive).toBe(true);
+    expect(player2.alive).toBe(false);
+    expect(player2.deathReason).toBe('Столкнулась с другой змейкой');
+    expect(tick1Result.events.some(event => event.type === 'SNAKE_DIED' && event.snakeId === player2.id)).toBe(true);
   });
 });

@@ -91,6 +91,31 @@ describe('App implemented behavior', () => {
       input.stop();
     });
 
+    test('in single-player mode arrow keys are mapped to player 1', () => {
+      const input = new InputHandler();
+      input.setPlayerCount(1);
+      input.start();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowUp' }));
+      const snapshot = input.consumeAll();
+      expect(snapshot.directions).toEqual(['up', null]);
+
+      input.stop();
+    });
+
+    test('in two-player mode WASD controls P1 and arrows control P2 simultaneously', () => {
+      const input = new InputHandler();
+      input.setPlayerCount(2);
+      input.start();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD' }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowLeft' }));
+      const snapshot = input.consumeAll();
+      expect(snapshot.directions).toEqual(['right', 'left']);
+
+      input.stop();
+    });
+
     test('escape triggers escape callback and enter triggers confirm callback', () => {
       const input = new InputHandler();
       const escapeSpy = jest.fn();
@@ -161,6 +186,28 @@ describe('App implemented behavior', () => {
 
       expect(bot1.direction).toBe('right');
       expect(bot2.direction).toBe('left');
+    });
+
+    test('applies both player commands in the same tick in two-player mode', () => {
+      const service = new InputApplicationService();
+      const state = createState();
+      const player1 = new SnakeEntity(0, 'P1', [{ x: 3, y: 3 }, { x: 2, y: 3 }], 'right', false);
+      const player2 = new SnakeEntity(1, 'P2', [{ x: 7, y: 7 }, { x: 8, y: 7 }], 'left', false);
+      state.snakes = [player1, player2];
+
+      const config: GameConfig = {
+        playerCount: 2,
+        botCount: 0,
+        playerNames: ['P1', 'P2'],
+        difficultyLevel: 1,
+      };
+
+      service.applyTickCommands(state, config, createDefaultSettings(), {
+        directions: ['up', 'down'],
+      });
+
+      expect(player1.direction).toBe('up');
+      expect(player2.direction).toBe('down');
     });
   });
 

@@ -336,6 +336,18 @@
 - **Статус:** `✅ Реализован`.
 - **Покрытие:** `tests/app-settings-storage-fsm.test.ts`.
 
+### APP-12 — Keyboard actions: Escape / Enter
+- **Что проверяем:** обработку `Escape` и `Enter` в `InputHandler` и `GameController`.
+- **Критерий успеха:** `Escape` вызывает escape callback; `Enter` вызывает confirm callback; в `GameController` выполняются сценарии выхода из pause и подтверждения выхода в меню.
+- **Статус:** `✅ Реализован`.
+- **Покрытие:** `tests/app-implemented.test.ts`.
+
+### APP-13 — Двухпользовательский ввод в одном тике
+- **Что проверяем:** одновременное применение команд двух игроков (`WASD` + стрелки) в `InputHandler` и `InputApplicationService`.
+- **Критерий успеха:** команды обоих игроков применяются в одном тике независимо, направления и позиции обновляются синхронно.
+- **Статус:** `✅ Реализован`.
+- **Покрытие:** `tests/app-implemented.test.ts`, `tests/board-multiplayer.integration.test.ts`.
+
 ---
 
 ## UI / E2E (DOM-ориентированные сценарии)
