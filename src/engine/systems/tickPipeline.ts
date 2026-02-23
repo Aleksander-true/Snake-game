@@ -17,7 +17,7 @@ export function runTickPipeline(state: GameState, ctx: EngineContext, events: Do
   movementSystem(state, ctx, events);
   hungerSystem(state, ctx, events);
   reproductionSystem(state, ctx, events);
-  boardSystem(state);
+  boardSystem(state, ctx);
   levelCheckSystem(state, ctx, events);
 }
 
@@ -102,8 +102,8 @@ function reproductionSystem(state: GameState, ctx: EngineContext, events: Domain
 }
 
 /* ---- System 4: Board rebuild ---- */
-function boardSystem(state: GameState): void {
-  state.board = buildBoard(state);
+function boardSystem(state: GameState, ctx: EngineContext): void {
+  state.board = buildBoard(state, ctx.settings);
 }
 
 /* ---- System 5: Level completion check ---- */

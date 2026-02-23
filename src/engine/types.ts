@@ -4,8 +4,8 @@ export type Direction = 'up' | 'down' | 'left' | 'right';
 /** Bot decision relative to current heading */
 export type BotDecision = 'left' | 'right' | 'front';
 
-/** Cell content on the board */
-export type CellContent = ' ' | '&' | '*' | '#';
+/** Cell content on the board (space, wall, food marker with value, or snake id marker). */
+export type CellContent = string;
 
 /** 2D coordinate */
 export interface Position {

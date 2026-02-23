@@ -47,9 +47,9 @@ function buildScopeCheckbox(key: string, checked: boolean): string {
 }
 
 /** Number input. */
-function buildNumberInput(id: string, value: number | string, step = 1, min?: number): string {
+function buildNumberInput(id: string, value: number | string, step = 1, min?: number, extraAttrs = ''): string {
   const minAttr = min != null ? ` min="${min}"` : '';
-  return `<input type="number" id="${id}" value="${value}" step="${step}"${minAttr} class="dev-input dev-input-num">`;
+  return `<input type="number" id="${id}" value="${value}" step="${step}"${minAttr} ${extraAttrs} class="dev-input dev-input-num">`;
 }
 
 /** Color picker input. */
@@ -176,11 +176,41 @@ function buildLevelOverridesSection(currentLevel: number, sessionConfig: DevPane
     sessionConfig.difficultyLevel,
     gameSettings
   );
+  const hasWallClustersOverride = levelOverride.wallClusters != null;
+  const hasWallLengthOverride = levelOverride.wallLength != null;
+  const hasFoodCountOverride = levelOverride.foodCount != null;
 
   return buildSection(`📋 Уровень ${currentLevel}`,
-    buildRow('Кластеров стен',  buildNumberInput('dev-lvl-wallClusters', levelOverride.wallClusters ?? defaultWallClusters, 1, 0)) +
-    buildRow('Длина стен',       buildNumberInput('dev-lvl-wallLength',   levelOverride.wallLength   ?? defaultWallLength, 1, 1)) +
-    buildRow('Еды (нач.)',  buildNumberInput('dev-lvl-foodCount',  levelOverride.foodCount  ?? defaultFoodCount, 1, 0))
+    buildRow(
+      'Кластеров стен',
+      buildNumberInput(
+        'dev-lvl-wallClusters',
+        levelOverride.wallClusters ?? defaultWallClusters,
+        1,
+        0,
+        `data-default="${defaultWallClusters}" data-had-override="${hasWallClustersOverride ? '1' : '0'}"`
+      )
+    ) +
+    buildRow(
+      'Длина стен',
+      buildNumberInput(
+        'dev-lvl-wallLength',
+        levelOverride.wallLength ?? defaultWallLength,
+        1,
+        1,
+        `data-default="${defaultWallLength}" data-had-override="${hasWallLengthOverride ? '1' : '0'}"`
+      )
+    ) +
+    buildRow(
+      'Еды (нач.)',
+      buildNumberInput(
+        'dev-lvl-foodCount',
+        levelOverride.foodCount ?? defaultFoodCount,
+        1,
+        0,
+        `data-default="${defaultFoodCount}" data-had-override="${hasFoodCountOverride ? '1' : '0'}"`
+      )
+    )
   );
 }
 
@@ -346,19 +376,19 @@ function bindPanelEvents(
 
   // Apply: read all → save → restart
   getElement(container, '#dev-apply').addEventListener('click', () => {
-    const level = readAndSave(container, levelInput);
+    const level = readAndSave(container, levelInput, sessionConfig);
     onApply(level);
   });
 
   // Save level overrides
   getElement(container, '#dev-save-lvl').addEventListener('click', () => {
-    readAndSave(container, levelInput);
+    readAndSave(container, levelInput, sessionConfig);
     showToast(container, 'Уровень сохранён ✓');
   });
 
   // Export JSON
   getElement(container, '#dev-export').addEventListener('click', () => {
-    readAndSave(container, levelInput);
+    readAndSave(container, levelInput, sessionConfig);
     exportJSON();
   });
 
@@ -375,10 +405,14 @@ function bindPanelEvents(
  * ================================================================ */
 
 /** Read all inputs from the panel into gameSettings + save to localStorage. Returns chosen level. */
-function readAndSave(container: HTMLElement, levelInput: HTMLInputElement): number {
+function readAndSave(
+  container: HTMLElement,
+  levelInput: HTMLInputElement,
+  sessionConfig: DevPanelSessionConfig
+): number {
   const level = parseInt(levelInput.value, 10) || 1;
   readPanelIntoSettings(container, level);
-  saveLevelOverride(container, level);
+  saveLevelOverride(container, level, sessionConfig);
   saveSettingsToStorage();
   return level;
 }
@@ -409,15 +443,30 @@ function readPanelIntoSettings(container: HTMLElement, level: number): void {
 }
 
 /** Save per-level overrides from panel inputs. */
-function saveLevelOverride(container: HTMLElement, level: number): void {
+function saveLevelOverride(container: HTMLElement, level: number, sessionConfig: DevPanelSessionConfig): void {
+  void sessionConfig;
   const override: LevelOverride = {};
   const wallClustersInput = container.querySelector('#dev-lvl-wallClusters') as HTMLInputElement | null;
   const wallLengthInput = container.querySelector('#dev-lvl-wallLength') as HTMLInputElement | null;
   const foodCountInput = container.querySelector('#dev-lvl-foodCount') as HTMLInputElement | null;
-  if (wallClustersInput?.value) override.wallClusters = parseInt(wallClustersInput.value, 10);
-  if (wallLengthInput?.value) override.wallLength   = parseInt(wallLengthInput.value, 10);
-  if (foodCountInput?.value) override.foodCount  = parseInt(foodCountInput.value, 10);
+  saveSingleLevelOverride(wallClustersInput, 'wallClusters', override);
+  saveSingleLevelOverride(wallLengthInput, 'wallLength', override);
+  saveSingleLevelOverride(foodCountInput, 'foodCount', override);
+
   setLevelOverride(level, override);
+}
+
+function saveSingleLevelOverride(
+  input: HTMLInputElement | null,
+  key: 'wallClusters' | 'wallLength' | 'foodCount',
+  target: LevelOverride
+): void {
+  if (!input?.value) return;
+  const currentValue = parseInt(input.value, 10);
+  const defaultValue = parseInt(input.dataset.default || '', 10);
+  if (Number.isNaN(defaultValue) || currentValue !== defaultValue) {
+    (target as any)[key] = currentValue;
+  }
 }
 
 /* ================================================================

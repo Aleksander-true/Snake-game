@@ -1,9 +1,19 @@
 import { GameConfig } from '../../engine/types';
 import { renderMenu } from '../ui/menu';
+import { heuristicAlgorithmOptions } from '../../heuristic';
 
 export interface MenuScreenCallbacks {
   onStart: (config: GameConfig) => void;
   onStartDevMode: () => void;
+  onStartArena: (config: ArenaLaunchConfig) => void;
+}
+
+export interface ArenaLaunchConfig {
+  snakeCount: number;
+  difficultyLevel: number;
+  speedMultiplier: 1 | 2 | 4 | 8;
+  seed: number;
+  algorithmIds: string[];
 }
 
 /**
@@ -16,6 +26,7 @@ export class MenuScreenService {
     renderMenu(this.appRoot, callbacks.onStart);
     if (typeof __DEV_MODE__ !== 'undefined' && __DEV_MODE__) {
       this.attachDevModeButton(callbacks.onStartDevMode);
+      this.attachArenaButton(callbacks.onStartArena);
     }
   }
 
@@ -52,5 +63,118 @@ export class MenuScreenService {
     menuPanel.appendChild(devModeRow);
 
     devModeRow.querySelector('#devModeBtn')!.addEventListener('click', onClick);
+  }
+
+  private attachArenaButton(onStartArena: (config: ArenaLaunchConfig) => void): void {
+    const menuPanel = this.appRoot.querySelector('.menu-panel');
+    if (!menuPanel || this.appRoot.querySelector('#arenaModeBtn')) return;
+
+    const arenaRow = document.createElement('div');
+    arenaRow.className = 'menu-dev-row';
+    arenaRow.innerHTML = `
+      <button id="arenaModeBtn" class="btn btn-dev">🤖 Арена ИИ</button>
+      <div id="arenaConfigPanel" class="arena-config-panel arena-config-panel--hidden"></div>
+    `;
+    menuPanel.appendChild(arenaRow);
+
+    const toggleButton = arenaRow.querySelector('#arenaModeBtn') as HTMLButtonElement;
+    const panel = arenaRow.querySelector('#arenaConfigPanel') as HTMLElement;
+    toggleButton.addEventListener('click', () => {
+      const hidden = panel.classList.contains('arena-config-panel--hidden');
+      panel.classList.toggle('arena-config-panel--hidden', !hidden);
+      if (hidden) {
+        this.renderArenaConfigPanel(panel, onStartArena);
+      }
+    });
+  }
+
+  private renderArenaConfigPanel(
+    panel: HTMLElement,
+    onStartArena: (config: ArenaLaunchConfig) => void
+  ): void {
+    panel.innerHTML = `
+      <h3 class="arena-config-title">Запуск арены</h3>
+      <div class="arena-config-grid">
+        <span class="menu-label">Змеек (1-6):</span>
+        <input id="arenaSnakeCount" type="number" min="1" max="6" value="4" class="input-field input-number">
+
+        <span class="menu-label">Сложность:</span>
+        <input id="arenaDifficulty" type="number" min="1" max="10" value="1" class="input-field input-number">
+
+        <span class="menu-label">Скорость:</span>
+        <select id="arenaSpeed" class="input-field input-select">
+          <option value="1">1x</option>
+          <option value="2" selected>2x</option>
+          <option value="4">4x</option>
+          <option value="8">8x</option>
+        </select>
+
+        <span class="menu-label">Seed:</span>
+        <input id="arenaSeed" type="number" min="1" step="1" value="1" class="input-field input-number">
+      </div>
+      <div id="arenaAlgorithmsList" class="arena-algorithms-list"></div>
+      <div class="arena-config-actions">
+        <button id="arenaStartBtn" class="btn btn-primary btn-small">▶ Запустить арену</button>
+      </div>
+    `;
+
+    const snakeCountInput = panel.querySelector('#arenaSnakeCount') as HTMLInputElement;
+    const algorithmsList = panel.querySelector('#arenaAlgorithmsList') as HTMLElement;
+    const renderAlgorithmSelectors = () => {
+      const rawCount = parseInt(snakeCountInput.value || '4', 10);
+      const snakeCount = Math.max(1, Math.min(6, rawCount));
+      snakeCountInput.value = String(snakeCount);
+      algorithmsList.innerHTML = this.buildAlgorithmRowsHtml(snakeCount);
+    };
+    snakeCountInput.addEventListener('input', renderAlgorithmSelectors);
+    renderAlgorithmSelectors();
+
+    const startButton = panel.querySelector('#arenaStartBtn') as HTMLButtonElement;
+    startButton.addEventListener('click', () => {
+      const algorithmIds = this.readAlgorithmIds(panel);
+      const rawSnakeCount = parseInt(snakeCountInput.value || '4', 10);
+      const rawDifficulty = parseInt((panel.querySelector('#arenaDifficulty') as HTMLInputElement).value || '1', 10);
+      const rawSeed = parseInt((panel.querySelector('#arenaSeed') as HTMLInputElement).value || '1', 10);
+      const rawSpeed = parseInt((panel.querySelector('#arenaSpeed') as HTMLSelectElement).value || '2', 10);
+
+      const speed = ([1, 2, 4, 8] as const).includes(rawSpeed as 1 | 2 | 4 | 8)
+        ? (rawSpeed as 1 | 2 | 4 | 8)
+        : 2;
+
+      onStartArena({
+        snakeCount: Math.max(1, Math.min(6, rawSnakeCount)),
+        difficultyLevel: Math.max(1, Math.min(10, rawDifficulty)),
+        speedMultiplier: speed,
+        seed: Math.max(1, rawSeed),
+        algorithmIds,
+      });
+    });
+  }
+
+  private buildAlgorithmRowsHtml(snakeCount: number): string {
+    const optionHtml = heuristicAlgorithmOptions
+      .map(option => `<option value="${option.id}">${option.label}</option>`)
+      .join('');
+    const rows: string[] = [];
+    for (let snakeNumber = 1; snakeNumber <= snakeCount; snakeNumber++) {
+      rows.push(`
+        <div class="arena-alg-row">
+          <span class="arena-alg-label">Змейка ${snakeNumber}:</span>
+          <select class="input-field input-select arena-alg-select" data-snake="${snakeNumber}">
+            ${optionHtml}
+          </select>
+        </div>
+      `);
+    }
+    return rows.join('');
+  }
+
+  private readAlgorithmIds(panel: HTMLElement): string[] {
+    const selects = panel.querySelectorAll('.arena-alg-select');
+    const result: string[] = [];
+    selects.forEach(selectElement => {
+      result.push((selectElement as HTMLSelectElement).value);
+    });
+    return result;
   }
 }

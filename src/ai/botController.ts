@@ -1,6 +1,6 @@
 import { BotDecision, BotInput, GameState, Direction } from '../engine/types';
 import { GameSettings } from '../engine/settings';
-import { generateVision } from './vision';
+import { chooseGreedyBoardDirection } from '../heuristic';
 
 /**
  * Main bot decision function.
@@ -62,17 +62,7 @@ export function processBots(state: GameState, settings: GameSettings): Map<numbe
 
   for (const snake of state.snakes) {
     if (!snake.isBot || !snake.alive) continue;
-
-    const vision = generateVision(snake.segments[0], snake.direction, state, settings);
-    const input: BotInput = {
-      vision,
-      snakeLength: snake.segments.length,
-      ticksWithoutFood: snake.ticksWithoutFood,
-    };
-
-    const decision = botDecide(input);
-    const newDir = getBotDirection(snake.direction, decision);
-    result.set(snake.id, newDir);
+    result.set(snake.id, chooseGreedyBoardDirection(state, snake, settings));
   }
 
   return result;

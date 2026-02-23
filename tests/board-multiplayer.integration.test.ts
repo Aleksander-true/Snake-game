@@ -70,7 +70,7 @@ describe('Board integration - multiplayer and edge cases', () => {
     expect(result.events.some(event => event.type === 'SNAKE_DIED' && event.reason === 'Съела саму себя')).toBe(true);
 
     for (const seg of snake.segments) {
-      expect(state.board[seg.y][seg.x]).toBe('#');
+      expect(state.board[seg.y][seg.x]).toBe('1');
     }
   });
 
@@ -89,10 +89,10 @@ describe('Board integration - multiplayer and edge cases', () => {
     expect(result.events.some(event => event.type === 'SNAKE_DIED' && event.snakeId === mover.id)).toBe(true);
 
     for (const seg of mover.segments) {
-      expect(state.board[seg.y][seg.x]).toBe('#');
+      expect(state.board[seg.y][seg.x]).toBe('1');
     }
     for (const seg of blocker.segments) {
-      expect(state.board[seg.y][seg.x]).toBe('#');
+      expect(state.board[seg.y][seg.x]).toBe('2');
     }
   });
 
@@ -152,8 +152,8 @@ describe('Board integration - multiplayer and edge cases', () => {
     expect(player2.direction).toBe('left');
     expect(player1.head).toEqual({ x: 4, y: 8 });
     expect(player2.head).toEqual({ x: 9, y: 8 });
-    expect(state.board[8][4]).toBe('#');
-    expect(state.board[8][9]).toBe('#');
+    expect(state.board[8][4]).toBe('1');
+    expect(state.board[8][9]).toBe('2');
   });
 
   test('player collision after simultaneous control can kill one of the players', () => {

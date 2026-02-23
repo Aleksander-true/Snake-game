@@ -14,6 +14,11 @@ import { LevelCompletionService } from '../src/app/services/LevelCompletionServi
 import { GameState } from '../src/engine/types';
 import { createEmptyBoard } from '../src/engine/board';
 import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
+import { renderDevPanel } from '../src/app/ui/dev-panel';
+import { getInitialFoodCount } from '../src/engine/formulas';
+import { GameEngine } from '../src/engine/GameEngine';
+import { EngineContext } from '../src/engine/context';
+import { RandomPort } from '../src/engine/ports';
 
 jest.mock('../src/app/ui/modal', () => ({
   showLevelCompleteModal: jest.fn(),
@@ -183,5 +188,54 @@ describe('Settings, storage and app state helpers', () => {
     callback();
     expect(hideModal).toHaveBeenCalled();
     expect(actions.onRestartSameLevel).toHaveBeenCalledWith(gameOver.level);
+  });
+
+  test('dev panel does not freeze food formula by default level override', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const onApply = jest.fn();
+
+    renderDevPanel(
+      container,
+      1,
+      { difficultyLevel: 1, snakeCount: 2 },
+      onApply
+    );
+
+    const foodCoeffInput = container.querySelector('#dev-foodCountPerSnakeCoeff') as HTMLInputElement;
+    expect(foodCoeffInput).toBeTruthy();
+    foodCoeffInput.value = '3';
+
+    const applyButton = container.querySelector('#dev-apply') as HTMLButtonElement;
+    applyButton.click();
+
+    expect(gameSettings.foodCountPerSnakeCoeff).toBe(3);
+    expect(getLevelOverride(1).foodCount).toBeUndefined();
+    expect(onApply).toHaveBeenCalledWith(1);
+
+    let counter = 0;
+    const rng: RandomPort = {
+      next: () => 0.5,
+      nextInt: (max: number) => {
+        if (max <= 0) return 0;
+        const value = (counter * 13 + 7) % max;
+        counter++;
+        return value;
+      },
+    };
+    const ctx: EngineContext = { settings: gameSettings, rng };
+    const engine = new GameEngine(ctx);
+    const config = {
+      playerCount: 0,
+      botCount: 2,
+      playerNames: [],
+      difficultyLevel: 1,
+      gameMode: 'classic' as const,
+    };
+    const state = engine.createGameState(config, 1);
+    engine.initLevel(state, config);
+
+    const expectedFoodCount = getInitialFoodCount(2, 1, gameSettings);
+    expect(state.foods.length).toBe(expectedFoodCount);
   });
 });

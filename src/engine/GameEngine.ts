@@ -103,7 +103,7 @@ export class GameEngine {
     state.foods = spawnFood(foodCount, state, this.context);
     syncLegacyFoodAlias(state);
 
-    state.board = buildBoard(state);
+    state.board = buildBoard(state, this.context.settings);
     state.tickCount = 0;
     state.lastAutoFoodSpawnTick = 0;
     state.levelTimeLeft = settings.levelTimeLimit;

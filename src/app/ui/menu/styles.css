@@ -89,3 +89,51 @@
 .menu-dev-row {
   margin-top: 16px;
 }
+
+.arena-config-panel {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 8px;
+  background: var(--color-input-bg);
+  text-align: left;
+}
+
+.arena-config-panel--hidden {
+  display: none;
+}
+
+.arena-config-title {
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+
+.arena-config-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.arena-algorithms-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.arena-alg-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 10px;
+  align-items: center;
+}
+
+.arena-alg-label {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.arena-config-actions {
+  margin-top: 12px;
+  text-align: center;
+}
