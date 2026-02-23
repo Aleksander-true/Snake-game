@@ -1,13 +1,12 @@
 import { inBounds } from '../board';
 import { EngineContext } from '../context';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
-import { RabbitFoodEntity } from '../entities/RabbitFoodEntity';
 import { GameSettings } from '../settings';
 import { Food, FoodPhase, GameState, Position } from '../types';
 
 export function getFoodPhase(food: Food, settings: GameSettings): FoodPhase {
-  if (food.age < settings.rabbitYoungAge) return 'young';
-  if (food.age < settings.rabbitAdultAge) return 'adult';
+  if (food.age < settings.foodYoungAge) return 'young';
+  if (food.age < settings.foodAdultAge) return 'adult';
   return 'old';
 }
 
@@ -21,11 +20,9 @@ export function getFoodReward(food: Food, settings: GameSettings): { points: num
 }
 
 export function createLevelFood(level: number, pos: Position, settings: GameSettings, phase: FoodPhase = 'young'): Food {
-  if (level <= 110) {
-    const age = phase === 'young' ? 0 : (phase === 'adult' ? settings.rabbitYoungAge : settings.rabbitAdultAge);
-    return AppleFoodEntity.newborn(pos, age);
-  }
-  return RabbitFoodEntity.newborn(pos);
+  const age = phase === 'young' ? 0 : (phase === 'adult' ? settings.foodYoungAge : settings.foodAdultAge);
+  void level;
+  return AppleFoodEntity.newborn(pos, age);
 }
 
 export function syncLegacyFoodAlias(state: GameState): void {

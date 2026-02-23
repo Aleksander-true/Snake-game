@@ -5,6 +5,7 @@ const webpack = require('webpack');
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
   const isDevMode = !!(env && env.devmode);
+  const isNoMinify = !!(env && env.noMinify);
   const publicPath = env && env.publicPath ? env.publicPath : '/';
 
   return {
@@ -35,6 +36,7 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './src/index.html',
         title: 'Snake Eats Rabbits',
+        favicon: path.resolve(__dirname, 'src/assets/images/snake.ico'),
       }),
       new webpack.DefinePlugin({
         __DEV_MODE__: JSON.stringify(isDevMode),
@@ -47,5 +49,8 @@ module.exports = (env, argv) => {
       open: false,
     },
     devtool: isProduction ? 'source-map' : 'eval-source-map',
+    optimization: {
+      minimize: isProduction && !isNoMinify,
+    },
   };
 };

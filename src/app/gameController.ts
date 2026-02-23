@@ -216,7 +216,9 @@ export class GameController {
     this.loopScheduler.start(this.ctx.settings.tickIntervalMs, {
       onSecondElapsed: () => {
         if (this.state && this.fsm.isPlaying()) {
-          this.state.levelTimeLeft = Math.max(0, this.state.levelTimeLeft - 1);
+          if (this.state.snakes.length > 1) {
+            this.state.levelTimeLeft = Math.max(0, this.state.levelTimeLeft - 1);
+          }
           this.updateHUD();
         }
       },
@@ -264,7 +266,7 @@ export class GameController {
           // GAME_OVER is always preceded/followed by LEVEL_COMPLETED
           // in the same tick, so handled there
           break;
-        // Other events (SNAKE_DIED, RABBIT_EATEN, RABBIT_BORN) can be
+        // Other events (SNAKE_DIED, FOOD_EATEN, FOOD_BORN) can be
         // used for sounds/animations in the future
       }
     }

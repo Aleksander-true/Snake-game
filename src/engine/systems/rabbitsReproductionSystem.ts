@@ -1,11 +1,11 @@
-import { Food, Position, GameState, RabbitPhase } from '../types';
+import { Food, Position, GameState, FoodPhase } from '../types';
 import { EngineContext } from '../context';
 import { GameSettings } from '../settings';
 import { inBounds } from '../board';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
 import { RabbitEntity } from '../entities/RabbitEntity';
 
-export interface RabbitBirth {
+export interface FoodBirth {
   parentPos: Position;
   child: Food;
 }
@@ -20,16 +20,16 @@ export function chebyshevDistance(positionA: Position, positionB: Position): num
 /**
  * Determine the lifecycle phase of a rabbit based on its age.
  */
-export function getRabbitPhase(food: Food, settings: GameSettings): RabbitPhase {
-  if (food.age < settings.rabbitYoungAge) return 'young';
-  if (food.age < settings.rabbitAdultAge) return 'adult';
+export function getFoodPhase(food: Food, settings: GameSettings): FoodPhase {
+  if (food.age < settings.foodYoungAge) return 'young';
+  if (food.age < settings.foodAdultAge) return 'adult';
   return 'old';
 }
 
 /**
  * Count rabbits within Chebyshev distance <= radius from position.
  */
-export function countNearbyRabbits(pos: Position, foods: Food[], radius: number, excludeSelf?: Food): number {
+export function countNearbyFood(pos: Position, foods: Food[], radius: number, excludeSelf?: Food): number {
   let count = 0;
   for (const food of foods) {
     if (food === excludeSelf) continue;
@@ -43,7 +43,7 @@ export function countNearbyRabbits(pos: Position, foods: Food[], radius: number,
 /**
  * Check if a position is valid for a new rabbit (not on wall/snake, far enough from other rabbits).
  */
-export function isValidRabbitPosition(
+export function isValidFoodPosition(
   pos: Position,
   state: GameState
 ): boolean {
@@ -72,10 +72,10 @@ export function isValidRabbitPosition(
  * - Reproduction only during adult phase
  * - Removes rabbits that reached max age
  */
-export function processRabbitReproduction(state: GameState, ctx: EngineContext): RabbitBirth[] {
+export function processFoodLifecycle(state: GameState, ctx: EngineContext): FoodBirth[] {
   const settings = ctx.settings;
   const randomPort = ctx.rng;
-  const births: RabbitBirth[] = [];
+  const births: FoodBirth[] = [];
 
   for (const food of state.foods) {
     food.tickLifecycle();
@@ -83,14 +83,14 @@ export function processRabbitReproduction(state: GameState, ctx: EngineContext):
 
   // Reproduction (adults only, for all food kinds; rules are the same for apples and rabbits)
   for (const parentFood of state.foods) {
-    const phase = getRabbitPhase(parentFood, settings);
+    const phase = getFoodPhase(parentFood, settings);
     if (phase !== 'adult') continue;
 
     if (parentFood.clockNum < settings.reproductionMinCooldown) continue;
     if (parentFood.reproductionCount >= settings.maxReproductions) continue;
 
     // Count neighbors in the configured radius
-    const nearbyCount = countNearbyRabbits(
+    const nearbyCount = countNearbyFood(
       parentFood.pos, state.foods,
       settings.neighborReproductionRadius, parentFood
     );
@@ -116,11 +116,18 @@ export function processRabbitReproduction(state: GameState, ctx: EngineContext):
   state.foods.push(...births.map(birth => birth.child));
 
   // Remove expired food (keeps lifecycle bounded in dense levels)
-  state.foods = state.foods.filter(food => food.age < settings.rabbitMaxAge);
+  state.foods = state.foods.filter(food => food.age < settings.foodMaxAge);
   state.rabbits = state.foods;
 
   return births;
 }
+
+// Backward-compatible aliases for older tests/modules.
+export type RabbitBirth = FoodBirth;
+export const getRabbitPhase = getFoodPhase;
+export const countNearbyRabbits = countNearbyFood;
+export const isValidRabbitPosition = isValidFoodPosition;
+export const processRabbitReproduction = processFoodLifecycle;
 
 /**
  * Try to find a valid position for offspring near the parent.
@@ -146,7 +153,7 @@ function trySpawnOffspring(parent: Food, state: GameState, rng: { next(): number
   }
 
   for (const candidatePosition of candidatePositions) {
-    if (isValidRabbitPosition(candidatePosition, state)) {
+    if (isValidFoodPosition(candidatePosition, state)) {
       if (parent.kind === 'apple') {
         return AppleFoodEntity.newborn(candidatePosition);
       }

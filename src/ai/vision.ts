@@ -53,7 +53,7 @@ export function generateVision(
 
         // Check food
         if (state.foods.some(food => food.pos.x === worldPos.x && food.pos.y === worldPos.y)) {
-          signal += getRabbitSignal(distance, settings);
+          signal += getFoodSignal(distance, settings);
         }
       }
 
@@ -91,10 +91,10 @@ function getObstacleSignal(dist: number, settings: GameSettings): number {
   return Math.min(signal, -5); // cap at -5
 }
 
-function getRabbitSignal(dist: number, settings: GameSettings): number {
-  if (dist <= 0) return settings.rabbitSignalClose;
-  const signal = settings.rabbitSignalClose - settings.rabbitSignalDecay * dist;
-  return Math.max(signal, settings.rabbitSignalMin);
+function getFoodSignal(dist: number, settings: GameSettings): number {
+  if (dist <= 0) return settings.foodSignalClose;
+  const signal = settings.foodSignalClose - settings.foodSignalDecay * dist;
+  return Math.max(signal, settings.foodSignalMin);
 }
 
 /**

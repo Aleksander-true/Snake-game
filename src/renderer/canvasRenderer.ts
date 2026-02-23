@@ -157,15 +157,15 @@ function drawFoods(
     let radius: number;
     switch (phase) {
       case 'young':
-        color = settings.colorRabbitYoung;
+        color = settings.colorFoodYoung;
         radius = cellSize * 0.28; // smaller
         break;
       case 'adult':
-        color = settings.colorRabbit;
+        color = settings.colorFoodAdult;
         radius = cellSize * 0.42; // normal
         break;
       case 'old':
-        color = settings.colorRabbitOld;
+        color = settings.colorFoodOld;
         radius = cellSize * 0.42; // same size, darker
         break;
     }

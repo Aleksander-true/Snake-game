@@ -47,6 +47,12 @@ export function renderMenu(
           <input type="number" id="difficulty" min="1" max="10" value="1"
             class="input-field input-number">
 
+          <span class="menu-label">Режим:</span>
+          <select id="gameMode" class="input-field input-select">
+            <option value="classic" selected>Классика</option>
+            <option value="survival">Выживание</option>
+          </select>
+
         </div>
 
         <div class="menu-start-row">
@@ -67,12 +73,13 @@ export function renderMenu(
     const player1Name = (container.querySelector('#player1Name') as HTMLInputElement).value || 'Игрок 1';
     const player2Name = (container.querySelector('#player2Name') as HTMLInputElement).value || 'Игрок 2';
     const difficulty = parseInt((container.querySelector('#difficulty') as HTMLInputElement).value) || 1;
+    const modeValue = (container.querySelector('#gameMode') as HTMLSelectElement).value;
 
     // Save names to localStorage
     if (playerCount >= 1) saveName(player1Name);
     if (playerCount >= 2) saveName(player2Name);
 
-    onStart(normalizeGameConfig(playerCount, botCount, player1Name, player2Name, difficulty));
+    onStart(normalizeGameConfig(playerCount, botCount, player1Name, player2Name, difficulty, modeValue));
   });
 
   attachOutsideClickHandler(container);
@@ -147,7 +154,8 @@ function normalizeGameConfig(
   rawBotCount: number,
   player1Name: string,
   player2Name: string,
-  rawDifficultyLevel: number
+  rawDifficultyLevel: number,
+  rawMode: string
 ): GameConfig {
   const playerCount = Math.min(2, Math.max(0, rawPlayerCount));
   let botCount = Math.min(4, Math.max(0, rawBotCount));
@@ -160,5 +168,6 @@ function normalizeGameConfig(
     botCount,
     playerNames: [player1Name, player2Name],
     difficultyLevel: Math.min(10, Math.max(1, rawDifficultyLevel)),
+    gameMode: rawMode === 'survival' ? 'survival' : 'classic',
   };
 }

@@ -33,12 +33,15 @@ export function getWallLength(difficultyLevel: number, settings: GameSettings): 
 }
 
 /**
- * Formula: floor(rabbitCountPerSnakeCoeff * snakeCount + rabbitCountBase - difficultyLevel)
+ * Formula: floor(foodCountPerSnakeCoeff * snakeCount + foodCountBase - difficultyLevel)
  */
-export function getInitialRabbitCount(
+export function getInitialFoodCount(
   snakeCount: number,
   difficultyLevel: number,
   settings: GameSettings
 ): number {
-  return Math.floor(settings.rabbitCountPerSnakeCoeff * snakeCount + (settings.rabbitCountBase - difficultyLevel));
+  return Math.floor(settings.foodCountPerSnakeCoeff * snakeCount + (settings.foodCountBase - difficultyLevel));
 }
+
+// Backward-compatible alias for older tests/modules.
+export const getInitialRabbitCount = getInitialFoodCount;

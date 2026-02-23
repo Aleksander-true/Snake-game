@@ -13,10 +13,10 @@ export interface Position {
   y: number;
 }
 
-/** Rabbit lifecycle phase */
+/** Food lifecycle phase */
 export type FoodPhase = 'young' | 'adult' | 'old';
-export type RabbitPhase = FoodPhase;
 export type FoodKind = 'apple' | 'rabbit';
+export type GameMode = 'classic' | 'survival';
 
 /**
  * Food shape used by engine systems.
@@ -67,6 +67,7 @@ export interface GameState {
   rabbits: Food[]; // legacy alias kept for compatibility in tests/modules
   walls: Position[];
   level: number;
+  gameMode?: GameMode;
   difficultyLevel: number;
   tickCount: number;
   lastAutoFoodSpawnTick: number;
@@ -81,6 +82,7 @@ export interface GameConfig {
   botCount: number;         // 0..4
   playerNames: string[];    // [player1Name, player2Name]
   difficultyLevel: number;  // 1..10
+  gameMode?: GameMode;
 }
 
 /** Input for bot AI */

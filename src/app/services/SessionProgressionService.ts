@@ -6,6 +6,10 @@ import { GameConfig, GameState } from '../../engine/types';
  */
 export class SessionProgressionService {
   advanceToNextLevel(currentState: GameState, config: GameConfig, gameEngine: GameEngine): GameState {
+    if (this.shouldContinueSurvivalInPlace(currentState)) {
+      return this.advanceSurvivalInPlace(currentState, config);
+    }
+
     const nextLevel = currentState.level + 1;
     const previousSnakes = currentState.snakes;
 
@@ -14,6 +18,18 @@ export class SessionProgressionService {
     this.copySnakeProgress(previousSnakes, nextState);
 
     return nextState;
+  }
+
+  private shouldContinueSurvivalInPlace(state: GameState): boolean {
+    return state.snakes.length === 1 && state.gameMode === 'survival';
+  }
+
+  private advanceSurvivalInPlace(state: GameState, config: GameConfig): GameState {
+    state.level += 1;
+    state.difficultyLevel = config.difficultyLevel;
+    state.levelComplete = false;
+    state.gameOver = false;
+    return state;
   }
 
   private copySnakeProgress(previousSnakes: GameState['snakes'], nextState: GameState): void {

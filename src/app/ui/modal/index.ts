@@ -109,7 +109,7 @@ export function showLevelCompleteModal(
   overlay.innerHTML = `
     <div class="modal-box modal-box--wide">
       <h2 class="modal-title">Уровень ${state.level} завершён</h2>
-      <p class="modal-subtitle">Цель: ${target} кроликов</p>
+      <p class="modal-subtitle">Цель: ${target} очков</p>
       <table class="modal-table">
         <thead>
           <tr>

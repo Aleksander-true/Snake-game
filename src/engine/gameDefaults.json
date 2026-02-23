@@ -5,7 +5,7 @@
     "initialSnakeLength": 5
   },
 
-  "rabbit": {
+  "food": {
     "youngAge": 50,
     "adultAge": 100,
     "maxAge": 150,
@@ -35,7 +35,7 @@
   "board": {
     "baseWidth": 40,
     "baseHeight": 40,
-    "levelSizeIncrement": 5,
+    "levelSizeIncrement": 2,
     "levelTimeLimit": 180,
     "tickIntervalMs": 150
   },
@@ -44,18 +44,18 @@
     "visionSize": 20,
     "obstacleSignalClose": -100,
     "obstacleSignalDecay": 20,
-    "rabbitSignalClose": 100,
-    "rabbitSignalDecay": 20,
-    "rabbitSignalMin": 5
+    "foodSignalClose": 100,
+    "foodSignalDecay": 20,
+    "foodSignalMin": 5
   },
 
   "colors": {
     "bg": "#000000",
     "grid": "#cccccc",
     "wall": "#cccccc",
-    "rabbit": "#FF0000",
-    "rabbitYoung": "#FF6666",
-    "rabbitOld": "#990000",
+    "foodAdult": "#FF0000",
+    "foodYoung": "#66CC33",
+    "foodOld": "#8B5A2B",
     "headStroke": "#FFFFFF",
     "snakeColors": ["#00FF00", "#00CCFF", "#FFFF00", "#FF00FF", "#FF8800", "#88FF88"]
   },

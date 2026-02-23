@@ -7,7 +7,7 @@ import {
 import {
   saveSettingsToStorage, loadSettingsFromStorage, clearSettingsStorage,
 } from '../../adapters/storageAdapter';
-import { getWallClusterCount, getWallLength, getInitialRabbitCount } from '../../../engine/formulas';
+import { getWallClusterCount, getWallLength, getInitialFoodCount } from '../../../engine/formulas';
 
 export interface DevPanelSessionConfig {
   difficultyLevel: number;
@@ -41,7 +41,7 @@ function buildScopeCheckbox(key: string, checked: boolean): string {
   return `
     <label class="dev-scope-label">
       <input type="checkbox" id="dev-scope-${key}" ${checkedAttr}>
-      <span>Для всех уровней</span>
+      <span>Для всех</span>
     </label>
   `;
 }
@@ -111,11 +111,11 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'initialSnakeLength',          type: 'number' },
   { key: 'minSnakeLength',              type: 'number' },
   // Rabbit lifecycle
-  { key: 'rabbitYoungAge',              type: 'number' },
-  { key: 'rabbitAdultAge',              type: 'number' },
-  { key: 'rabbitMaxAge',                type: 'number' },
+  { key: 'foodYoungAge',              type: 'number' },
+  { key: 'foodAdultAge',              type: 'number' },
+  { key: 'foodMaxAge',                type: 'number' },
   // Rabbit spawning
-  { key: 'rabbitMinDistance',            type: 'number' },
+  { key: 'foodMinDistance',            type: 'number' },
   // Rabbit reproduction
   { key: 'reproductionMinCooldown',     type: 'number' },
   { key: 'reproductionProbabilityBase', type: 'number' },
@@ -124,8 +124,8 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'maxReproductionNeighbors',    type: 'number' },
   { key: 'neighborReproductionPenalty', type: 'number' },
   // Rabbit generation
-  { key: 'rabbitCountPerSnakeCoeff',    type: 'number' },
-  { key: 'rabbitCountBase',             type: 'number' },
+  { key: 'foodCountPerSnakeCoeff',    type: 'number' },
+  { key: 'foodCountBase',             type: 'number' },
   // Walls
   { key: 'wallClusterCoeff',            type: 'number' },
   { key: 'wallClusterBase',             type: 'number' },
@@ -144,16 +144,16 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'visionSize',                  type: 'number' },
   { key: 'obstacleSignalClose',         type: 'number' },
   { key: 'obstacleSignalDecay',         type: 'number' },
-  { key: 'rabbitSignalClose',           type: 'number' },
-  { key: 'rabbitSignalDecay',           type: 'number' },
-  { key: 'rabbitSignalMin',             type: 'number' },
+  { key: 'foodSignalClose',           type: 'number' },
+  { key: 'foodSignalDecay',           type: 'number' },
+  { key: 'foodSignalMin',             type: 'number' },
   // Colors
   { key: 'colorBg',                     type: 'color' },
   { key: 'colorGrid',                   type: 'color' },
   { key: 'colorWall',                   type: 'color' },
-  { key: 'colorRabbit',                 type: 'color' },
-  { key: 'colorRabbitYoung',            type: 'color' },
-  { key: 'colorRabbitOld',              type: 'color' },
+  { key: 'colorFoodAdult',                 type: 'color' },
+  { key: 'colorFoodYoung',            type: 'color' },
+  { key: 'colorFoodOld',              type: 'color' },
   { key: 'colorHeadStroke',             type: 'color' },
 ];
 
@@ -171,7 +171,7 @@ function buildLevelOverridesSection(currentLevel: number, sessionConfig: DevPane
   const levelOverride = getLevelOverride(currentLevel);
   const defaultWallClusters = getWallClusterCount(currentLevel, gameSettings);
   const defaultWallLength = getWallLength(sessionConfig.difficultyLevel, gameSettings);
-  const defaultRabbitCount = getInitialRabbitCount(
+  const defaultFoodCount = getInitialFoodCount(
     sessionConfig.snakeCount,
     sessionConfig.difficultyLevel,
     gameSettings
@@ -180,7 +180,7 @@ function buildLevelOverridesSection(currentLevel: number, sessionConfig: DevPane
   return buildSection(`📋 Уровень ${currentLevel}`,
     buildRow('Кластеров стен',  buildNumberInput('dev-lvl-wallClusters', levelOverride.wallClusters ?? defaultWallClusters, 1, 0)) +
     buildRow('Длина стен',       buildNumberInput('dev-lvl-wallLength',   levelOverride.wallLength   ?? defaultWallLength, 1, 1)) +
-    buildRow('Кроликов (нач.)',  buildNumberInput('dev-lvl-rabbitCount',  levelOverride.rabbitCount  ?? defaultRabbitCount, 1, 0))
+    buildRow('Еды (нач.)',  buildNumberInput('dev-lvl-foodCount',  levelOverride.foodCount  ?? defaultFoodCount, 1, 0))
   );
 }
 
@@ -193,16 +193,16 @@ function buildSnakeSection(currentLevel: number): string {
 }
 
 function buildRabbitLifecycleSection(currentLevel: number): string {
-  return buildSection('🐇 Жизненный цикл',
-    settingsRow('rabbitYoungAge', 'Молодость до (тик)', currentLevel) +
-    settingsRow('rabbitAdultAge', 'Взрослый до (тик)', currentLevel) +
-    settingsRow('rabbitMaxAge',   'Смерть на тике', currentLevel)
+  return buildSection('🍎 Жизненный цикл еды',
+    settingsRow('foodYoungAge', 'Молодость до (тик)', currentLevel) +
+    settingsRow('foodAdultAge', 'Взрослый до (тик)', currentLevel) +
+    settingsRow('foodMaxAge',   'Смерть на тике', currentLevel)
   );
 }
 
 function buildRabbitSpawnSection(currentLevel: number): string {
-  return buildSection('🐇 Спавн и размножение',
-    settingsRow('rabbitMinDistance',            'Мин. дистанция', currentLevel)      +
+  return buildSection('🍎 Спавн и размножение еды',
+    settingsRow('foodMinDistance',            'Мин. дистанция', currentLevel)      +
     settingsRow('reproductionMinCooldown',     'Кулдаун размнож.', currentLevel)     +
     settingsRow('reproductionProbabilityBase', 'Вероятность', currentLevel, 0.01) +
     settingsRow('maxReproductions',            'Макс. потомство', currentLevel)      +
@@ -213,9 +213,9 @@ function buildRabbitSpawnSection(currentLevel: number): string {
 }
 
 function buildRabbitGenSection(currentLevel: number): string {
-  return buildSection('🐇 Генерация (формулы)',
-    settingsRow('rabbitCountPerSnakeCoeff', 'Коэфф. на змейку', currentLevel, 0.1) +
-    settingsRow('rabbitCountBase',          'Базовое кол-во', currentLevel)
+  return buildSection('🍎 Генерация еды (формулы)',
+    settingsRow('foodCountPerSnakeCoeff', 'Коэфф. на змейку', currentLevel, 0.1) +
+    settingsRow('foodCountBase',          'Базовое кол-во', currentLevel)
   );
 }
 
@@ -250,9 +250,9 @@ function buildAiSection(currentLevel: number): string {
     settingsRow('visionSize',          'Размер обзора', currentLevel)           +
     settingsRow('obstacleSignalClose', 'Сигнал преп. (близко)', currentLevel)   +
     settingsRow('obstacleSignalDecay', 'Затухание преп.', currentLevel)          +
-    settingsRow('rabbitSignalClose',   'Сигнал кролика (близко)', currentLevel) +
-    settingsRow('rabbitSignalDecay',   'Затухание кролика', currentLevel)        +
-    settingsRow('rabbitSignalMin',     'Мин. сигнал кролика', currentLevel)
+    settingsRow('foodSignalClose',   'Сигнал еды (близко)', currentLevel) +
+    settingsRow('foodSignalDecay',   'Затухание еды', currentLevel)        +
+    settingsRow('foodSignalMin',     'Мин. сигнал еды', currentLevel)
   );
 }
 
@@ -269,9 +269,9 @@ function buildColorsSection(currentLevel: number): string {
     settingsColorRow('colorBg',          'Фон', currentLevel)             +
     settingsColorRow('colorGrid',        'Сетка', currentLevel)           +
     settingsColorRow('colorWall',        'Стены', currentLevel)           +
-    settingsColorRow('colorRabbit',      'Взрослый кролик', currentLevel) +
-    settingsColorRow('colorRabbitYoung', 'Молодой кролик', currentLevel)  +
-    settingsColorRow('colorRabbitOld',   'Пожилой кролик', currentLevel)  +
+    settingsColorRow('colorFoodAdult',      'Еда (взрослая)', currentLevel) +
+    settingsColorRow('colorFoodYoung', 'Еда (молодая)', currentLevel)  +
+    settingsColorRow('colorFoodOld',   'Еда (старая)', currentLevel)  +
     settingsColorRow('colorHeadStroke',  'Обводка головы', currentLevel)  +
     snakeColorRows
   );
@@ -413,10 +413,10 @@ function saveLevelOverride(container: HTMLElement, level: number): void {
   const override: LevelOverride = {};
   const wallClustersInput = container.querySelector('#dev-lvl-wallClusters') as HTMLInputElement | null;
   const wallLengthInput = container.querySelector('#dev-lvl-wallLength') as HTMLInputElement | null;
-  const rabbitCountInput = container.querySelector('#dev-lvl-rabbitCount') as HTMLInputElement | null;
+  const foodCountInput = container.querySelector('#dev-lvl-foodCount') as HTMLInputElement | null;
   if (wallClustersInput?.value) override.wallClusters = parseInt(wallClustersInput.value, 10);
   if (wallLengthInput?.value) override.wallLength   = parseInt(wallLengthInput.value, 10);
-  if (rabbitCountInput?.value) override.rabbitCount  = parseInt(rabbitCountInput.value, 10);
+  if (foodCountInput?.value) override.foodCount  = parseInt(foodCountInput.value, 10);
   setLevelOverride(level, override);
 }
 

@@ -1,5 +1,5 @@
 .dev-panel {
-  width: 300px;
+  width: 400px;
   min-width: 280px;
   max-height: calc(100vh - 60px);
   display: flex;
@@ -43,9 +43,9 @@
 }
 
 .dev-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px 124px;
   align-items: center;
-  justify-content: space-between;
   padding: 2px 4px;
   gap: 8px;
 }
@@ -63,6 +63,22 @@
   text-overflow: ellipsis;
 }
 
+.dev-row > .dev-input {
+  grid-column: 2;
+  justify-self: stretch;
+}
+
+.dev-scope-label {
+  grid-column: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 0.78em;
+  color: var(--color-text);
+  justify-self: start;
+}
+
 .dev-input {
   background: var(--color-input-bg);
   color: var(--color-text);
@@ -74,8 +90,9 @@
 }
 
 .dev-input-num {
-  width: 72px;
+  width: 88px;
   text-align: right;
+  box-sizing: border-box;
 }
 
 .dev-input-color {
@@ -83,6 +100,12 @@
   height: 24px;
   padding: 1px;
   cursor: pointer;
+}
+
+/* Keep numeric inputs the same visual width in all rows */
+.dev-input-num::-webkit-outer-spin-button,
+.dev-input-num::-webkit-inner-spin-button {
+  margin: 0;
 }
 
 .dev-buttons {

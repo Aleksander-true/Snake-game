@@ -6,8 +6,8 @@ import { moveSnake } from './movementSystem';
 import { collidesWithWall, collidesWithSnake, selfCollision } from '../collision';
 import { processHunger, resetHunger } from './hungerSystem';
 import { awardFoodPoints } from './scoringSystem';
-import { processRabbitReproduction } from './rabbitsReproductionSystem';
-import { checkLevelComplete } from './levelSystem';
+import { processFoodLifecycle } from './rabbitsReproductionSystem';
+import { checkLevelComplete, getMaxLevel } from './levelSystem';
 import { autoReplenishFood, getFoodReward, syncLegacyFoodAlias } from './foodSystem';
 
 /**
@@ -68,7 +68,7 @@ function movementSystem(state: GameState, ctx: EngineContext, events: DomainEven
       resetHunger(snake);
       syncLegacyFoodAlias(state);
       events.push({
-        type: 'RABBIT_EATEN',
+        type: 'FOOD_EATEN',
         snakeId: snake.id,
         pos: eatenFoodPosition,
         newScore: snake.score,
@@ -88,12 +88,12 @@ function hungerSystem(state: GameState, ctx: EngineContext, events: DomainEvent[
   }
 }
 
-/* ---- System 3: Rabbit reproduction ---- */
+/* ---- System 3: Food lifecycle/reproduction ---- */
 function reproductionSystem(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
-  const rabbitBirths = processRabbitReproduction(state, ctx);
-  for (const birth of rabbitBirths) {
+  const foodBirths = processFoodLifecycle(state, ctx);
+  for (const birth of foodBirths) {
     events.push({
-      type: 'RABBIT_BORN',
+      type: 'FOOD_BORN',
       parentPos: birth.parentPos,
       childPos: birth.child.pos,
     });
@@ -112,11 +112,18 @@ function levelCheckSystem(state: GameState, ctx: EngineContext, events: DomainEv
 
   state.levelComplete = true;
   const aliveSnakes = state.snakes.filter(snake => snake.alive);
+  const maxLevel = getMaxLevel(state);
+  const reachedLastLevel = state.level >= maxLevel;
 
   if (state.snakes.length === 1) {
     const singleSnake = state.snakes[0];
-    const reason = singleSnake.alive ? 'Цель достигнута' : 'Змейка погибла';
-    if (!singleSnake.alive) {
+    const reason = !singleSnake.alive
+      ? 'Змейка погибла'
+      : reachedLastLevel
+        ? (state.gameMode === 'survival' ? 'Выживание завершено: победа' : 'Последний уровень завершён')
+        : 'Цель достигнута';
+    if (!singleSnake.alive || reachedLastLevel) {
+      state.gameOver = true;
       events.push({ type: 'GAME_OVER' });
     }
     events.push({ type: 'LEVEL_COMPLETED', reason });
@@ -135,6 +142,10 @@ function levelCheckSystem(state: GameState, ctx: EngineContext, events: DomainEv
     reason = 'Время вышло';
   }
 
+  if (reachedLastLevel) {
+    state.gameOver = true;
+    events.push({ type: 'GAME_OVER' });
+  }
   events.push({ type: 'LEVEL_COMPLETED', reason, winnerId });
 }
 

@@ -7,6 +7,7 @@
     "dev": "webpack serve --mode development --open",
     "dev:debug": "webpack serve --mode development --env devmode --open",
     "build": "webpack --mode production",
+    "build:debug": "webpack --mode production --env noMinify",
     "test": "jest --verbose",
     "lint": "tsc --noEmit",
     "prepare": "bash ./scripts/setup-hooks.sh"

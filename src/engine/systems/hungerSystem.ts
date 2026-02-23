@@ -26,7 +26,7 @@ export function processHunger(snake: Snake, ctx: EngineContext): boolean {
 }
 
 /**
- * Reset hunger counter (called when snake eats a rabbit).
+ * Reset hunger counter (called when snake eats food).
  */
 export function resetHunger(snake: Snake): void {
   snake.resetHunger();

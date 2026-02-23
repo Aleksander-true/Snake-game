@@ -39,12 +39,14 @@ export function renderHUD(
   const seconds = state.levelTimeLeft % 60;
   const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
   const cumulativeTarget = getCumulativeTargetScore(state.level, settings);
+  const showTimer = state.snakes.length > 1;
+  const timerCell = showTimer ? `<span>Время: ${timeStr}</span>` : '';
 
   topBar.innerHTML = `
     <div class="hud-bar">
       <span>Уровень: ${state.level}</span>
       <span>Цель: ${cumulativeTarget}</span>
-      <span>Время: ${timeStr}</span>
+      ${timerCell}
       <span>Тик: ${state.tickCount}</span>
       ${paused ? '<span class="hud-paused">⏸ ПАУЗА (пробел)</span>' : '<span class="hud-hint">Пробел — пауза</span>'}
     </div>

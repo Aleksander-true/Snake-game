@@ -7,7 +7,7 @@ import { createLevelFood } from '../systems/foodSystem';
  * Spawn initial food for a level.
  * Food cannot be on walls, snakes, or within Chebyshev distance 1 of each other.
  */
-export function spawnRabbits(
+export function spawnFood(
   count: number,
   state: GameState,
   ctx: EngineContext
@@ -55,3 +55,6 @@ export function spawnRabbits(
 
   return foods;
 }
+
+// Backward-compatible alias for older tests/modules.
+export const spawnRabbits = spawnFood;

@@ -3,11 +3,11 @@ import { createEmptyBoard, buildBoard } from './board';
 import { EngineContext } from './context';
 import { applyLevelSettingOverrides, getLevelOverride, GameSettings } from './settings';
 import { generateWalls } from './spawning/wallsGenerator';
-import { spawnRabbits } from './spawning/rabbitsSpawner';
+import { spawnFood } from './spawning/rabbitsSpawner';
 import { runTickPipeline } from './systems/tickPipeline';
 import { DomainEvent, TickResult } from './events';
 import { SnakeEntity } from './entities/SnakeEntity';
-import { getInitialRabbitCount, getWallClusterCount, getWallLength } from './formulas';
+import { getInitialFoodCount, getWallClusterCount, getWallLength } from './formulas';
 import { syncLegacyFoodAlias } from './systems/foodSystem';
 
 /**
@@ -31,6 +31,7 @@ export class GameEngine {
       rabbits: [],
       walls: [],
       level,
+      gameMode: config.gameMode ?? 'classic',
       difficultyLevel: config.difficultyLevel,
       tickCount: 0,
       lastAutoFoodSpawnTick: 0,
@@ -95,9 +96,11 @@ export class GameEngine {
       snakeId++;
     }
 
-    const rabbitCount =
-      levelOverride.rabbitCount ?? getInitialRabbitCount(totalSnakes, state.difficultyLevel, settings);
-    state.foods = spawnRabbits(rabbitCount, state, this.context);
+    const foodCount =
+      levelOverride.foodCount
+      ?? levelOverride.rabbitCount
+      ?? getInitialFoodCount(totalSnakes, state.difficultyLevel, settings);
+    state.foods = spawnFood(foodCount, state, this.context);
     syncLegacyFoodAlias(state);
 
     state.board = buildBoard(state);

@@ -12,7 +12,7 @@ export function checkLevelComplete(state: GameState, ctx: EngineContext): boolea
   const totalSnakes = state.snakes.length;
 
   if (totalSnakes === 1) {
-    // Single-player: check cumulative target score
+    // Single-player: cumulative target score reached OR snake dead
     const target = getCumulativeTargetScore(state.level, ctx.settings);
     const snake = state.snakes[0];
     if (snake.score >= target) {
@@ -33,6 +33,13 @@ export function checkLevelComplete(state: GameState, ctx: EngineContext): boolea
   }
 
   return false;
+}
+
+export function getMaxLevel(state: GameState): number {
+  if (state.snakes.length === 1) {
+    return state.gameMode === 'survival' ? 100 : 10;
+  }
+  return 10;
 }
 
 /**
@@ -56,7 +63,7 @@ export function getLevelWinner(state: GameState): number | null {
 /**
  * Determine the overall game winner based on:
  * 1. Most levels won
- * 2. Tiebreak: most rabbits eaten (score)
+ * 2. Tiebreak: highest score
  * Returns the winning snake, or null if truly tied.
  */
 export function getOverallWinner(snakes: Snake[]): Snake | null {

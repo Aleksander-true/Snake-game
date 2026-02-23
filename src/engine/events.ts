@@ -6,8 +6,8 @@ import { Position } from './types';
 
 export type DomainEvent =
   | { type: 'SNAKE_DIED'; snakeId: number; reason: string }
-  | { type: 'RABBIT_EATEN'; snakeId: number; pos: Position; newScore: number }
-  | { type: 'RABBIT_BORN'; parentPos: Position; childPos: Position }
+  | { type: 'FOOD_EATEN'; snakeId: number; pos: Position; newScore: number }
+  | { type: 'FOOD_BORN'; parentPos: Position; childPos: Position }
   | { type: 'LEVEL_COMPLETED'; reason: string; winnerId?: number }
   | { type: 'GAME_OVER' };
 

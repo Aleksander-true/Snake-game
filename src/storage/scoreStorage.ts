@@ -1,7 +1,7 @@
 import { ScoreRecord } from '../engine/types';
 
-const STORAGE_KEY = 'snake-eats-rabbits-scores';
-const NAMES_KEY = 'snake-eats-rabbits-names';
+const STORAGE_KEY = 'snake-food-scores';
+const NAMES_KEY = 'snake-food-names';
 
 /**
  * Save a score record to localStorage.

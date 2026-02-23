@@ -20,6 +20,31 @@ export class LevelCompletionService {
     settings: GameSettings,
     actions: LevelCompletionActions
   ): void {
+    if (state.gameOver) {
+      if (devModeActive) {
+        actions.setState('LevelComplete');
+        showLevelCompleteModal(
+          state,
+          () => {
+            hideModal();
+            actions.onRestartSameLevel(state.level);
+          },
+          settings
+        );
+        return;
+      }
+
+      actions.setState('GameOver');
+      showGameOverModal(state, actions.onShowResults);
+      return;
+    }
+
+    if (state.snakes.length === 1 && state.gameMode === 'survival' && state.snakes[0].alive) {
+      actions.setState('LevelComplete');
+      actions.onContinue();
+      return;
+    }
+
     const aliveSnakes = state.snakes.filter(snake => snake.alive);
     const canAdvance = state.snakes.length === 1 ? state.snakes[0].alive : aliveSnakes.length >= 1;
 

@@ -11,6 +11,7 @@ import defaults from './gameDefaults.json';
 export interface LevelOverride {
   wallClusters?: number;
   wallLength?: number;
+  foodCount?: number;
   rabbitCount?: number;
 }
 
@@ -24,15 +25,15 @@ export interface GameSettings {
   minSnakeLength: number;
   initialSnakeLength: number;
 
-  /* Rabbits — lifecycle */
-  rabbitYoungAge: number;
-  rabbitAdultAge: number;
-  rabbitMaxAge: number;
+  /* Food — lifecycle */
+  foodYoungAge: number;
+  foodAdultAge: number;
+  foodMaxAge: number;
 
-  /* Rabbits — spawning */
-  rabbitMinDistance: number;
+  /* Food — spawning */
+  foodMinDistance: number;
 
-  /* Rabbits — reproduction */
+  /* Food — reproduction */
   reproductionMinCooldown: number;
   reproductionProbabilityBase: number;
   maxReproductions: number;
@@ -40,9 +41,9 @@ export interface GameSettings {
   neighborReproductionPenalty: number;
   maxReproductionNeighbors: number;
 
-  /* Rabbits — generation formula */
-  rabbitCountPerSnakeCoeff: number;
-  rabbitCountBase: number;
+  /* Food — generation formula */
+  foodCountPerSnakeCoeff: number;
+  foodCountBase: number;
 
   /* Walls — generation formulas */
   wallClusterCoeff: number;
@@ -65,17 +66,17 @@ export interface GameSettings {
   visionSize: number;
   obstacleSignalClose: number;
   obstacleSignalDecay: number;
-  rabbitSignalClose: number;
-  rabbitSignalDecay: number;
-  rabbitSignalMin: number;
+  foodSignalClose: number;
+  foodSignalDecay: number;
+  foodSignalMin: number;
 
   /* Colors (canvas) */
   colorBg: string;
   colorGrid: string;
   colorWall: string;
-  colorRabbit: string;
-  colorRabbitYoung: string;
-  colorRabbitOld: string;
+  colorFoodAdult: string;
+  colorFoodYoung: string;
+  colorFoodOld: string;
   colorHeadStroke: string;
   snakeColors: string[];
 
@@ -83,6 +84,20 @@ export interface GameSettings {
   levelOverrides: Record<string, LevelOverride>;
   levelSettingsOverrides: Record<string, LevelSettingsOverride>;
   fieldScopes: Record<string, boolean>;
+
+  // Deprecated compatibility aliases (tests/legacy modules)
+  rabbitYoungAge: number;
+  rabbitAdultAge: number;
+  rabbitMaxAge: number;
+  rabbitMinDistance: number;
+  rabbitCountPerSnakeCoeff: number;
+  rabbitCountBase: number;
+  rabbitSignalClose: number;
+  rabbitSignalDecay: number;
+  rabbitSignalMin: number;
+  colorRabbit: string;
+  colorRabbitYoung: string;
+  colorRabbitOld: string;
 }
 
 /* ====== Build defaults from JSON ====== */
@@ -90,23 +105,23 @@ export interface GameSettings {
 export function createDefaultSettings(): GameSettings {
   const defaultJson = defaults;
   const fieldScopes = createDefaultFieldScopes();
-  return {
+  const settings = {
     hungerThreshold:              defaultJson.snake.hungerThreshold,
     minSnakeLength:               defaultJson.snake.minSnakeLength,
     initialSnakeLength:           defaultJson.snake.initialSnakeLength,
 
-    rabbitYoungAge:               defaultJson.rabbit.youngAge,
-    rabbitAdultAge:               defaultJson.rabbit.adultAge,
-    rabbitMaxAge:                 defaultJson.rabbit.maxAge,
-    rabbitMinDistance:             defaultJson.rabbit.minDistance,
-    reproductionMinCooldown:      defaultJson.rabbit.reproductionMinCooldown,
-    reproductionProbabilityBase:  defaultJson.rabbit.reproductionProbabilityBase,
-    maxReproductions:             defaultJson.rabbit.maxReproductions,
-    neighborReproductionRadius:   defaultJson.rabbit.neighborReproductionRadius,
-    neighborReproductionPenalty:  defaultJson.rabbit.neighborReproductionPenalty,
-    maxReproductionNeighbors:     defaultJson.rabbit.maxReproductionNeighbors,
-    rabbitCountPerSnakeCoeff:     defaultJson.rabbit.countPerSnakeCoeff,
-    rabbitCountBase:              defaultJson.rabbit.countBase,
+    foodYoungAge:               defaultJson.food.youngAge,
+    foodAdultAge:               defaultJson.food.adultAge,
+    foodMaxAge:                 defaultJson.food.maxAge,
+    foodMinDistance:            defaultJson.food.minDistance,
+    reproductionMinCooldown:    defaultJson.food.reproductionMinCooldown,
+    reproductionProbabilityBase: defaultJson.food.reproductionProbabilityBase,
+    maxReproductions:           defaultJson.food.maxReproductions,
+    neighborReproductionRadius: defaultJson.food.neighborReproductionRadius,
+    neighborReproductionPenalty: defaultJson.food.neighborReproductionPenalty,
+    maxReproductionNeighbors:   defaultJson.food.maxReproductionNeighbors,
+    foodCountPerSnakeCoeff:     defaultJson.food.countPerSnakeCoeff,
+    foodCountBase:              defaultJson.food.countBase,
 
     wallClusterCoeff:             defaultJson.walls.clusterCoeff,
     wallClusterBase:              defaultJson.walls.clusterBase,
@@ -125,23 +140,26 @@ export function createDefaultSettings(): GameSettings {
     visionSize:                   defaultJson.ai.visionSize,
     obstacleSignalClose:          defaultJson.ai.obstacleSignalClose,
     obstacleSignalDecay:          defaultJson.ai.obstacleSignalDecay,
-    rabbitSignalClose:            defaultJson.ai.rabbitSignalClose,
-    rabbitSignalDecay:            defaultJson.ai.rabbitSignalDecay,
-    rabbitSignalMin:              defaultJson.ai.rabbitSignalMin,
+    foodSignalClose:            defaultJson.ai.foodSignalClose,
+    foodSignalDecay:            defaultJson.ai.foodSignalDecay,
+    foodSignalMin:              defaultJson.ai.foodSignalMin,
 
     colorBg:                      defaultJson.colors.bg,
     colorGrid:                    defaultJson.colors.grid,
     colorWall:                    defaultJson.colors.wall,
-    colorRabbit:                  defaultJson.colors.rabbit,
-    colorRabbitYoung:             defaultJson.colors.rabbitYoung,
-    colorRabbitOld:               defaultJson.colors.rabbitOld,
+    colorFoodAdult:             defaultJson.colors.foodAdult,
+    colorFoodYoung:             defaultJson.colors.foodYoung,
+    colorFoodOld:               defaultJson.colors.foodOld,
     colorHeadStroke:              defaultJson.colors.headStroke,
     snakeColors:                  [...defaultJson.colors.snakeColors],
 
     levelOverrides:               { ...(defaultJson.levelOverrides as Record<string, LevelOverride>) },
     levelSettingsOverrides:       {},
     fieldScopes,
-  };
+  } as unknown as GameSettings;
+
+  defineLegacyAliases(settings);
+  return settings;
 }
 
 /** The singleton mutable settings object. */
@@ -161,7 +179,7 @@ export interface GameDefaultsJSON {
     minSnakeLength: number;
     initialSnakeLength: number;
   };
-  rabbit: {
+  food: {
     youngAge: number;
     adultAge: number;
     maxAge: number;
@@ -196,17 +214,17 @@ export interface GameDefaultsJSON {
     visionSize: number;
     obstacleSignalClose: number;
     obstacleSignalDecay: number;
-    rabbitSignalClose: number;
-    rabbitSignalDecay: number;
-    rabbitSignalMin: number;
+    foodSignalClose: number;
+    foodSignalDecay: number;
+    foodSignalMin: number;
   };
   colors: {
     bg: string;
     grid: string;
     wall: string;
-    rabbit: string;
-    rabbitYoung: string;
-    rabbitOld: string;
+    foodAdult: string;
+    foodYoung: string;
+    foodOld: string;
     headStroke: string;
     snakeColors: string[];
   };
@@ -227,19 +245,19 @@ export function settingsToJSON(): GameDefaultsJSON {
       minSnakeLength: settings.minSnakeLength,
       initialSnakeLength: settings.initialSnakeLength,
     },
-    rabbit: {
-      youngAge: settings.rabbitYoungAge,
-      adultAge: settings.rabbitAdultAge,
-      maxAge: settings.rabbitMaxAge,
-      minDistance: settings.rabbitMinDistance,
+    food: {
+      youngAge: settings.foodYoungAge,
+      adultAge: settings.foodAdultAge,
+      maxAge: settings.foodMaxAge,
+      minDistance: settings.foodMinDistance,
       reproductionMinCooldown: settings.reproductionMinCooldown,
       reproductionProbabilityBase: settings.reproductionProbabilityBase,
       maxReproductions: settings.maxReproductions,
       neighborReproductionRadius: settings.neighborReproductionRadius,
       neighborReproductionPenalty: settings.neighborReproductionPenalty,
       maxReproductionNeighbors: settings.maxReproductionNeighbors,
-      countPerSnakeCoeff: settings.rabbitCountPerSnakeCoeff,
-      countBase: settings.rabbitCountBase,
+      countPerSnakeCoeff: settings.foodCountPerSnakeCoeff,
+      countBase: settings.foodCountBase,
     },
     walls: {
       clusterCoeff: settings.wallClusterCoeff,
@@ -262,17 +280,17 @@ export function settingsToJSON(): GameDefaultsJSON {
       visionSize: settings.visionSize,
       obstacleSignalClose: settings.obstacleSignalClose,
       obstacleSignalDecay: settings.obstacleSignalDecay,
-      rabbitSignalClose: settings.rabbitSignalClose,
-      rabbitSignalDecay: settings.rabbitSignalDecay,
-      rabbitSignalMin: settings.rabbitSignalMin,
+      foodSignalClose: settings.foodSignalClose,
+      foodSignalDecay: settings.foodSignalDecay,
+      foodSignalMin: settings.foodSignalMin,
     },
     colors: {
       bg: settings.colorBg,
       grid: settings.colorGrid,
       wall: settings.colorWall,
-      rabbit: settings.colorRabbit,
-      rabbitYoung: settings.colorRabbitYoung,
-      rabbitOld: settings.colorRabbitOld,
+      foodAdult: settings.colorFoodAdult,
+      foodYoung: settings.colorFoodYoung,
+      foodOld: settings.colorFoodOld,
       headStroke: settings.colorHeadStroke,
       snakeColors: [...settings.snakeColors],
     },
@@ -293,19 +311,19 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.snake.minSnakeLength != null)     settings.minSnakeLength = data.snake.minSnakeLength;
     if (data.snake.initialSnakeLength != null)  settings.initialSnakeLength = data.snake.initialSnakeLength;
   }
-  if (data.rabbit) {
-    if (data.rabbit.youngAge != null)                    settings.rabbitYoungAge = data.rabbit.youngAge;
-    if (data.rabbit.adultAge != null)                    settings.rabbitAdultAge = data.rabbit.adultAge;
-    if (data.rabbit.maxAge != null)                      settings.rabbitMaxAge = data.rabbit.maxAge;
-    if (data.rabbit.minDistance != null)                  settings.rabbitMinDistance = data.rabbit.minDistance;
-    if (data.rabbit.reproductionMinCooldown != null)     settings.reproductionMinCooldown = data.rabbit.reproductionMinCooldown;
-    if (data.rabbit.reproductionProbabilityBase != null)  settings.reproductionProbabilityBase = data.rabbit.reproductionProbabilityBase;
-    if (data.rabbit.maxReproductions != null)             settings.maxReproductions = data.rabbit.maxReproductions;
-    if (data.rabbit.neighborReproductionRadius != null)   settings.neighborReproductionRadius = data.rabbit.neighborReproductionRadius;
-    if (data.rabbit.neighborReproductionPenalty != null)   settings.neighborReproductionPenalty = data.rabbit.neighborReproductionPenalty;
-    if (data.rabbit.maxReproductionNeighbors != null)     settings.maxReproductionNeighbors = data.rabbit.maxReproductionNeighbors;
-    if (data.rabbit.countPerSnakeCoeff != null)           settings.rabbitCountPerSnakeCoeff = data.rabbit.countPerSnakeCoeff;
-    if (data.rabbit.countBase != null)                    settings.rabbitCountBase = data.rabbit.countBase;
+  if (data.food) {
+    if (data.food.youngAge != null)                    settings.foodYoungAge = data.food.youngAge;
+    if (data.food.adultAge != null)                    settings.foodAdultAge = data.food.adultAge;
+    if (data.food.maxAge != null)                      settings.foodMaxAge = data.food.maxAge;
+    if (data.food.minDistance != null)                 settings.foodMinDistance = data.food.minDistance;
+    if (data.food.reproductionMinCooldown != null)     settings.reproductionMinCooldown = data.food.reproductionMinCooldown;
+    if (data.food.reproductionProbabilityBase != null) settings.reproductionProbabilityBase = data.food.reproductionProbabilityBase;
+    if (data.food.maxReproductions != null)            settings.maxReproductions = data.food.maxReproductions;
+    if (data.food.neighborReproductionRadius != null)  settings.neighborReproductionRadius = data.food.neighborReproductionRadius;
+    if (data.food.neighborReproductionPenalty != null) settings.neighborReproductionPenalty = data.food.neighborReproductionPenalty;
+    if (data.food.maxReproductionNeighbors != null)    settings.maxReproductionNeighbors = data.food.maxReproductionNeighbors;
+    if (data.food.countPerSnakeCoeff != null)          settings.foodCountPerSnakeCoeff = data.food.countPerSnakeCoeff;
+    if (data.food.countBase != null)                   settings.foodCountBase = data.food.countBase;
   }
   if (data.walls) {
     if (data.walls.clusterCoeff != null)  settings.wallClusterCoeff = data.walls.clusterCoeff;
@@ -328,17 +346,17 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.ai.visionSize != null)           settings.visionSize = data.ai.visionSize;
     if (data.ai.obstacleSignalClose != null)  settings.obstacleSignalClose = data.ai.obstacleSignalClose;
     if (data.ai.obstacleSignalDecay != null)  settings.obstacleSignalDecay = data.ai.obstacleSignalDecay;
-    if (data.ai.rabbitSignalClose != null)    settings.rabbitSignalClose = data.ai.rabbitSignalClose;
-    if (data.ai.rabbitSignalDecay != null)    settings.rabbitSignalDecay = data.ai.rabbitSignalDecay;
-    if (data.ai.rabbitSignalMin != null)      settings.rabbitSignalMin = data.ai.rabbitSignalMin;
+    if (data.ai.foodSignalClose != null)    settings.foodSignalClose = data.ai.foodSignalClose;
+    if (data.ai.foodSignalDecay != null)    settings.foodSignalDecay = data.ai.foodSignalDecay;
+    if (data.ai.foodSignalMin != null)      settings.foodSignalMin = data.ai.foodSignalMin;
   }
   if (data.colors) {
     if (data.colors.bg != null)          settings.colorBg = data.colors.bg;
     if (data.colors.grid != null)        settings.colorGrid = data.colors.grid;
     if (data.colors.wall != null)        settings.colorWall = data.colors.wall;
-    if (data.colors.rabbit != null)      settings.colorRabbit = data.colors.rabbit;
-    if (data.colors.rabbitYoung != null)  settings.colorRabbitYoung = data.colors.rabbitYoung;
-    if (data.colors.rabbitOld != null)   settings.colorRabbitOld = data.colors.rabbitOld;
+    if (data.colors.foodAdult != null)   settings.colorFoodAdult = data.colors.foodAdult;
+    if (data.colors.foodYoung != null)   settings.colorFoodYoung = data.colors.foodYoung;
+    if (data.colors.foodOld != null)     settings.colorFoodOld = data.colors.foodOld;
     if (data.colors.headStroke != null)  settings.colorHeadStroke = data.colors.headStroke;
     if (data.colors.snakeColors)         settings.snakeColors = [...data.colors.snakeColors];
   }
@@ -404,18 +422,48 @@ export function applyLevelSettingOverrides(level: number, settings?: GameSetting
 function createDefaultFieldScopes(): Record<string, boolean> {
   const keys = [
     'hungerThreshold', 'initialSnakeLength', 'minSnakeLength',
-    'rabbitYoungAge', 'rabbitAdultAge', 'rabbitMaxAge',
-    'rabbitMinDistance', 'reproductionMinCooldown', 'reproductionProbabilityBase',
+    'foodYoungAge', 'foodAdultAge', 'foodMaxAge',
+    'foodMinDistance', 'reproductionMinCooldown', 'reproductionProbabilityBase',
     'maxReproductions', 'neighborReproductionRadius', 'maxReproductionNeighbors',
-    'neighborReproductionPenalty', 'rabbitCountPerSnakeCoeff', 'rabbitCountBase',
+    'neighborReproductionPenalty', 'foodCountPerSnakeCoeff', 'foodCountBase',
     'wallClusterCoeff', 'wallClusterBase', 'wallLengthCoeff', 'wallLengthBase',
     'targetScoreCoeff', 'targetScoreBase',
     'baseWidth', 'baseHeight', 'levelSizeIncrement', 'levelTimeLimit', 'tickIntervalMs',
-    'visionSize', 'obstacleSignalClose', 'obstacleSignalDecay', 'rabbitSignalClose',
-    'rabbitSignalDecay', 'rabbitSignalMin',
-    'colorBg', 'colorGrid', 'colorWall', 'colorRabbit', 'colorRabbitYoung', 'colorRabbitOld', 'colorHeadStroke',
+    'visionSize', 'obstacleSignalClose', 'obstacleSignalDecay', 'foodSignalClose',
+    'foodSignalDecay', 'foodSignalMin',
+    'colorBg', 'colorGrid', 'colorWall', 'colorFoodAdult', 'colorFoodYoung', 'colorFoodOld', 'colorHeadStroke',
   ];
   const scopes: Record<string, boolean> = {};
   for (const key of keys) scopes[key] = true;
   return scopes;
+}
+
+function defineLegacyAliases(settings: GameSettings): void {
+  const aliases: Array<[keyof GameSettings, keyof GameSettings]> = [
+    ['rabbitYoungAge', 'foodYoungAge'],
+    ['rabbitAdultAge', 'foodAdultAge'],
+    ['rabbitMaxAge', 'foodMaxAge'],
+    ['rabbitMinDistance', 'foodMinDistance'],
+    ['rabbitCountPerSnakeCoeff', 'foodCountPerSnakeCoeff'],
+    ['rabbitCountBase', 'foodCountBase'],
+    ['rabbitSignalClose', 'foodSignalClose'],
+    ['rabbitSignalDecay', 'foodSignalDecay'],
+    ['rabbitSignalMin', 'foodSignalMin'],
+    ['colorRabbit', 'colorFoodAdult'],
+    ['colorRabbitYoung', 'colorFoodYoung'],
+    ['colorRabbitOld', 'colorFoodOld'],
+  ];
+
+  for (const [legacyKey, modernKey] of aliases) {
+    Object.defineProperty(settings, legacyKey, {
+      get() {
+        return (settings as any)[modernKey];
+      },
+      set(value: unknown) {
+        (settings as any)[modernKey] = value;
+      },
+      configurable: true,
+      enumerable: false,
+    });
+  }
 }
