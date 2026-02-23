@@ -87,7 +87,7 @@ export class GameEngine {
       state.snakes.push(
         this.createSnake(
           snakeId,
-          `Бот ${botIndex + 1}`,
+          this.getBotColorName(snakeId, settings),
           startSlot.position,
           startSlot.direction,
           true
@@ -167,6 +167,46 @@ export class GameEngine {
       { position: { x: width - margin - 1, y: height - margin - 1 }, direction: 'left' },
     ];
     return positions.slice(0, count);
+  }
+
+  private getBotColorName(snakeId: number, settings: GameSettings): string {
+    const palette = settings.snakeColors;
+    if (palette.length === 0) return `Бот ${snakeId + 1}`;
+    const color = palette[snakeId % palette.length].toLowerCase();
+    const map: Record<string, string> = {
+      '#ff0000': 'Красный',
+      '#00ff00': 'Зелёный',
+      '#0000ff': 'Синий',
+      '#ffff00': 'Жёлтый',
+      '#ff00ff': 'Фиолетовый',
+      '#ff8800': 'Оранжевый',
+      '#88ff88': 'Салатовый',
+    };
+    if (map[color]) return map[color];
+
+    const rgb = this.hexToRgb(color);
+    if (!rgb) return `Бот ${snakeId + 1}`;
+
+    // Family-based fallback so near-blue tones (e.g. #00CCFF) still get a color name.
+    if (rgb.b >= 170 && rgb.g >= 140 && rgb.r <= 90) return 'Синий';
+    if (rgb.g >= 170 && rgb.r <= 120 && rgb.b <= 120) return 'Зелёный';
+    if (rgb.r >= 170 && rgb.g >= 120 && rgb.b <= 90) return 'Оранжевый';
+    if (rgb.r >= 170 && rgb.g >= 170 && rgb.b <= 110) return 'Жёлтый';
+    if (rgb.r >= 150 && rgb.b >= 150 && rgb.g <= 130) return 'Фиолетовый';
+    if (rgb.r >= 170 && rgb.g <= 110 && rgb.b <= 110) return 'Красный';
+
+    return `Бот ${snakeId + 1}`;
+  }
+
+  private hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+    const match = /^#([0-9a-f]{6})$/i.exec(hex);
+    if (!match) return null;
+    const value = match[1];
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16),
+    };
   }
 
 }

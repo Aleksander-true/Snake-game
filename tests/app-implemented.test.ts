@@ -237,6 +237,25 @@ describe('App implemented behavior', () => {
     });
   });
 
+  describe('GameEngine bot names', () => {
+    test('assigns bot names based on snake color palette', () => {
+      const ctx = createCtx();
+      const engine = new GameEngine(ctx);
+      const config: GameConfig = {
+        playerCount: 0,
+        botCount: 2,
+        playerNames: [],
+        difficultyLevel: 1,
+      };
+
+      const state = engine.createGameState(config, 1);
+      engine.initLevel(state, config);
+
+      expect(state.snakes[0].name).toBe('Зелёный');
+      expect(state.snakes[1].name).toBe('Синий');
+    });
+  });
+
   describe('ScorePersistenceService', () => {
     test('saves session scores for every snake', () => {
       const service = new ScorePersistenceService();

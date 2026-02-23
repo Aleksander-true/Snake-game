@@ -1,4 +1,6 @@
 import {
+  BotProfileId,
+  BotSkillProfileSettings,
   gameSettings, GameSettings, LevelOverride,
   resetSettings,
   settingsToJSON, getLevelOverride, setLevelOverride,
@@ -104,6 +106,23 @@ interface FieldDef {
   key: keyof GameSettings;
   type: 'number' | 'color';
 }
+
+interface BotFieldDef {
+  key: keyof BotSkillProfileSettings;
+  label: string;
+  step?: number;
+  min?: number;
+}
+
+const BOT_PROFILE_FIELDS: BotFieldDef[] = [
+  { key: 'trapPenalty', label: 'Штраф тупика' },
+  { key: 'fearWeight', label: 'Страх змей' },
+  { key: 'foodWeight', label: 'Вес еды' },
+  { key: 'longSnakeThreshold', label: 'Длинная с длины' },
+  { key: 'longSnakeFoodPenalty', label: 'Снижение интереса к еде', step: 0.05, min: 0 },
+  { key: 'mistakePeriod', label: 'Период ошибок', min: 0 },
+  { key: 'badMoveBias', label: 'Сила ошибки', step: 0.05, min: 0 },
+];
 
 const ALL_FIELDS: FieldDef[] = [
   // Snake
@@ -286,6 +305,31 @@ function buildAiSection(currentLevel: number): string {
   );
 }
 
+function buildBotProfilesSection(): string {
+  const profileNames: Record<BotProfileId, string> = {
+    rookie: 'Rookie (1-3)',
+    basic: 'Basic (4-6)',
+    solid: 'Solid (7-8)',
+    wise: 'Wise (9-10)',
+  };
+
+  let body = '';
+  const profileIds: BotProfileId[] = ['rookie', 'basic', 'solid', 'wise'];
+  for (const profileId of profileIds) {
+    body += `<div class="dev-section-title">${profileNames[profileId]}</div>`;
+    for (const field of BOT_PROFILE_FIELDS) {
+      const inputId = `dev-bot-${profileId}-${field.key}`;
+      const value = gameSettings.botProfiles[profileId][field.key];
+      body += buildRow(
+        field.label,
+        buildNumberInput(inputId, value, field.step ?? 1, field.min)
+      );
+    }
+  }
+
+  return buildSection('🧠 Профили ИИ', body);
+}
+
 function buildColorsSection(currentLevel: number): string {
   let snakeColorRows = '';
   for (let snakeColorIndex = 0; snakeColorIndex < gameSettings.snakeColors.length; snakeColorIndex++) {
@@ -345,6 +389,7 @@ export function renderDevPanel(
         ${buildScoringSection(currentLevel)}
         ${buildBoardSection(currentLevel)}
         ${buildAiSection(currentLevel)}
+        ${buildBotProfilesSection()}
         ${buildColorsSection(currentLevel)}
       </div>
       ${buildButtons()}
@@ -440,6 +485,8 @@ function readPanelIntoSettings(container: HTMLElement, level: number): void {
     const colorInputElement = container.querySelector(`#dev-snakeColor-${snakeColorIndex}`) as HTMLInputElement | null;
     if (colorInputElement) gameSettings.snakeColors[snakeColorIndex] = colorInputElement.value;
   }
+
+  readBotProfilesIntoSettings(container);
 }
 
 /** Save per-level overrides from panel inputs. */
@@ -466,6 +513,19 @@ function saveSingleLevelOverride(
   const defaultValue = parseInt(input.dataset.default || '', 10);
   if (Number.isNaN(defaultValue) || currentValue !== defaultValue) {
     (target as any)[key] = currentValue;
+  }
+}
+
+function readBotProfilesIntoSettings(container: HTMLElement): void {
+  const profileIds: BotProfileId[] = ['rookie', 'basic', 'solid', 'wise'];
+  for (const profileId of profileIds) {
+    for (const field of BOT_PROFILE_FIELDS) {
+      const input = container.querySelector(`#dev-bot-${profileId}-${field.key}`) as HTMLInputElement | null;
+      if (!input) continue;
+      const rawValue = parseFloat(input.value);
+      if (!Number.isFinite(rawValue)) continue;
+      gameSettings.botProfiles[profileId][field.key] = rawValue;
+    }
   }
 }
 

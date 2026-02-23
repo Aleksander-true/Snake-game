@@ -17,6 +17,23 @@ export interface LevelOverride {
 
 export type LevelSettingsOverride = Record<string, number | string>;
 
+export type BotProfileId = 'rookie' | 'basic' | 'solid' | 'wise';
+
+export interface BotSkillProfileSettings {
+  trapPenalty: number;
+  areaWeight: number;
+  escapeWeight: number;
+  foodWeight: number;
+  immediateEatWeight: number;
+  fearWeight: number;
+  longSnakeThreshold: number;
+  longSnakeFoodPenalty: number;
+  mistakePeriod: number;
+  badMoveBias: number;
+}
+
+export type BotProfilesSettings = Record<BotProfileId, BotSkillProfileSettings>;
+
 /* ====== Main settings interface ====== */
 
 export interface GameSettings {
@@ -69,6 +86,7 @@ export interface GameSettings {
   foodSignalClose: number;
   foodSignalDecay: number;
   foodSignalMin: number;
+  botProfiles: BotProfilesSettings;
 
   /* Colors (canvas) */
   colorBg: string;
@@ -143,6 +161,7 @@ export function createDefaultSettings(): GameSettings {
     foodSignalClose:            defaultJson.ai.foodSignalClose,
     foodSignalDecay:            defaultJson.ai.foodSignalDecay,
     foodSignalMin:              defaultJson.ai.foodSignalMin,
+    botProfiles: deepCopyBotProfiles(defaultJson.ai.botProfiles),
 
     colorBg:                      defaultJson.colors.bg,
     colorGrid:                    defaultJson.colors.grid,
@@ -217,6 +236,7 @@ export interface GameDefaultsJSON {
     foodSignalClose: number;
     foodSignalDecay: number;
     foodSignalMin: number;
+    botProfiles: BotProfilesSettings;
   };
   colors: {
     bg: string;
@@ -283,6 +303,7 @@ export function settingsToJSON(): GameDefaultsJSON {
       foodSignalClose: settings.foodSignalClose,
       foodSignalDecay: settings.foodSignalDecay,
       foodSignalMin: settings.foodSignalMin,
+      botProfiles: deepCopyBotProfiles(settings.botProfiles),
     },
     colors: {
       bg: settings.colorBg,
@@ -349,6 +370,9 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.ai.foodSignalClose != null)    settings.foodSignalClose = data.ai.foodSignalClose;
     if (data.ai.foodSignalDecay != null)    settings.foodSignalDecay = data.ai.foodSignalDecay;
     if (data.ai.foodSignalMin != null)      settings.foodSignalMin = data.ai.foodSignalMin;
+    if (data.ai.botProfiles) {
+      settings.botProfiles = mergeBotProfiles(settings.botProfiles, data.ai.botProfiles);
+    }
   }
   if (data.colors) {
     if (data.colors.bg != null)          settings.colorBg = data.colors.bg;
@@ -466,4 +490,27 @@ function defineLegacyAliases(settings: GameSettings): void {
       enumerable: false,
     });
   }
+}
+
+function deepCopyBotProfiles(source: BotProfilesSettings): BotProfilesSettings {
+  return {
+    rookie: { ...source.rookie },
+    basic: { ...source.basic },
+    solid: { ...source.solid },
+    wise: { ...source.wise },
+  };
+}
+
+function mergeBotProfiles(
+  base: BotProfilesSettings,
+  incoming: Partial<Record<BotProfileId, Partial<BotSkillProfileSettings>>>
+): BotProfilesSettings {
+  const result = deepCopyBotProfiles(base);
+  const profileIds: BotProfileId[] = ['rookie', 'basic', 'solid', 'wise'];
+  for (const profileId of profileIds) {
+    const patch = incoming[profileId];
+    if (!patch) continue;
+    result[profileId] = { ...result[profileId], ...patch };
+  }
+  return result;
 }

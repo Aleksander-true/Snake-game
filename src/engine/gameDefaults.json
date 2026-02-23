@@ -46,7 +46,57 @@
     "obstacleSignalDecay": 20,
     "foodSignalClose": 100,
     "foodSignalDecay": 20,
-    "foodSignalMin": 5
+    "foodSignalMin": 5,
+    "botProfiles": {
+      "rookie": {
+        "trapPenalty": 95,
+        "areaWeight": 1.3,
+        "escapeWeight": 10,
+        "foodWeight": 170,
+        "immediateEatWeight": 140,
+        "fearWeight": 95,
+        "longSnakeThreshold": 8,
+        "longSnakeFoodPenalty": 0.85,
+        "mistakePeriod": 7,
+        "badMoveBias": 1.6
+      },
+      "basic": {
+        "trapPenalty": 120,
+        "areaWeight": 1.9,
+        "escapeWeight": 18,
+        "foodWeight": 190,
+        "immediateEatWeight": 165,
+        "fearWeight": 78,
+        "longSnakeThreshold": 9,
+        "longSnakeFoodPenalty": 0.7,
+        "mistakePeriod": 11,
+        "badMoveBias": 1.15
+      },
+      "solid": {
+        "trapPenalty": 145,
+        "areaWeight": 2.3,
+        "escapeWeight": 24,
+        "foodWeight": 205,
+        "immediateEatWeight": 190,
+        "fearWeight": 62,
+        "longSnakeThreshold": 10,
+        "longSnakeFoodPenalty": 0.55,
+        "mistakePeriod": 19,
+        "badMoveBias": 0.7
+      },
+      "wise": {
+        "trapPenalty": 170,
+        "areaWeight": 2.8,
+        "escapeWeight": 30,
+        "foodWeight": 210,
+        "immediateEatWeight": 220,
+        "fearWeight": 45,
+        "longSnakeThreshold": 11,
+        "longSnakeFoodPenalty": 0.4,
+        "mistakePeriod": 0,
+        "badMoveBias": 0
+      }
+    }
   },
 
   "colors": {

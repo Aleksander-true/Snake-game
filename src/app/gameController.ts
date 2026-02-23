@@ -277,10 +277,14 @@ export class GameController {
 
     // Stop the game loop while modal is shown
     this.stopGameLoop();
+    if (this.state.gameOver) {
+      this.scorePersistenceService.saveSessionScores(this.state);
+    }
     this.levelCompletionService.handleCompletion(this.state, this.devModeActive, this.ctx.settings, {
       setState: (fsmState) => this.fsm.reset(fsmState),
       onContinue: () => this.handleFSMEvent('CONTINUE'),
-      onShowResults: () => this.handleFSMEvent('SHOW_RESULTS'),
+      onRestart: () => this.handleFSMEvent('RESTART'),
+      onMenu: () => this.handleFSMEvent('GO_TO_MENU'),
       onRestartSameLevel: (level) => {
         if (this.config && this.canvas) {
           this.startGame(this.config, this.canvas, level);

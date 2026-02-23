@@ -2,6 +2,16 @@ import { ScoreRecord } from '../engine/types';
 
 const STORAGE_KEY = 'snake-food-scores';
 const NAMES_KEY = 'snake-food-names';
+const MENU_PREFS_KEY = 'snake-menu-prefs';
+
+export interface MenuPreferences {
+  playerCount: number;
+  botCount: number;
+  difficultyLevel: number;
+  gameMode: 'classic' | 'survival';
+  player1Name: string;
+  player2Name: string;
+}
 
 /**
  * Save a score record to localStorage.
@@ -59,5 +69,38 @@ export function getSavedNames(): string[] {
     return JSON.parse(data) as string[];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Save last selected menu parameters.
+ * Used in main menu to restore players/bots counts, names, difficulty and mode.
+ */
+export function saveMenuPreferences(preferences: MenuPreferences): void {
+  localStorage.setItem(MENU_PREFS_KEY, JSON.stringify(preferences));
+}
+
+/**
+ * Load last selected menu parameters.
+ * Returns null when no saved data exists or payload is invalid.
+ */
+export function getMenuPreferences(): MenuPreferences | null {
+  try {
+    const raw = localStorage.getItem(MENU_PREFS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<MenuPreferences>;
+    if (
+      typeof parsed.playerCount !== 'number' ||
+      typeof parsed.botCount !== 'number' ||
+      typeof parsed.difficultyLevel !== 'number' ||
+      (parsed.gameMode !== 'classic' && parsed.gameMode !== 'survival') ||
+      typeof parsed.player1Name !== 'string' ||
+      typeof parsed.player2Name !== 'string'
+    ) {
+      return null;
+    }
+    return parsed as MenuPreferences;
+  } catch {
+    return null;
   }
 }

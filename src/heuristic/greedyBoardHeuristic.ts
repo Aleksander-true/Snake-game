@@ -1,4 +1,4 @@
-import { GameSettings } from '../engine/settings';
+import { BotProfileId, GameSettings } from '../engine/settings';
 import { Direction, Food, GameState, Position, Snake } from '../engine/types';
 import { getNextHeadPosition } from '../engine/systems/movementSystem';
 import { getFoodReward } from '../engine/systems/foodSystem';
@@ -10,24 +10,56 @@ interface DirectionEvaluation {
   score: number;
 }
 
-export const greedyBoardHeuristic: HeuristicAlgorithm = {
-  id: 'greedy-board-v1',
-  chooseDirection: (state, snake, settings) => chooseGreedyBoardDirection(state, snake, settings),
+export interface SkillProfile {
+  id: string;
+  trapPenalty: number;
+  areaWeight: number;
+  escapeWeight: number;
+  foodWeight: number;
+  immediateEatWeight: number;
+  fearWeight: number;
+  longSnakeThreshold: number;
+  longSnakeFoodPenalty: number;
+  mistakePeriod: number;
+  badMoveBias: number;
+}
+
+export const wiseHeuristic: HeuristicAlgorithm = {
+  id: 'wise',
+  chooseDirection: (state, snake, settings) => chooseWiseDirection(state, snake, settings),
 };
 
-export function chooseGreedyBoardDirection(
+export function chooseDirectionByDifficulty(
   state: GameState,
   snake: Snake,
   settings: GameSettings
 ): Direction {
+  const profile = resolveProfileByDifficulty(state.difficultyLevel, settings);
+  return chooseDirectionByProfile(state, snake, settings, profile);
+}
+
+export function chooseWiseDirection(
+  state: GameState,
+  snake: Snake,
+  settings: GameSettings
+): Direction {
+  return chooseDirectionByProfile(state, snake, settings, getSkillProfileById(settings, 'wise'));
+}
+
+export function chooseDirectionByProfile(
+  state: GameState,
+  snake: Snake,
+  settings: GameSettings,
+  profile: SkillProfile
+): Direction {
   const candidates = getCandidateDirections(snake.direction);
   const ranked = candidates.map(direction => ({
     direction,
-    score: evaluateDirection(state, snake, settings, direction),
+    score: evaluateDirection(state, snake, settings, direction, profile),
   }));
   ranked.sort((left, right) => right.score - left.score);
-  const best = ranked[0];
-  return best ? best.direction : snake.direction;
+  const maybeBad = pickMistakeDirection(ranked, state, snake, profile);
+  return maybeBad?.direction ?? ranked[0]?.direction ?? snake.direction;
 }
 
 function getCandidateDirections(current: Direction): Direction[] {
@@ -39,7 +71,8 @@ function evaluateDirection(
   state: GameState,
   snake: Snake,
   settings: GameSettings,
-  direction: Direction
+  direction: Direction,
+  profile: SkillProfile
 ): number {
   const nextHead = getNextHeadPosition(snake.head, direction);
   if (!isInBounds(nextHead, state)) return Number.NEGATIVE_INFINITY;
@@ -57,19 +90,26 @@ function evaluateDirection(
 
   const localEscapeRoutes = countFreeNeighbors(nextHead, state, blocked);
   const minSafeArea = snake.segments.length + 2;
-  const trapPenalty = reachableArea < minSafeArea ? (minSafeArea - reachableArea) * 150 : 0;
+  const trapPenalty = reachableArea < minSafeArea ? (minSafeArea - reachableArea) * profile.trapPenalty : 0;
 
   const nearestFoodDistance = getNearestFoodDistance(nextHead, state.foods);
   const nearestFoodReward = getNearestFoodReward(nextHead, state.foods, settings);
+  const nearestSnakeDistance = getNearestOtherSnakeDistance(nextHead, state, snake.id);
+  const foodSuppression = snake.segments.length >= profile.longSnakeThreshold
+    ? profile.longSnakeFoodPenalty
+    : 0;
   const foodScore = nearestFoodDistance === Number.POSITIVE_INFINITY
     ? 0
-    : (nearestFoodReward * 220) / (nearestFoodDistance + 1);
+    : (nearestFoodReward * profile.foodWeight) / (nearestFoodDistance + 1);
+  const fearPenalty = nearestSnakeDistance === Number.POSITIVE_INFINITY
+    ? 0
+    : profile.fearWeight / (nearestSnakeDistance + 1);
 
-  const areaScore = reachableArea * 2.5;
-  const escapeScore = localEscapeRoutes * 25;
-  const immediateEatBonus = food ? getFoodReward(food, settings).points * 200 : 0;
+  const areaScore = reachableArea * profile.areaWeight;
+  const escapeScore = localEscapeRoutes * profile.escapeWeight;
+  const immediateEatBonus = food ? getFoodReward(food, settings).points * profile.immediateEatWeight : 0;
 
-  return areaScore + escapeScore + foodScore + immediateEatBonus - trapPenalty;
+  return areaScore + escapeScore + (foodScore * (1 - foodSuppression)) + immediateEatBonus - trapPenalty - fearPenalty;
 }
 
 function isInBounds(pos: Position, state: GameState): boolean {
@@ -185,14 +225,74 @@ function cellKey(pos: Position): string {
   return `${pos.x},${pos.y}`;
 }
 
+function resolveProfileByDifficulty(difficulty: number, settings: GameSettings): SkillProfile {
+  if (difficulty <= 3) return getSkillProfileById(settings, 'rookie');
+  if (difficulty <= 6) return getSkillProfileById(settings, 'basic');
+  if (difficulty <= 8) return getSkillProfileById(settings, 'solid');
+  return getSkillProfileById(settings, 'wise');
+}
+
+function pickMistakeDirection(
+  ranked: DirectionEvaluation[],
+  state: GameState,
+  snake: Snake,
+  profile: SkillProfile
+): DirectionEvaluation | null {
+  if (profile.mistakePeriod <= 0 || ranked.length < 2) return null;
+  const shouldMakeMistake = (state.tickCount + snake.id * 3) % profile.mistakePeriod === 0;
+  if (!shouldMakeMistake) return null;
+
+  const safeDescending = [...ranked].sort((left, right) => right.score - left.score);
+  const nonFatal = safeDescending.filter(candidate => candidate.score > Number.NEGATIVE_INFINITY / 2);
+  if (nonFatal.length < 2) return null;
+
+  // Mistake model: pick a direction from the lower half, causing misses or wider turns.
+  const mistakeIndex = Math.min(nonFatal.length - 1, Math.floor((nonFatal.length - 1) * profile.badMoveBias / 2));
+  return nonFatal[mistakeIndex];
+}
+
+function getNearestOtherSnakeDistance(origin: Position, state: GameState, currentSnakeId: number): number {
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const snake of state.snakes) {
+    if (!snake.alive || snake.id === currentSnakeId) continue;
+    for (const segment of snake.segments) {
+      const distance = Math.max(Math.abs(segment.x - origin.x), Math.abs(segment.y - origin.y));
+      if (distance < nearest) nearest = distance;
+    }
+  }
+  return nearest;
+}
+
 export function rankDirectionsForDebug(
   state: GameState,
   snake: Snake,
-  settings: GameSettings
+  settings: GameSettings,
+  profile: SkillProfile = getSkillProfileById(settings, 'wise')
 ): DirectionEvaluation[] {
   const candidates = getCandidateDirections(snake.direction);
   return candidates
-    .map(direction => ({ direction, score: evaluateDirection(state, snake, settings, direction) }))
+    .map(direction => ({ direction, score: evaluateDirection(state, snake, settings, direction, profile) }))
     .sort((left, right) => right.score - left.score);
 }
+
+export function getSkillProfileById(settings: GameSettings, profileId: BotProfileId): SkillProfile {
+  const source = settings.botProfiles[profileId];
+  return {
+    id: profileId,
+    trapPenalty: source.trapPenalty,
+    areaWeight: source.areaWeight,
+    escapeWeight: source.escapeWeight,
+    foodWeight: source.foodWeight,
+    immediateEatWeight: source.immediateEatWeight,
+    fearWeight: source.fearWeight,
+    longSnakeThreshold: source.longSnakeThreshold,
+    longSnakeFoodPenalty: source.longSnakeFoodPenalty,
+    mistakePeriod: source.mistakePeriod,
+    badMoveBias: source.badMoveBias,
+  };
+}
+
+// Backward-compat alias kept for existing tests and imports.
+export const greedyBoardHeuristic = wiseHeuristic;
+export const chooseGreedyBoardDirection = chooseWiseDirection;
 

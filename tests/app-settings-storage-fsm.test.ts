@@ -7,7 +7,15 @@ import {
   setLevelOverride,
   settingsToJSON,
 } from '../src/engine/settings';
-import { clearScores, getSavedNames, getScores, saveName, saveScore } from '../src/storage/scoreStorage';
+import {
+  clearScores,
+  getMenuPreferences,
+  getSavedNames,
+  getScores,
+  saveMenuPreferences,
+  saveName,
+  saveScore,
+} from '../src/storage/scoreStorage';
 import { GameFSM } from '../src/app/gameFSM';
 import { GameLoopScheduler } from '../src/app/services/GameLoopScheduler';
 import { LevelCompletionService } from '../src/app/services/LevelCompletionService';
@@ -106,6 +114,26 @@ describe('Settings, storage and app state helpers', () => {
     expect(getScores()).toEqual([]);
   });
 
+  test('menu preferences storage saves and loads last selected menu values', () => {
+    saveMenuPreferences({
+      playerCount: 0,
+      botCount: 3,
+      difficultyLevel: 8,
+      gameMode: 'survival',
+      player1Name: 'Алекс',
+      player2Name: 'Борис',
+    });
+
+    expect(getMenuPreferences()).toEqual({
+      playerCount: 0,
+      botCount: 3,
+      difficultyLevel: 8,
+      gameMode: 'survival',
+      player1Name: 'Алекс',
+      player2Name: 'Борис',
+    });
+  });
+
   test('GameFSM transitions and space behavior are consistent', () => {
     const fsm = new GameFSM();
     const transitions: string[] = [];
@@ -121,8 +149,7 @@ describe('Settings, storage and app state helpers', () => {
     expect(fsm.handleSpace()).toBe('CONTINUE');
     expect(fsm.send('CONTINUE')).toBe('Playing');
     expect(fsm.send('GAME_END')).toBe('GameOver');
-    expect(fsm.handleSpace()).toBe('SHOW_RESULTS');
-    expect(fsm.send('SHOW_RESULTS')).toBe('Results');
+    expect(fsm.handleSpace()).toBe('GO_TO_MENU');
     expect(fsm.send('GO_TO_MENU')).toBe('Menu');
     expect(fsm.send('RESUME')).toBeNull();
     expect(fsm.isStopped()).toBe(true);
@@ -161,7 +188,8 @@ describe('Settings, storage and app state helpers', () => {
     const actions = {
       setState: jest.fn(),
       onContinue: jest.fn(),
-      onShowResults: jest.fn(),
+      onRestart: jest.fn(),
+      onMenu: jest.fn(),
       onRestartSameLevel: jest.fn(),
     };
 

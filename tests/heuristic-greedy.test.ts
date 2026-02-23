@@ -3,7 +3,7 @@ import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
 import { AppleFoodEntity } from '../src/engine/entities/AppleFoodEntity';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
 import { GameState } from '../src/engine/types';
-import { chooseGreedyBoardDirection } from '../src/heuristic';
+import { chooseDirectionByDifficulty, chooseGreedyBoardDirection } from '../src/heuristic';
 
 function createState(width = 12, height = 12): GameState {
   return {
@@ -63,6 +63,27 @@ describe('greedy board heuristic', () => {
 
     const direction = chooseGreedyBoardDirection(state, snake, settings);
     expect(direction).toBe('right');
+  });
+
+  test('difficulty-based selection returns a valid movement direction for all tiers', () => {
+    const settings = createDefaultSettings();
+    const state = createState(12, 12);
+    const snake = new SnakeEntity(
+      0,
+      'Bot',
+      [{ x: 6, y: 6 }, { x: 5, y: 6 }, { x: 4, y: 6 }],
+      'right',
+      true
+    );
+    state.snakes = [snake];
+
+    const tiers = [1, 5, 8, 10];
+    for (const difficulty of tiers) {
+      state.difficultyLevel = difficulty;
+      state.tickCount = difficulty * 10;
+      const direction = chooseDirectionByDifficulty(state, snake, settings);
+      expect(['up', 'right', 'down']).toContain(direction);
+    }
   });
 });
 

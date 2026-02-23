@@ -1,6 +1,7 @@
 import { GameState, Snake } from '../../../engine/types';
 import { GameSettings } from '../../../engine/settings';
 import { getCumulativeTargetScore } from '../../../engine/formulas';
+import { getScores } from '../../../storage/scoreStorage';
 
 /* ================================================================
  *  Shared overlay helpers
@@ -139,11 +140,42 @@ export function showLevelCompleteModal(
 
 export function showGameOverModal(
   state: GameState,
-  onResults: () => void,
+  onRestart: () => void,
+  onMenu: () => void,
 ): void {
   const overlay = createOverlay();
 
   const snakeRows = state.snakes.map(snake => snakeResultRow(snake)).join('');
+  const scores = getScores();
+  const scoreRows = scores
+    .slice(0, 10)
+    .map((scoreRecord, scoreIndex) => `
+      <tr>
+        <td>${scoreIndex + 1}</td>
+        <td>${scoreRecord.playerName}</td>
+        <td>${scoreRecord.score}</td>
+        <td>${scoreRecord.date}</td>
+      </tr>
+    `)
+    .join('');
+  const scoreTable = scoreRows
+    ? `
+      <h3 class="modal-subtitle">Таблица рекордов</h3>
+      <table class="modal-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Имя</th>
+            <th>Очки</th>
+            <th>Дата</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${scoreRows}
+        </tbody>
+      </table>
+    `
+    : '';
 
   overlay.innerHTML = `
     <div class="modal-box modal-box--wide">
@@ -162,13 +194,18 @@ export function showGameOverModal(
           ${snakeRows}
         </tbody>
       </table>
-      <button class="btn btn-primary modal-btn" id="modal-results">Результаты</button>
-      <p class="modal-hint">или нажмите <kbd>Пробел</kbd></p>
+      ${scoreTable}
+      <div class="modal-actions">
+        <button class="btn btn-primary modal-btn" id="modal-restart">Заново</button>
+        <button class="btn btn-secondary modal-btn" id="modal-menu">Меню</button>
+      </div>
+      <p class="modal-hint">или нажмите <kbd>Пробел</kbd> для выхода в меню</p>
     </div>`;
 
   getOverlayParent().appendChild(overlay);
 
-  overlay.querySelector('#modal-results')!.addEventListener('click', onResults);
+  overlay.querySelector('#modal-restart')!.addEventListener('click', onRestart);
+  overlay.querySelector('#modal-menu')!.addEventListener('click', onMenu);
 }
 
 /* ================================================================

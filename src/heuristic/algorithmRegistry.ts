@@ -1,7 +1,7 @@
 import { Direction, GameState, Snake } from '../engine/types';
 import { GameSettings } from '../engine/settings';
 import { HeuristicAlgorithm } from './types';
-import { greedyBoardHeuristic } from './greedyBoardHeuristic';
+import { chooseDirectionByProfile, getSkillProfileById, wiseHeuristic } from './greedyBoardHeuristic';
 
 function makeConstantDirectionAlgorithm(id: string, direction: Direction): HeuristicAlgorithm {
   return {
@@ -18,7 +18,19 @@ function makeKeepDirectionAlgorithm(): HeuristicAlgorithm {
 }
 
 const registry: Record<string, HeuristicAlgorithm> = {
-  [greedyBoardHeuristic.id]: greedyBoardHeuristic,
+  [wiseHeuristic.id]: wiseHeuristic,
+  'rookie': {
+    id: 'rookie',
+    chooseDirection: (state, snake, settings) => chooseDirectionByProfile(state, snake, settings, getSkillProfileById(settings, 'rookie')),
+  },
+  'basic': {
+    id: 'basic',
+    chooseDirection: (state, snake, settings) => chooseDirectionByProfile(state, snake, settings, getSkillProfileById(settings, 'basic')),
+  },
+  'solid': {
+    id: 'solid',
+    chooseDirection: (state, snake, settings) => chooseDirectionByProfile(state, snake, settings, getSkillProfileById(settings, 'solid')),
+  },
   'always-up': makeConstantDirectionAlgorithm('always-up', 'up'),
   'always-down': makeConstantDirectionAlgorithm('always-down', 'down'),
   'always-left': makeConstantDirectionAlgorithm('always-left', 'left'),
@@ -32,7 +44,10 @@ export interface AlgorithmOption {
 }
 
 export const heuristicAlgorithmOptions: AlgorithmOption[] = [
-  { id: 'greedy-board-v1', label: 'Жадный full-board (v1)' },
+  { id: 'wise', label: 'Wise (сложность 9-10)' },
+  { id: 'solid', label: 'Solid (сложность 7-8)' },
+  { id: 'basic', label: 'Basic (сложность 4-6)' },
+  { id: 'rookie', label: 'Rookie (сложность 1-3)' },
   { id: 'keep-direction', label: 'Без поворотов' },
   { id: 'always-up', label: 'Всегда вверх' },
   { id: 'always-down', label: 'Всегда вниз' },
@@ -41,6 +56,6 @@ export const heuristicAlgorithmOptions: AlgorithmOption[] = [
 ];
 
 export function getHeuristicAlgorithmById(id: string): HeuristicAlgorithm {
-  return registry[id] ?? greedyBoardHeuristic;
+  return registry[id] ?? wiseHeuristic;
 }
 
