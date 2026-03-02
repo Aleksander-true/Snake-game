@@ -1,7 +1,7 @@
-import { RandomPort } from '../../engine/ports';
+import { RandomPort } from '../engine/ports';
 
 /**
- * Small deterministic LCG RNG for reproducible arena simulations.
+ * Deterministic LCG RNG for reproducible arena simulations.
  */
 export function createSeededRng(seed: number): RandomPort {
   let state = (seed >>> 0) || 1;
@@ -21,4 +21,3 @@ export function createSeededRng(seed: number): RandomPort {
     },
   };
 }
-

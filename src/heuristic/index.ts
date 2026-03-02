@@ -13,7 +13,8 @@ export { heuristicAlgorithmOptions, getHeuristicAlgorithmById } from './algorith
 export {
   runArenaSimulation,
   runArenaBatch,
-} from './arena/headlessArena';
+  createArenaDemoController,
+} from '../arena';
 export type {
   ArenaParticipant,
   ArenaRunConfig,
@@ -21,12 +22,6 @@ export type {
   ArenaBatchConfig,
   ArenaBatchResult,
   ArenaSnakeStats,
-} from './arena/headlessArena';
-export {
-  createArenaDemoController,
-} from './arena/demoArena';
-export type {
   ArenaDemoOptions,
   ArenaDemoController,
-} from './arena/demoArena';
-
+} from '../arena';
