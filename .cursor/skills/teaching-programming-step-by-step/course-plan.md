@@ -1,341 +1,213 @@
-# Programming Teaching Course Plan
+# План курса и текущий прогресс (Snake + нейросети)
+
+Этот файл — рабочий checkpoint курса.  
+Цель: в любой момент можно вернуться и продолжить обучение с текущего места.
+
+---
+
+## 1. Что изучаем
 
-This file defines the standard course structure for practical programming обучения step by step.
+Мы изучаем нейросети на практическом примере:  
+пишем нейросетевой алгоритм управления змейкой в этом проекте.
+
+Финальный результат курса:
+- рабочий нейросетевой бот в текущей архитектуре игры;
+- запуск и наблюдение в training lab/arena;
+- предобучение от эвристики;
+- дообучение на результатах симуляции;
+- сравнение quality-метрик разных политик.
 
-It is intended to support the `teaching-programming-step-by-step` skill and can be reused for different subjects such as:
-- neural networks
-- Node.js servers
-- C++
-- data structures and algorithms
-- frontend development
-- testing and architecture
+---
 
-## Main Goal
+## 2. Выбранный путь обучения
 
-The goal of this plan is to make learning:
-- structured
-- practical
-- progressive
-- understandable for learners who may know programming basics but are new to the subject
+Используем поэтапный путь:
+1. Понять текущую архитектуру.
+2. Подготовить вход для модели.
+3. Сделать простую сеть без обучения.
+4. Подключить сеть в текущий `ArenaAlgorithm`.
+5. Добавить визуализацию и диагностический вывод.
+6. Сделать предобучение от эвристики.
+7. Добавить самообучение (RL/fine-tuning).
+8. Сравнить версии и зафиксировать результат.
 
-The course should help the learner move from orientation and understanding toward a working implementation.
+Почему этот путь:
+- быстрый первый работающий результат;
+- минимальная когнитивная нагрузка на старте;
+- хорошая совместимость с текущим кодом проекта;
+- легко тестировать шагами.
 
-## Core Teaching Principles
+---
 
-1. Start with orientation before implementation.
-2. Move from simple to complex.
-3. Introduce terminology gradually.
-4. Make code the primary proof of progress.
-5. Keep lessons small and finishable.
-6. Tie every step to concrete files, modules, and architecture.
-7. Review learner submissions like code review, not like an oral exam.
+## 3. Текущий статус курса
 
-## How A New Course Starts
+Текущая стадия: **после урока 3**.
 
-Before the first practical lesson, provide an expanded introductory section.
+Пройдено:
+- Урок 0 — архитектура и карта потока данных
+- Урок 1 — кодирование наблюдения
+- Урок 2 — первая сеть (`tanh`) без обучения
+- Урок 3 — подключение сети к арене через адаптер
 
-That opening should answer:
-- What are we studying?
-- Why does this topic matter?
-- What main approaches exist?
-- Which approach is chosen for this course?
-- Why was it chosen?
-- How many lessons or stages are planned?
-- What will the learner have by the end?
+Не начато:
+- Урок 4 и далее
 
-## Required Opening Structure
+Точка продолжения:
+- **начать с урока 4** (интеграция нейробота в training lab + визуальный вывод результатов).
 
-### 1. What We Are Studying
+---
 
-Explain the topic in plain language.
+## 4. Что уже сделано по факту в коде
 
-Examples:
-- "We are learning how to build a neural-network-controlled snake bot."
-- "We are learning how to build a backend server in Node.js."
-- "We are learning modern C++ through small practical modules."
+### Урок 0 — Архитектурная база
+Результат:
+- зафиксирован pipeline:
+  `GameState -> vision -> BotInput -> decision -> Direction -> processTick`
+- определены точки расширения для нейросети.
 
-This section should be more detailed than a normal lesson intro, but still practical.
+### Урок 1 — Кодирование входа
+Файлы:
+- `src/ai/encodeObservation.ts`
+- `tests/ai/encodeObservation.test.ts`
 
-### 2. Main Approaches
+Результат:
+- есть flat-encoding `vision + признаки`;
+- есть нормализация;
+- есть проверки edge cases.
 
-Explain the main relevant approaches for the topic.
+### Урок 2 — Простая сеть
+Файлы:
+- `src/ai/nn/simpleNetwork.ts`
+- `tests/ai/simpleNetwork.test.ts`
 
-The goal is not an academic survey.  
-The goal is to orient the learner.
+Результат:
+- реализован forward pass;
+- активация: `tanh`;
+- выход: 3 оценки действий (`left/front/right`);
+- выбор действия через `argmax`.
 
-Examples:
+### Урок 3 — Интеграция сети в арену
+Файлы:
+- `src/ai/nn/neuralArenaAlgorithm.ts`
+- `tests/ai/neuralArenaAlgorithm.test.ts`
 
-For neural networks:
-- imitation learning
-- reinforcement learning
-- hybrid path
+Результат:
+- реализованы функции:
+  - `buildBotInput(...)`
+  - `chooseNeuralDecision(...)`
+  - `chooseNeuralDirection(...)`
+  - `createNeuralArenaAlgorithm(...)`
+- добавлена проверка mismatch:
+  длина encoded observation должна совпадать с `network.hiddenLayer.inputSize`.
+- есть интеграционный headless test run.
 
-For Node.js servers:
-- raw `http`
-- Express
-- Fastify
-- framework-heavy approaches
+---
 
-For C++:
-- procedural introduction
-- object-oriented introduction
-- STL-first modern style
-- memory-focused low-level route
+## 5. Критерии завершения этапа 0–3
 
-### 3. Chosen Approach
+Этап 0–3 считается завершённым, если:
+- есть рабочий адаптер сети к `ArenaAlgorithm`;
+- сеть принимает закодированный вход и возвращает валидное действие;
+- mismatch размера входа явно валидируется;
+- есть юнит + интеграционные тесты на базовый pipeline.
 
-State which path this course will use and why.
+Статус: **выполнено**.
 
-Good reasons:
-- easier for a beginner
-- fits the current project
-- gives visible progress faster
-- reduces complexity at the start
-- creates a better foundation for later stages
+---
 
-### 4. Course Plan
+## 6. Что осталось сделать в курсе
 
-Provide the staged roadmap.
+## Урок 4 — Интеграция в training lab + визуализация
+Цель:
+- подключить нейросеть в текущий training lab;
+- добавить выбор политики;
+- показывать результаты прогона (счёт, тики, причина смерти, summary).
 
-For each lesson or stage, state:
-- the title
-- the practical goal
-- how it builds on the previous stage
+Ожидаемый результат:
+- можно запускать нейробота из UI;
+- видно, что делает модель без обучения.
 
-### 5. Final Result
+## Урок 5 — Диагностика inference
+Цель:
+- сделать читаемый debug-вывод для поведения сети.
 
-Explain what the learner will have at the end:
-- working feature
-- working server
-- trained bot
-- compiled application
-- tested module
-- practical understanding of the chosen approach
+Ожидаемый результат:
+- видно observation size, action scores, выбранное действие;
+- легко искать ошибки в пайплайне.
 
-### 6. How We Will Work
+## Урок 6 — Подготовка предобучения
+Цель:
+- определить формат датасета и процедуру генерации.
 
-Always explain the process:
-- lessons are step-by-step
-- theory is heavier at the course start, lighter inside individual lessons
-- the learner writes code after each stage
-- the learner can ask clarifying questions at any point
-- after writing code the learner can send it for review
-- the learner can say `проверяй` to trigger review mode
+Ожидаемый результат:
+- собран pipeline `(observation -> teacher action)` от эвристики.
 
-## Standard Lesson Structure
+## Урок 7 — Предобучение от эвристики (imitation)
+Цель:
+- обучить сеть копировать эвристику на датасете.
 
-After the course opening, each lesson should follow a smaller repeatable structure.
+Ожидаемый результат:
+- pretrained policy, которая заметно лучше random baseline.
 
-### Lesson Title
+## Урок 8 — Оценка предобученной модели
+Цель:
+- сравнить heuristic / random / pretrained на фиксированных seed.
 
-A short concrete title.
+Ожидаемый результат:
+- таблица метрик и подтверждённый прирост качества.
 
-Examples:
-- "Encode the model input"
-- "Implement the first forward pass"
-- "Connect the network to the arena"
-- "Create the first Node.js route"
-- "Implement a C++ vector wrapper"
+## Урок 9 — Дообучение на симуляции (RL)
+Цель:
+- добавить reward-driven fine-tuning.
 
-### What We Are Building
+Ожидаемый результат:
+- policy улучшает выживаемость/очки сверх базового уровня.
 
-Explain the lesson goal in plain language.
+## Урок 10 — Стабилизация и сериализация
+Цель:
+- воспроизводимость и переносимость результатов.
 
-Keep this practical and specific.
+Ожидаемый результат:
+- сохранение/загрузка весов;
+- зафиксированные сценарии оценки;
+- финальный отчёт курса.
 
-### New Terms
+---
 
-Introduce only the terms required for the lesson.
+## 7. Формат продолжения (важно)
 
-Recommended style:
-- simple explanation first
-- English term in parentheses
+Когда ученик возвращается позже, запуск продолжения:
+1. Открыть этот файл (`course-plan.md`).
+2. Подтвердить текущий checkpoint: урок 3 завершён.
+3. Начать следующий урок: **урок 4**.
 
-Example:
-- Observation (`observation`) — all input data the program receives before making a decision.
+Допустимые команды для продолжения:
+- "продолжим с урока 4"
+- "resume курс с текущего прогресса"
+- "идём дальше по плану"
 
-### Where This Goes In The Project
+Для проверки кода:
+- после реализации ученик пишет: `проверяй`.
 
-Specify:
-- which file to create
-- which file to edit
-- why this location is correct
-- how the new code fits the architecture
-- what should not be changed yet
+---
 
-### What The Learner Must Implement
+## 8. Какие файлы смотреть первыми при возобновлении
 
-For each required unit, state:
-- function, class, or module name
-- argument types
-- return type
-- exact behavior
-- important edge cases
+Обязательный минимум перед уроком 4:
+- `src/ai/nn/neuralArenaAlgorithm.ts`
+- `tests/ai/neuralArenaAlgorithm.test.ts`
+- `src/app/SnakeGameApplication.ts` (точка будущей интеграции в lab)
 
-For main implementation code:
-- provide the types if helpful
-- do not provide a near-complete final implementation by default
-- let the learner write the core logic
+---
 
-### Tests
+## 9. Краткое резюме checkpoint
 
-Explain what the tests should verify.
+Сейчас уже есть:
+- encoding;
+- простая сеть (`tanh`);
+- подключение в arena;
+- валидация размеров;
+- тесты на базовый pipeline.
 
-Tests can be guided more explicitly than production code.
-
-Typical test categories:
-- happy path
-- edge cases
-- invalid inputs
-- integration boundaries
-- regression checks for the current lesson
-
-### Completion Criteria
-
-State exactly what must exist for the lesson to count as complete.
-
-Examples:
-- required file exists
-- required functions are present
-- tests cover the target behavior
-- no blocking logic errors remain
-
-### What To Send For Review
-
-Tell the learner exactly what to send back.
-
-Examples:
-- implementation file
-- test file
-- both implementation and tests
-
-### Hints
-
-Hints must come at the end of the lesson, not immediately after the task.
-
-This gives the learner a chance to think independently.
-
-## Code Review Phase
-
-When the learner sends code, switch into review mode.
-
-Typical user triggers:
-- `проверяй`
-- `проверь`
-- `review`
-- `посмотри решение`
-
-### Review Goals
-
-The review should answer:
-- Is the code correct?
-- Are there edge cases missing?
-- Are the tests good enough?
-- Does the implementation fit the intended architecture?
-- Is the lesson complete?
-
-### Standard Review Structure
-
-#### Findings
-
-List blockers first.
-
-Focus on:
-- correctness
-- edge cases
-- unsafe assumptions
-- architecture mismatches
-- weak tests
-
-#### What Is Good
-
-Mention what is already correct or well designed.
-
-#### Completion Status
-
-Say explicitly one of:
-- lesson not complete
-- lesson almost complete
-- lesson complete
-
-#### Next Fixes
-
-List only the minimum required changes to proceed.
-
-## Error Handling Teaching Rule
-
-When connecting modules, teach validation at the boundary.
-
-Examples:
-- encoded observation length must match network input size
-- parsed config must match schema
-- request body must match expected DTO
-- file format must match parser assumptions
-
-Recommended pattern:
-1. validate at the integration boundary
-2. throw or return a meaningful error
-3. catch errors at the correct higher layer
-4. test both valid and invalid cases
-
-## How This Plan Applies To Different Subjects
-
-### Neural Networks
-
-Typical flow:
-1. course overview and learning approaches
-2. input encoding
-3. simple network structure
-4. connecting the network to the existing system
-5. displaying results
-6. pretraining
-7. training loop
-8. comparison and evaluation
-
-### Node.js Server
-
-Typical flow:
-1. course overview and server architecture options
-2. minimal server setup
-3. first route
-4. request parsing and validation
-5. modular routing
-6. storage or database integration
-7. tests
-8. deployment-ready cleanup
-
-### C++
-
-Typical flow:
-1. course overview and style choices
-2. basic compilation setup
-3. simple functions and data types
-4. classes and constructors
-5. ownership and memory basics
-6. STL usage
-7. modularization
-8. tests or validation
-
-## Success Criteria For The Full Course
-
-A course is successful when:
-- the learner understands the chosen path
-- the learner can implement each stage in code
-- the learner gets review feedback after each stage
-- terminology is introduced gradually rather than dumped at once
-- the learner finishes with a working practical result
-
-## Notes For Reuse
-
-This plan is intentionally general.
-
-It should be reused across different domains while preserving the same teaching process:
-- expanded theory at the start
-- clear approach selection
-- lesson roadmap
-- practical implementation
-- code review after each step
-- hints at the end
-
-The domain changes.  
-The teaching process stays consistent.
+Следующий шаг:
+- интеграция нейробота в training lab и визуализация результатов (урок 4).

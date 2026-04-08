@@ -6,6 +6,8 @@ export interface MenuScreenCallbacks {
   onStart: (config: GameConfig) => void;
   onStartDevMode: () => void;
   onStartArena: (config: ArenaLaunchConfig) => void;
+  /** Headless training lab: browser UI for arena metrics and future ML steps. */
+  onStartTraining: (config: TrainingLaunchConfig) => void;
 }
 
 export interface ArenaLaunchConfig {
@@ -14,6 +16,28 @@ export interface ArenaLaunchConfig {
   speedMultiplier: 1 | 2 | 4 | 8;
   seed: number;
   algorithmIds: string[];
+}
+
+/**
+ * Parameters for a single headless arena run from the training lab (one bot, no live canvas).
+ */
+export interface TrainingLaunchConfig {
+  seed: number;
+  level: number;
+  difficultyLevel: number;
+  maxTicks: number;
+  gameMode: 'classic' | 'survival';
+}
+
+/** Defaults when opening the training lab from the dev menu (parameters are editable on the lab screen). */
+export function getDefaultTrainingLaunchConfig(): TrainingLaunchConfig {
+  return {
+    seed: 1,
+    level: 1,
+    difficultyLevel: 1,
+    maxTicks: 50_000,
+    gameMode: 'classic',
+  };
 }
 
 /**
@@ -27,6 +51,7 @@ export class MenuScreenService {
     if (typeof __DEV_MODE__ !== 'undefined' && __DEV_MODE__) {
       this.attachDevModeButton(callbacks.onStartDevMode);
       this.attachArenaButton(callbacks.onStartArena);
+      this.attachTrainingButton(callbacks.onStartTraining);
     }
   }
 
@@ -85,6 +110,25 @@ export class MenuScreenService {
       if (hidden) {
         this.renderArenaConfigPanel(panel, onStartArena);
       }
+    });
+  }
+
+  /**
+   * Training lab: single button navigates straight to the lab screen (defaults from getDefaultTrainingLaunchConfig).
+   */
+  private attachTrainingButton(onStartTraining: (config: TrainingLaunchConfig) => void): void {
+    const menuPanel = this.appRoot.querySelector('.menu-panel');
+    if (!menuPanel || this.appRoot.querySelector('#trainingLabBtn')) return;
+
+    const trainingRow = document.createElement('div');
+    trainingRow.className = 'menu-dev-row';
+    trainingRow.innerHTML = `
+      <button id="trainingLabBtn" type="button" class="btn btn-dev">🧪 Лаборатория обучения</button>
+    `;
+    menuPanel.appendChild(trainingRow);
+
+    trainingRow.querySelector('#trainingLabBtn')!.addEventListener('click', () => {
+      onStartTraining(getDefaultTrainingLaunchConfig());
     });
   }
 

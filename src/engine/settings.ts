@@ -4,7 +4,7 @@
  * The dev panel can override any field at runtime.
  * All game systems read from the `gameSettings` singleton.
  */
-import defaults from './gameDefaults.json';
+import defaults from '../gameDefaults.json';
 
 /* ====== Per-level overrides ====== */
 

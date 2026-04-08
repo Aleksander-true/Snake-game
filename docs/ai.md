@@ -104,9 +104,17 @@ For each of `["left", "front", "right"]`:
 | `OBSTACLE_WEIGHT` | 1.5 | Weight for obstacle avoidance |
 | `AGGRESSION_LENGTH_THRESHOLD` | 8 | Below this length, increase rabbit weight |
 
+## Training lab (dev build)
+
+In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has a **«Лаборатория обучения»** button that opens the lab screen directly (defaults from `getDefaultTrainingLaunchConfig()` in `MenuScreenService.ts`).
+
+- The lab runs **headless** simulations: no live game loop on the canvas; results are shown as text (ticks, score, death reason). Parameters are edited on the lab screen, not in the menu.
+- **Step 0** policy: `randomArenaAlgorithm` in `src/ai/ai_algorithm.ts` (`id: random-turns`). Replace this `ArenaAlgorithm` with a neural policy when ready; keep using `runArenaSimulation` from `src/arena/runBatch.ts`.
+- UI copy and layout live in `SnakeGameApplication.mountTrainingLabPanel` (Russian strings).
+
 ## Future Improvements
 
-- Neural network–based decision making (trained via self-play)
+- Neural network–based decision making (trained via imitation / RL; training lab UI as the entry point)
 - Multi-step lookahead (minimax or MCTS)
 - Opponent modeling (predict other snakes' moves)
 - Pathfinding integration (A* to nearest rabbit)

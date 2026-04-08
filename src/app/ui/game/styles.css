@@ -204,3 +204,29 @@
   align-items: center;
   padding: 0;
 }
+
+/* Training lab: same layout as arena demo — full canvas area, HUD hidden. */
+.training-lab-mode .game-layout-row {
+  height: calc(100vh - 8px);
+}
+
+.training-lab-mode .game-area {
+  height: 100%;
+}
+
+.training-lab-mode .game-top-bar,
+.training-lab-mode .game-side-panel,
+.training-lab-mode .game-bottom-panel,
+.training-lab-mode .touch-controls-single,
+.training-lab-mode .touch-controls-duo {
+  display: none;
+}
+
+.training-lab-mode .game-middle,
+.training-lab-mode .game-middle--dev {
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}

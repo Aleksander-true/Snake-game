@@ -134,3 +134,55 @@
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* --- Training lab (headless runs, future loss charts) --- */
+.training-lab-panel {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.training-lab-panel .dev-row {
+  grid-template-columns: minmax(100px, 130px) minmax(0, 1fr);
+}
+
+.training-lab-panel .dev-row > .dev-input {
+  grid-column: 2;
+}
+
+.training-lab-about-text,
+.training-lab-policy-note {
+  font-size: 0.78em;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.training-lab-policy-note {
+  margin-top: 4px;
+}
+
+.training-lab-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  color: var(--color-text);
+}
+
+.training-lab-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.training-lab-output {
+  margin: 0;
+  padding: 8px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  color: var(--color-text);
+}

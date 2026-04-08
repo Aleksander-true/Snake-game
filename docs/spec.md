@@ -1741,7 +1741,7 @@ continueAfterLevelEnd()
 | Логика победы уровня (выживший, ничья, побед больше) | ✅ |
 | Тесты | ✅ |
 
-Текущее состояние автотестов: **63 теста, 7 test suites, все проходят** (`npm test`).
+Текущее состояние автотестов: **79 тестов, 12 test suites, все проходят** (`npm test`).
 
 ---
 
@@ -1755,6 +1755,7 @@ continueAfterLevelEnd()
 | Тесты: бот не выбирает смертельный ход | ✅ |
 | Headless test arena (batch simulations, compare algorithms) | ✅ |
 | Demo arena (render + speed 1x/2x/4x/8x) | ✅ |
+| Лаборатория обучения (dev): меню, headless прогон, базовая политика `random-turns` | ✅ |
 
 ---
 

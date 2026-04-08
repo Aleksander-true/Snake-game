@@ -9,10 +9,13 @@ import { loadSettingsFromStorage } from './adapters/storageAdapter';
 import { GameController } from './gameController';
 import { GameLayoutBuilder } from './ui/game-layout';
 import { MenuScreenService } from './services/MenuScreenService';
-import { ArenaLaunchConfig } from './services/MenuScreenService';
+import { ArenaLaunchConfig, TrainingLaunchConfig } from './services/MenuScreenService';
+import { runArenaSimulation } from '../arena';
+import type { ArenaRunResult } from '../arena';
 import { ResultsScreenService } from './services/ResultsScreenService';
 import { DevPanelLoader } from './services/DevPanelLoader';
 import { createArenaDemoController, ArenaDemoController, getHeuristicAlgorithmById, HeuristicAlgorithm } from '../heuristic';
+import { randomArenaAlgorithm } from '../ai/ai_algorithm';
 
 /**
  * Application-level orchestrator.
@@ -106,6 +109,12 @@ export class SnakeGameApplication {
         this.devModeActive = true;
         this.router.navigate('game', { mode: 'arena', arenaConfig });
       },
+      onStartTraining: (trainingConfig: TrainingLaunchConfig) => {
+        resetSettings();
+        loadSettingsFromStorage();
+        this.devModeActive = true;
+        this.router.navigate('game', { mode: 'training', trainingConfig });
+      },
     });
   }
 
@@ -113,6 +122,11 @@ export class SnakeGameApplication {
     if (data && typeof data === 'object' && (data as any).mode === 'arena') {
       const arenaConfig = (data as { mode: 'arena'; arenaConfig: ArenaLaunchConfig }).arenaConfig;
       this.startArenaDemo(arenaConfig);
+      return;
+    }
+    if (data && typeof data === 'object' && (data as any).mode === 'training') {
+      const trainingConfig = (data as { mode: 'training'; trainingConfig: TrainingLaunchConfig }).trainingConfig;
+      this.startTrainingLab(trainingConfig);
       return;
     }
     this.startGame(data as GameConfig);
@@ -173,6 +187,154 @@ export class SnakeGameApplication {
     this.mountArenaControls(layout.devPanelContainer, arenaConfig);
     this.updateArenaLiveStats(this.arenaDemoController.getState());
     this.arenaDemoController.start();
+  }
+
+  /**
+   * Training lab: headless arena run with metrics in the side panel (no live game loop on canvas).
+   * Step 0 uses randomArenaAlgorithm; later you can plug in a neural ArenaAlgorithm here.
+   */
+  private startTrainingLab(initialConfig: TrainingLaunchConfig): void {
+    hideModal();
+    this.inputHandler.stop();
+    const layout = this.gameLayoutBuilder.build(true);
+    const gameOuter = this.appRoot.querySelector('.game-outer');
+    if (gameOuter) {
+      gameOuter.classList.add('training-lab-mode');
+    }
+
+    this.mountTrainingLabPanel(layout.devPanelContainer, initialConfig);
+  }
+
+  private mountTrainingLabPanel(container: HTMLElement | null, initialConfig: TrainingLaunchConfig): void {
+    if (!container) return;
+
+    const readFormConfig = (): TrainingLaunchConfig => {
+      const level = Math.max(
+        1,
+        Math.min(100, parseInt((container.querySelector('#trainingLabLevel') as HTMLInputElement).value || '1', 10))
+      );
+      const difficultyLevel = Math.max(
+        1,
+        Math.min(10, parseInt((container.querySelector('#trainingLabDifficulty') as HTMLInputElement).value || '1', 10))
+      );
+      const seed = Math.max(1, parseInt((container.querySelector('#trainingLabSeed') as HTMLInputElement).value || '1', 10));
+      const maxTicks = Math.max(
+        100,
+        parseInt((container.querySelector('#trainingLabMaxTicks') as HTMLInputElement).value || '50000', 10)
+      );
+      const modeRaw = (container.querySelector('#trainingLabGameMode') as HTMLSelectElement).value;
+      const gameMode = modeRaw === 'survival' ? 'survival' : 'classic';
+      return { seed, level, difficultyLevel, maxTicks, gameMode };
+    };
+
+    container.innerHTML = `
+      <div class="dev-panel training-lab-panel">
+        <h2 class="dev-panel-title">Лаборатория обучения</h2>
+        <div class="training-lab-about dev-section">
+          <p class="training-lab-about-text">
+            Экран для экспериментов с обучением: движок гоняет симуляцию без отрисовки каждого тика.
+            Ниже — параметры прогона и числовой результат (фитнес). Полотно слева свободно: позже можно
+            вывести график loss или подключить визуализацию.
+          </p>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-title">Параметры прогона</div>
+          <div class="dev-row">
+            <label class="dev-row-label" for="trainingLabLevel">Уровень</label>
+            <input id="trainingLabLevel" class="dev-input dev-input-num" type="number" min="1" max="100" value="${initialConfig.level}">
+          </div>
+          <div class="dev-row">
+            <label class="dev-row-label" for="trainingLabDifficulty">Сложность</label>
+            <input id="trainingLabDifficulty" class="dev-input dev-input-num" type="number" min="1" max="10" value="${initialConfig.difficultyLevel}">
+          </div>
+          <div class="dev-row">
+            <label class="dev-row-label" for="trainingLabGameMode">Режим</label>
+            <select id="trainingLabGameMode" class="dev-input">
+              <option value="classic" ${initialConfig.gameMode === 'classic' ? 'selected' : ''}>Классика</option>
+              <option value="survival" ${initialConfig.gameMode === 'survival' ? 'selected' : ''}>Выживание</option>
+            </select>
+          </div>
+          <div class="dev-row">
+            <label class="dev-row-label" for="trainingLabSeed">Seed</label>
+            <input id="trainingLabSeed" class="dev-input dev-input-num" type="number" min="1" step="1" value="${initialConfig.seed}">
+          </div>
+          <div class="dev-row">
+            <label class="dev-row-label" for="trainingLabMaxTicks">Лимит тиков</label>
+            <input id="trainingLabMaxTicks" class="dev-input dev-input-num" type="number" min="100" step="100" value="${initialConfig.maxTicks}">
+          </div>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-title">Политика</div>
+          <p class="training-lab-policy-note">
+            Сейчас: случайные повороты (<code class="training-lab-code">random-turns</code>) — одна змейка-бот.
+            Дальше замените алгоритм на свою сеть, оставив тот же <code class="training-lab-code">runArenaSimulation</code>.
+          </p>
+        </div>
+        <div class="dev-buttons training-lab-actions">
+          <button id="trainingLabRunBtn" type="button" class="btn btn-primary btn-small">Запустить прогон</button>
+          <button id="trainingLabMenuBtn" type="button" class="btn btn-secondary btn-small">Меню</button>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-title">Результат последнего прогона</div>
+          <pre id="trainingLabOutput" class="training-lab-output">Нажмите «Запустить прогон».</pre>
+        </div>
+      </div>
+    `;
+
+    const outputPre = container.querySelector('#trainingLabOutput') as HTMLElement;
+    const runBtn = container.querySelector('#trainingLabRunBtn') as HTMLButtonElement;
+    const menuBtn = container.querySelector('#trainingLabMenuBtn') as HTMLButtonElement;
+
+    const run = (): void => {
+      const config = readFormConfig();
+      runBtn.disabled = true;
+      outputPre.textContent = 'Считаю…';
+
+      window.setTimeout(() => {
+        try {
+          const result = runArenaSimulation({
+            participants: [{ name: 'Обучение', algorithm: randomArenaAlgorithm }],
+            seed: config.seed,
+            level: config.level,
+            difficultyLevel: config.difficultyLevel,
+            gameMode: config.gameMode,
+            maxTicks: config.maxTicks,
+          });
+          outputPre.textContent = this.formatTrainingLabResult(result);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          outputPre.textContent = `Ошибка: ${message}`;
+        } finally {
+          runBtn.disabled = false;
+        }
+      }, 0);
+    };
+
+    runBtn.addEventListener('click', run);
+    if (menuBtn) {
+      menuBtn.addEventListener('click', () => this.router.navigate('menu'));
+    }
+  }
+
+  private formatTrainingLabResult(result: ArenaRunResult): string {
+    const lines: string[] = [
+      `Seed: ${result.seed}`,
+      `Выполнено тиков (симуляция): ${result.ticksExecuted}`,
+      `Условное время: ${result.elapsedMs} мс (тик × интервал из настроек)`,
+      `Уровень завершён: ${result.levelComplete ? 'да' : 'нет'}`,
+      `Game over: ${result.gameOver ? 'да' : 'нет'}`,
+      '',
+    ];
+    for (const s of result.snakes) {
+      lines.push(
+        `Змейка «${s.name}» (алгоритм: ${s.algorithmId})`,
+        `  Очки: ${s.score}, длина жизни (тики): ${s.survivedTicks}, мс: ${s.survivedMs}`,
+        `  Жива в конце: ${s.aliveAtEnd ? 'да' : 'нет'}`,
+        s.deathReason ? `  Причина смерти: ${s.deathReason}` : '  Причина смерти: —',
+        ''
+      );
+    }
+    return lines.join('\n');
   }
 
   private mountArenaControls(container: HTMLElement | null, arenaConfig: ArenaLaunchConfig): void {
