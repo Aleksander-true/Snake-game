@@ -1,5 +1,6 @@
 import { GameState } from '../../../engine/types';
 import { getScores } from '../../../storage/scoreStorage';
+import { escapeHtml } from '../shared/escapeHtml';
 
 /**
  * Render the results screen.
@@ -33,10 +34,10 @@ export function renderResults(
     const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
     html += `
       <tr>
-        <td>${snake.name}</td>
+        <td>${escapeHtml(snake.name)}</td>
         <td>${snake.score}</td>
         <td>${snake.levelsWon}</td>
-        <td>${status}</td>
+        <td>${escapeHtml(status)}</td>
       </tr>
     `;
   }
@@ -64,7 +65,7 @@ export function renderResults(
       html += `
         <tr>
           <td>${rankIndex + 1}</td>
-          <td>${scoreRecord.playerName}</td>
+          <td>${escapeHtml(scoreRecord.playerName)}</td>
           <td>${scoreRecord.score}</td>
           <td>${scoreRecord.date}</td>
         </tr>

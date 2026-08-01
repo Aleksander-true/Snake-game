@@ -6,6 +6,7 @@ import {
   saveMenuPreferences,
   saveName,
 } from '../../../storage/scoreStorage';
+import { escapeHtml } from '../shared/escapeHtml';
 
 let outsideClickHandler: ((event: MouseEvent) => void) | null = null;
 
@@ -209,7 +210,7 @@ function populateDropdown(dropdownList: HTMLElement, inputId: string, container:
   }
 
   dropdownList.innerHTML = savedNames.map(name =>
-    `<div class="name-option" data-name="${name}">${name}</div>`
+    `<div class="name-option" data-name="${escapeHtml(name)}">${escapeHtml(name)}</div>`
   ).join('');
 
   dropdownList.querySelectorAll('.name-option').forEach(option => {
@@ -260,13 +261,4 @@ function normalizeGameConfig(
     difficultyLevel: Math.min(10, Math.max(1, rawDifficultyLevel)),
     gameMode: rawMode === 'survival' ? 'survival' : 'classic',
   };
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

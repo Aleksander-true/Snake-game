@@ -2,6 +2,7 @@ import { GameState, Snake } from '../../../engine/types';
 import { GameSettings } from '../../../engine/settings';
 import { getCumulativeTargetScore } from '../../../engine/formulas';
 import { getScores } from '../../../storage/scoreStorage';
+import { escapeHtml } from '../shared/escapeHtml';
 
 /* ================================================================
  *  Shared overlay helpers
@@ -152,7 +153,7 @@ export function showGameOverModal(
     .map((scoreRecord, scoreIndex) => `
       <tr>
         <td>${scoreIndex + 1}</td>
-        <td>${scoreRecord.playerName}</td>
+        <td>${escapeHtml(scoreRecord.playerName)}</td>
         <td>${scoreRecord.score}</td>
         <td>${scoreRecord.date}</td>
       </tr>
@@ -217,10 +218,10 @@ function snakeResultRow(snake: Snake): string {
   const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
   return `
     <tr>
-      <td>${snake.name}</td>
+      <td>${escapeHtml(snake.name)}</td>
       <td>${snake.score}</td>
       <td>${snake.segments.length}</td>
       <td>${snake.levelsWon}</td>
-      <td class="${statusClass}">${status}</td>
+      <td class="${statusClass}">${escapeHtml(status)}</td>
     </tr>`;
 }

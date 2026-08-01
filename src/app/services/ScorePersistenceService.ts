@@ -5,7 +5,10 @@ import { saveScore } from '../../storage/scoreStorage';
  * Persists session scores when the game reaches results screen.
  */
 export class ScorePersistenceService {
+  private readonly persistedStates = new WeakSet<GameState>();
+
   saveSessionScores(state: GameState): void {
+    if (this.persistedStates.has(state)) return;
     for (const snake of state.snakes) {
       saveScore({
         playerName: snake.name,
@@ -15,5 +18,6 @@ export class ScorePersistenceService {
         isBot: snake.isBot,
       });
     }
+    this.persistedStates.add(state);
   }
 }

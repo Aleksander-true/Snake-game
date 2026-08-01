@@ -1,6 +1,7 @@
 import { GameState, Snake } from '../../../engine/types';
 import { GameSettings } from '../../../engine/settings';
 import { getCumulativeTargetScore } from '../../../engine/formulas';
+import { escapeHtml } from '../shared/escapeHtml';
 
 /**
  * Render a single snake stats block.
@@ -10,11 +11,11 @@ function buildSnakeStatsHtml(snake: Snake): string {
   const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
   return `
     <div class="${cssClass}">
-      <strong>${snake.name}</strong><br>
+      <strong>${escapeHtml(snake.name)}</strong><br>
       Очки: ${snake.score}<br>
       Длина: ${snake.segments.length}<br>
       Победы: ${snake.levelsWon}<br>
-      ${status}
+      ${escapeHtml(status)}
     </div>
   `;
 }

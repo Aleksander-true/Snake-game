@@ -322,6 +322,7 @@ describe('App implemented behavior', () => {
       state.snakes[1].levelsWon = 0;
 
       service.saveSessionScores(state);
+      service.saveSessionScores(state);
 
       const scores = getScores();
       expect(scores).toHaveLength(2);
