@@ -3,7 +3,7 @@ import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
 import { AppleFoodEntity } from '../src/engine/entities/AppleFoodEntity';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
 import { GameState } from '../src/engine/types';
-import { chooseDirectionByDifficulty, chooseGreedyBoardDirection } from '../src/heuristic';
+import { chooseDirectionByDifficulty, chooseGreedyBoardDirection, rankDirectionsForDebug } from '../src/heuristic';
 
 function createState(width = 12, height = 12): GameState {
   return {
@@ -85,5 +85,43 @@ describe('greedy board heuristic', () => {
       expect(['up', 'right', 'down']).toContain(direction);
     }
   });
-});
 
+  test('prefers front, then left, then right when candidate scores are tied', () => {
+    const state = createState();
+    const snake = new SnakeEntity(
+      0,
+      'Bot',
+      [{ x: 6, y: 6 }, { x: 6, y: 7 }, { x: 6, y: 8 }],
+      'up',
+      true
+    );
+    state.snakes = [snake];
+    const ranked = rankDirectionsForDebug(state, snake, createDefaultSettings(), {
+      id: 'ties',
+      trapPenalty: 0,
+      areaWeight: 0,
+      escapeWeight: 0,
+      foodWeight: 0,
+      immediateEatWeight: 0,
+      fearWeight: 0,
+      longSnakeThreshold: 999,
+      longSnakeFoodPenalty: 0,
+      mistakePeriod: 0,
+      badMoveBias: 0,
+    });
+
+    expect(ranked.map(candidate => candidate.direction)).toEqual(['up', 'left', 'right']);
+  });
+
+  test('avoids a cell that another snake can enter head-on', () => {
+    const settings = createDefaultSettings();
+    const state = createState();
+    const bot = new SnakeEntity(0, 'Bot', [{ x: 4, y: 6 }, { x: 3, y: 6 }], 'right', true);
+    const opponent = new SnakeEntity(1, 'Opponent', [{ x: 6, y: 6 }, { x: 7, y: 6 }], 'left', true);
+    state.snakes = [bot, opponent];
+
+    const direction = chooseGreedyBoardDirection(state, bot, settings);
+
+    expect(direction).not.toBe('right');
+  });
+});

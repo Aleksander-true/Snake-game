@@ -63,8 +63,13 @@ export function chooseDirectionByProfile(
 }
 
 function getCandidateDirections(current: Direction): Direction[] {
-  const all: Direction[] = ['up', 'right', 'down', 'left'];
-  return all.filter(candidate => !isReverseDirection(current, candidate));
+  const ordered: Record<Direction, Direction[]> = {
+    up: ['up', 'left', 'right'],
+    down: ['down', 'right', 'left'],
+    left: ['left', 'down', 'up'],
+    right: ['right', 'up', 'down'],
+  };
+  return ordered[current];
 }
 
 function evaluateDirection(
@@ -95,6 +100,9 @@ function evaluateDirection(
   const nearestFoodDistance = getNearestFoodDistance(nextHead, state.foods);
   const nearestFoodReward = getNearestFoodReward(nextHead, state.foods, settings);
   const nearestSnakeDistance = getNearestOtherSnakeDistance(nextHead, state, snake.id);
+  const headContestPenalty = isPotentialHeadContest(nextHead, state, snake.id)
+    ? profile.trapPenalty * 2
+    : 0;
   const foodSuppression = snake.segments.length >= profile.longSnakeThreshold
     ? profile.longSnakeFoodPenalty
     : 0;
@@ -109,7 +117,8 @@ function evaluateDirection(
   const escapeScore = localEscapeRoutes * profile.escapeWeight;
   const immediateEatBonus = food ? getFoodReward(food, settings).points * profile.immediateEatWeight : 0;
 
-  return areaScore + escapeScore + (foodScore * (1 - foodSuppression)) + immediateEatBonus - trapPenalty - fearPenalty;
+  return areaScore + escapeScore + (foodScore * (1 - foodSuppression)) + immediateEatBonus
+    - trapPenalty - fearPenalty - headContestPenalty;
 }
 
 function isInBounds(pos: Position, state: GameState): boolean {
@@ -263,6 +272,20 @@ function getNearestOtherSnakeDistance(origin: Position, state: GameState, curren
   return nearest;
 }
 
+function isPotentialHeadContest(target: Position, state: GameState, currentSnakeId: number): boolean {
+  for (const snake of state.snakes) {
+    if (!snake.alive || snake.id === currentSnakeId) continue;
+    for (const direction of getCandidateDirections(snake.direction)) {
+      if (positionsEqual(getNextHeadPosition(snake.head, direction), target)) return true;
+    }
+  }
+  return false;
+}
+
+function positionsEqual(left: Position, right: Position): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
 export function rankDirectionsForDebug(
   state: GameState,
   snake: Snake,
@@ -295,4 +318,3 @@ export function getSkillProfileById(settings: GameSettings, profileId: BotProfil
 // Backward-compat alias kept for existing tests and imports.
 export const greedyBoardHeuristic = wiseHeuristic;
 export const chooseGreedyBoardDirection = chooseWiseDirection;
-

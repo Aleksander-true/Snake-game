@@ -51,6 +51,33 @@ describe('Board integration - multiplayer and edge cases', () => {
     resetSettings();
   });
 
+  test('mixed mode initializes and advances one human with two bots', () => {
+    const ctx = createCtx();
+    ctx.settings.wallClusterCoeff = 0;
+    ctx.settings.wallClusterBase = 0;
+    const engine = new GameEngine(ctx);
+    const inputService = new InputApplicationService();
+    const config: GameConfig = {
+      playerCount: 1,
+      botCount: 2,
+      playerNames: ['Игрок'],
+      difficultyLevel: 5,
+    };
+    const state = engine.createGameState(config, 1);
+    engine.initLevel(state, config);
+
+    expect(state.snakes).toHaveLength(3);
+    expect(state.snakes.map(snake => snake.isBot)).toEqual([false, true, true]);
+    inputService.applyTickCommands(state, config, engine.getSettings(), {
+      directions: ['up', null],
+      directionQueues: [['up'], []],
+    });
+    engine.processTick(state);
+
+    expect(state.tickCount).toBe(1);
+    expect(state.snakes.filter(snake => snake.alive)).toHaveLength(3);
+  });
+
   test('self-collision kills snake and body remains on board', () => {
     const ctx = createCtx();
     const engine = new GameEngine(ctx);

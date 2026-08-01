@@ -2,127 +2,69 @@
 
 ## Overview
 
-"Snake Eats Rabbits" is a snake game where snakes hunt rabbits that can breed and multiply on the field. Supports 0–2 human players and 0–4 AI bots simultaneously.
+"Hungry Snakes" is a browser Snake game for 0–2 human players and 0–4 bots, with 1–6 snakes in a match. The canonical detailed specification is `docs/spec.md`; runtime defaults come from `src/gameDefaults.json`.
 
 ## Board
 
-- **Cell types** (engine representation):
-  - `" "` — empty
-  - `"&"` — rabbit
-  - `"*"` — wall/obstacle
-  - `"#"` — snake segment
-- **Base size**: 40×40
-- **Each new level**: +5 to width and height (level 2 = 45×45, level 3 = 50×50, etc.)
+- The base board is 40×40 cells.
+- Each level adds 2 cells to width and height.
+- Boundaries and generated walls are lethal.
+- Walls are generated before food and validated with BFS so all free cells remain connected.
+- Derived `board[][]` markers are: space for empty cells, `&xN` for food value, `*` for walls, and `1`–`6` for snake ids.
 
-## Visual Style
+## Snakes
 
-| Element | Color |
-|---------|-------|
-| Background | Black |
-| Grid | White |
-| Snake | Green |
-| Rabbits | Red |
-| Walls | White |
+- Initial length: 5 cells.
+- Snakes move one cell per tick.
+- A 180-degree reversal is forbidden.
+- Commands received between ticks are buffered; the last non-reversing command is applied.
+- All snake moves are resolved simultaneously. A head-on collision kills every participating snake, while entering a tail cell vacated during the same tick is allowed.
+- A snake dies after hitting a boundary, wall, its own body, another snake, or starving below length 2.
+- Every 15 ticks without food removes one tail segment. Eating resets hunger.
 
-## Snake Rules
+## Food
 
-### Movement
-- Snakes move one cell per tick
-- **180° reversal is forbidden** — a snake cannot turn back on itself
-- Each player controls direction via keyboard; bots decide via AI
+The base mode uses apples with three lifecycle phases:
 
-### Death Conditions
-- Collision with a wall/obstacle
-- Collision with another snake's body
-- Collision with own body (self-collision)
-- Starvation (length drops below 2 due to hunger)
+| Phase | Age | Score | Growth |
+|---|---:|---:|---:|
+| Young | 0–49 | 1 | 1 |
+| Adult | 50–99 | 2 | 2 |
+| Old | 100–149 | 1 | 1 |
 
-### Initial State
-- Snake spawns with **length 5**
+Food is removed at age 150. `RabbitFood` remains an extension type, but is not the default gameplay food.
 
-## Hunger System
+Initial food count is:
 
-- If a snake hasn't eaten a rabbit in **15 ticks**, it loses **1 segment**
-- The hunger counter resets each time the snake eats
-- If snake length drops **below 2** → death ("Starved to death")
+```text
+Math.floor(1.5 × snakeCount + 5 − difficultyLevel)
+```
 
-## Rabbits
+One adult food item is created per snake; remaining initial food is young. Food cannot overlap walls or snakes and must be more than one Chebyshev cell from other food.
 
-### Initial Spawn
-- At level start, rabbits spawn in random empty cells (not on walls, not on snakes)
-- Count: `Math.floor((snakeCount * 1.5) + (10 - difficultyLevel))`
+Adult food may reproduce after a five-tick cooldown. The base probability is `0.01 × clockNum`, reduced by 25% for each neighbor within radius 4 and blocked at four neighbors. Each item can reproduce at most five times.
 
-### Reproduction
-Each rabbit tracks:
-- `clockNum` — ticks since spawn or last reproduction
-- `reproductionCount` — times this rabbit has reproduced (max 5)
+If food count drops below the number of living snakes, the engine can add one adult item at the maximin-farthest free position, no more than once per hunger interval.
 
-**Reproduction window**: ticks 5–15 (inclusive)
+## Levels and Victory
 
-**Probability per tick**: `0.05 * clockNum` (modified by neighbors)
+- Classic single-player: 10 levels.
+- Survival single-player: 100 levels with automatic, pause-free transitions.
+- Multiplayer and mixed matches: 10 levels.
+- Each new level rebuilds the board, walls, food, and snake starting positions while preserving cumulative score and level wins.
+- Single-player target: `Math.floor(5 × level + 20)`, accumulated across levels.
+- Multiplayer level ends when at most one snake remains or the 180-second timer expires.
+- Overall winner: most level wins, then highest score; an exact tie is a draw.
 
-**Neighbor penalty**:
-- For each rabbit within Chebyshev distance ≤ 2: probability reduced by 25%
-- If 4+ rabbits nearby: probability = 0
+## Controls
 
-**Offspring placement**:
-- New rabbit spawns 1–2 cells away from parent in a random direction
-- Cannot spawn on walls, snakes, or within Chebyshev distance 1 of another rabbit
-
-**After reproduction**: `clockNum` resets to 0
-
-**Limit**: max 5 reproductions per rabbit lifetime
-
-## Scoring
-- **+1 point** per rabbit eaten, tracked per snake
-
-## Level Progression
-
-### Single Player
-- **Target score**: `Math.floor(level * 1.2 + 10)` rabbits to complete the level
-
-### Multiplayer (>1 snake)
-- Level ends when:
-  - Only 1 snake remains alive, **OR**
-  - Level timer expires (3 minutes)
-- **Level winner**: the surviving snake. If both alive after 3 min → draw (no winner).
-- Track "levels won" per snake across the game.
-- **Overall winner**: most levels won. Tiebreak: most rabbits eaten (total score). If still tied → draw.
-
-## Walls / Obstacles
-
-### Generation
-- Short branching continuous wall segments via random walk
-- **Cluster count**: `Math.floor(level * 1.2 + 2)`
-- **Wall segment length**: `Math.floor(difficultyLevel * 1.2 + 3)`
-- Walls are generated **before** rabbits
-- Rabbits never spawn on walls
-
-### Constraints
-- Walls must **not** form enclosed areas
-- All free cells must remain reachable (verified by BFS)
-- At least **2 passages** (no single-cell bottlenecks that would trap snakes)
-- If generation fails validation → regenerate
-
-## Difficulty Level
-
-- Range: 1–10 (configurable in menu)
-- Affects: rabbit count, wall length, and AI behavior
-
-## Game Modes
-
-| Players | Bots | Description |
-|---------|------|-------------|
-| 0 | 1–4 | Spectator mode — watch bots play |
-| 1 | 0 | Classic single-player |
-| 1 | 1–3 | Player vs bots |
-| 2 | 0–2 | Local multiplayer |
-| 2 | 1–2 | 2 players + bots |
-| * | * | Total snakes = players + bots (max practical: ~4–6) |
+- One player: WASD and arrow keys both control player 1.
+- Two players: player 1 uses WASD; player 2 uses arrow keys.
+- Space pauses/resumes or continues the current modal action.
+- Escape opens exit confirmation while playing, exits from pause/results, or cancels confirmation.
+- Enter confirms exit.
+- Touch controls are available on coarse-pointer devices.
 
 ## Results
 
-- After game ends, results are saved to `localStorage`
-- Results screen shows:
-  - Per-snake: name, score, levels won, cause of death
-  - Historical high scores table from localStorage
+Results and player names are stored in `localStorage`. A completed session is persisted once. The results screen shows current snake statistics and the top historical scores; user-controlled text is HTML-escaped before rendering.

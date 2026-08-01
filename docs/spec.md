@@ -1,7 +1,7 @@
 # Техническое задание: «Голодные змейки 🐍»
 
 > Полная версия ТЗ. Является единственным источником истины для разработки и тестирования.
-> Последнее обновление: 2026-02-22
+> Последнее обновление: 2026-08-01
 
 ---
 
@@ -192,9 +192,9 @@ Touch-раскладка для двух игроков (кнопки для о�
 |---|---|
 | `baseWidth` | 40 |
 | `baseHeight` | 40 |
-| `levelSizeIncrement` | 5 |
+| `levelSizeIncrement` | 2 |
 
-Примеры: уровень 1 — 40×40, уровень 2 — 45×45, уровень 3 — 50×50.
+Примеры: уровень 1 — 40×40, уровень 2 — 42×42, уровень 3 — 44×44.
 
 ### Внутреннее представление (engine)
 
@@ -207,7 +207,7 @@ Touch-раскладка для двух игроков (кнопки для о�
 | `'*'` | Стена / преграда |
 | `'1'..'6'` | Сегмент тела змейки по `snake.id + 1` (`1` — первая змейка, `2` — вторая, `3..6` — боты) |
 
-Массив `board[][]` **пересобирается из сущностей** каждый тик (не является мастер-данными). Мастер-данные — отдельные массивы `state.walls`, `state.foodItems`, `state.snakes`.
+Массив `board[][]` **пересобирается из сущностей** каждый тик (не является мастер-данными). Мастер-данные — отдельные массивы `state.walls`, `state.foods`, `state.snakes`.
 
 ### Границы поля
 
@@ -291,7 +291,7 @@ interface Snake {
 
 Когда голова змейки оказывается в клетке, где находится еда:
 
-1. Еда **удаляется** из массива `state.foodItems`.
+1. Еда **удаляется** из массива `state.foods`.
 2. Змейка растёт на `food.growthValue` сегментов.
 3. Счёт змейки увеличивается на `food.scoreValue`.
 4. Счётчик голода **сбрасывается** (`snake.ticksWithoutFood = 0`) для **любой** еды.
@@ -404,7 +404,7 @@ interface Food {
 foodCount = Math.floor(foodCountPerSnakeCoeff × snakeCount + foodCountBase − difficultyLevel)
 ```
 
-Значения по умолчанию: `foodCountPerSnakeCoeff = 1.5`, `foodCountBase = 10`.
+Значения по умолчанию: `foodCountPerSnakeCoeff = 1.5`, `foodCountBase = 5`.
 
 Состав стартовой еды:
 - количество **взрослой** еды (`phase = adult`) равно количеству змеек;
@@ -1178,7 +1178,7 @@ Webpack определяет глобальную переменную `__DEV_MO
 }
 ```
 
-Этот файл можно **заменить** вместо `src/engine/gameDefaults.json` в исходниках, чтобы изменить дефолтные параметры игры на постоянной основе.
+Этот файл можно **заменить** вместо `src/gameDefaults.json` в исходниках, чтобы изменить дефолтные параметры игры на постоянной основе.
 
 ### Поведение при game over в dev-режиме
 
@@ -1192,7 +1192,7 @@ Webpack определяет глобальную переменную `__DEV_MO
 
 Все игровые константы хранятся в **одном** JSON-файле:
 
-**`src/engine/gameDefaults.json`**
+**`src/gameDefaults.json`**
 
 Этот файл — каноническое хранилище дефолтных значений. Он:
 1. Импортируется в `settings.ts` и используется для инициализации `gameSettings`.
@@ -1232,13 +1232,13 @@ Dev-панель может изменять поля `gameSettings` в runtime.
     "maxAge": 150,
     "minDistance": 2,
     "reproductionMinCooldown": 5,
-    "reproductionProbabilityBase": 0.05,
+    "reproductionProbabilityBase": 0.01,
     "maxReproductions": 5,
     "neighborReproductionRadius": 4,
     "neighborReproductionPenalty": 0.25,
     "maxReproductionNeighbors": 4,
     "countPerSnakeCoeff": 1.5,
-    "countBase": 10
+    "countBase": 5
   },
   "walls": {
     "clusterCoeff": 1.2,
@@ -1253,7 +1253,7 @@ Dev-панель может изменять поля `gameSettings` в runtime.
   "board": {
     "baseWidth": 40,
     "baseHeight": 40,
-    "levelSizeIncrement": 5,
+    "levelSizeIncrement": 2,
     "levelTimeLimit": 180,
     "tickIntervalMs": 150
   },
@@ -1299,8 +1299,8 @@ Dev-панель может изменять поля `gameSettings` в runtime.
 | Кумулятивная цель | `Σ targetScore(l) для l=1..N` | — | Уровень 3: 25+30+35 = 90 |
 | Кластеры стен | `Math.floor(wallClusterCoeff × level + wallClusterBase)` | 1.2, 2 | Уровень 3: 5 |
 | Длина стен | `Math.floor(wallLengthCoeff × difficulty + wallLengthBase)` | 1.2, 3 | Сложность 5: 9 |
-| Начальная еда | `Math.floor(foodCountPerSnakeCoeff × snakeCount + foodCountBase − difficulty)` | 1.5, 10 | 1 змейка, сложность 1: 10 |
-| Размер поля | `base + (level − 1) × increment` | 40, 40, 5 | Уровень 3: 50×50 |
+| Начальная еда | `Math.floor(foodCountPerSnakeCoeff × snakeCount + foodCountBase − difficulty)` | 1.5, 5 | 1 змейка, сложность 1: 5 |
+| Размер поля | `base + (level − 1) × increment` | 40, 40, 2 | Уровень 3: 44×44 |
 
 ---
 
@@ -1484,8 +1484,8 @@ continueAfterLevelEnd()
 2. `processTick` возвращает `TickResult { events: DomainEvent[] }` (или эквивалентный механизм), содержащий события тика.
 3. Примеры доменных событий (минимальный обязательный набор):
    - `SNAKE_DIED` (snakeId, reason)
-   - `RABBIT_EATEN` (snakeId, pos, newScore)
-   - `RABBIT_BORN` (parentPos, childPos)
+   - `FOOD_EATEN` (snakeId, pos, newScore)
+   - `FOOD_BORN` (parentPos, childPos)
    - `LEVEL_COMPLETED` (reason, winnerId?)
    - `GAME_OVER` (если применимо)
 4. App-слой обрабатывает Domain Events и выполняет побочные эффекты: модалки, звук, storage, переходы экранов.
@@ -1519,7 +1519,7 @@ continueAfterLevelEnd()
 ### 15.10 Derived-данные и оптимизации
 
 1. `board[][]` и любые occupancy-индексы являются derived-структурами и могут пересобираться из мастер-данных (по ТЗ — каждый тик).
-2. Коллизии и правила симуляции должны опираться на мастер-данные (`snakes`, `foodItems`, `walls`) либо на корректно синхронизированные derived-индексы, построенные из мастер-данных в пределах тика.
+2. Коллизии и правила симуляции должны опираться на мастер-данные (`snakes`, `foods`, `walls`) либо на корректно синхронизированные derived-индексы, построенные из мастер-данных в пределах тика.
 
 ---
 
@@ -1591,7 +1591,7 @@ continueAfterLevelEnd()
 |------|-----------------|
 | Змейка съедает еду → `score += food.scoreValue` | |
 | Змейка растёт на `food.growthValue` сегментов | `segments.length` увеличивается |
-| Еда удаляется из `state.foodItems` | |
+| Еда удаляется из `state.foods` | |
 | `ticksWithoutFood` сбрасывается | |
 
 #### 16.6 `processTick` (интеграционный)
@@ -1744,7 +1744,7 @@ continueAfterLevelEnd()
 | Логика победы уровня (выживший, ничья, побед больше) | ✅ |
 | Тесты | ✅ |
 
-Текущее состояние автотестов: **79 тестов, 12 test suites, все проходят** (`npm test`).
+Текущее состояние: основной и длительный наборы автотестов проходят; актуальное количество проверяется выводом `npm test` и `npm run test:long`.
 
 ---
 
@@ -1762,12 +1762,12 @@ continueAfterLevelEnd()
 
 ---
 
-### Этап 8: 2+ ботов (взаимодействие) ⏳
+### Этап 8: 2+ ботов (взаимодействие) ✅
 
 | Задача | Статус |
 |--------|--------|
-| Боты учитывают друг друга в vision | ⏳ |
-| Стресс-тест: 4 бота выживают N тиков | ⏳ |
+| Боты учитывают друг друга в vision и full-board heuristic | ✅ |
+| Детерминированный стресс-тест 4 ботов с проверкой метрик и инвариантов | ✅ |
 
 ---
 
@@ -1775,11 +1775,11 @@ continueAfterLevelEnd()
 
 | Задача | Статус |
 |--------|--------|
-| Любая комбинация игроков + ботов | ⏳ |
-| Полная запись/чтение результатов в localStorage | ⏳ частично |
-| Экран результатов с таблицей рекордов | ⏳ частично |
+| Любая комбинация игроков + ботов | ✅ |
+| Полная запись/чтение результатов в localStorage без повторного сохранения сессии | ✅ |
+| Экран результатов с таблицей рекордов и безопасным выводом имён | ✅ |
 | Полировка UI, edge cases | ⏳ |
-| Финальная проверка всех тестов | ⏳ |
+| Финальная проверка основного и длительного наборов тестов | ✅ |
 
 ---
 

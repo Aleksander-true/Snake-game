@@ -83,6 +83,13 @@ describe('Smoke tests — project skeleton', () => {
     expect(gameSettings.hungerThreshold).toBe(original);
   });
 
+  test('canonical defaults are loaded from gameDefaults.json', () => {
+    const settings = createDefaultSettings();
+    expect(settings.foodCountBase).toBe(5);
+    expect(settings.reproductionProbabilityBase).toBe(0.01);
+    expect(settings.levelSizeIncrement).toBe(2);
+  });
+
   test('GameFSM handles basic transitions and invalid transition safely', () => {
     const fsm = new GameFSM();
     expect(fsm.send('START_GAME')).toBe('Playing');
