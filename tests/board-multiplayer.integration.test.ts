@@ -156,7 +156,7 @@ describe('Board integration - multiplayer and edge cases', () => {
     expect(state.board[8][9]).toBe('2');
   });
 
-  test('player collision after simultaneous control can kill one of the players', () => {
+  test('head-on collision after simultaneous control kills both players', () => {
     const ctx = createCtx();
     const engine = new GameEngine(ctx);
     const inputService = new InputApplicationService();
@@ -173,9 +173,27 @@ describe('Board integration - multiplayer and edge cases', () => {
     });
     const tick1Result = engine.processTick(state);
 
-    expect(player1.alive).toBe(true);
+    expect(player1.alive).toBe(false);
     expect(player2.alive).toBe(false);
+    expect(player1.deathReason).toBe('Столкнулась с другой змейкой');
     expect(player2.deathReason).toBe('Столкнулась с другой змейкой');
+    expect(tick1Result.events.some(event => event.type === 'SNAKE_DIED' && event.snakeId === player1.id)).toBe(true);
     expect(tick1Result.events.some(event => event.type === 'SNAKE_DIED' && event.snakeId === player2.id)).toBe(true);
+  });
+
+  test('moving into another snake tail is allowed when that tail leaves the cell', () => {
+    const ctx = createCtx();
+    const engine = new GameEngine(ctx);
+    const state = createState(14, 14);
+    const player1 = new SnakeEntity(0, 'Игрок 1', [{ x: 4, y: 5 }, { x: 4, y: 6 }], 'left', false);
+    const player2 = new SnakeEntity(1, 'Игрок 2', [{ x: 3, y: 3 }, { x: 3, y: 4 }, { x: 3, y: 5 }], 'up', false);
+    state.snakes = [player1, player2];
+
+    engine.processTick(state);
+
+    expect(player1.alive).toBe(true);
+    expect(player1.head).toEqual({ x: 3, y: 5 });
+    expect(player2.alive).toBe(true);
+    expect(player2.head).toEqual({ x: 3, y: 2 });
   });
 });

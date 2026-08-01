@@ -71,6 +71,7 @@ describe('App implemented behavior', () => {
       const snapshot = input.consumeAll();
       expect(snapshot.directions[0]).toBe('right');
       expect(snapshot.directions[1]).toBe('left');
+      expect(snapshot.directionQueues).toEqual([['up', 'right'], ['up', 'left']]);
 
       const afterConsume = input.consumeAll();
       expect(afterConsume.directions).toEqual([null, null]);
@@ -209,6 +210,25 @@ describe('App implemented behavior', () => {
       expect(player1.direction).toBe('up');
       expect(player2.direction).toBe('down');
     });
+
+    test('applies the last non-reversing direction when a later command is invalid', () => {
+      const service = new InputApplicationService();
+      const state = createState();
+      const player = new SnakeEntity(0, 'P1', [{ x: 3, y: 3 }, { x: 2, y: 3 }], 'right', false);
+      state.snakes = [player];
+
+      service.applyTickCommands(state, {
+        playerCount: 1,
+        botCount: 0,
+        playerNames: ['P1'],
+        difficultyLevel: 1,
+      }, createDefaultSettings(), {
+        directions: ['left', null],
+        directionQueues: [['up', 'left'], []],
+      });
+
+      expect(player.direction).toBe('up');
+    });
   });
 
   describe('SessionProgressionService', () => {
@@ -234,6 +254,38 @@ describe('App implemented behavior', () => {
       expect(next.snakes[0].levelsWon).toBe(2);
       expect(next.tickCount).toBe(0);
       expect(next.levelComplete).toBe(false);
+    });
+
+    test('reinitializes survival level while preserving cumulative progress', () => {
+      const ctx = createCtx();
+      const engine = new GameEngine(ctx);
+      const progression = new SessionProgressionService();
+      const config: GameConfig = {
+        playerCount: 1,
+        botCount: 0,
+        playerNames: ['Игрок 1'],
+        difficultyLevel: 2,
+        gameMode: 'survival',
+      };
+      const current = engine.createGameState(config, 1);
+      engine.initLevel(current, config);
+      const previousSnake = current.snakes[0];
+      previousSnake.score = 31;
+      previousSnake.levelsWon = 1;
+      current.tickCount = 25;
+
+      const next = progression.advanceToNextLevel(current, config, engine);
+
+      expect(next).not.toBe(current);
+      expect(next.level).toBe(2);
+      expect(next.width).toBe(ctx.settings.baseWidth + ctx.settings.levelSizeIncrement);
+      expect(next.height).toBe(ctx.settings.baseHeight + ctx.settings.levelSizeIncrement);
+      expect(next.tickCount).toBe(0);
+      expect(next.levelTimeLeft).toBe(ctx.settings.levelTimeLimit);
+      expect(next.snakes[0]).not.toBe(previousSnake);
+      expect(next.snakes[0].segments).toHaveLength(ctx.settings.initialSnakeLength);
+      expect(next.snakes[0].score).toBe(31);
+      expect(next.snakes[0].levelsWon).toBe(1);
     });
   });
 

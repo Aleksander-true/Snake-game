@@ -2,6 +2,7 @@ import { processBots } from '../../ai/botController';
 import { GameConfig, GameState } from '../../engine/types';
 import { GameSettings } from '../../engine/settings';
 import { applyDirection } from '../../engine/systems/movementSystem';
+import { isReverseDirection } from '../../engine/collision';
 import { InputSnapshot } from '../inputHandler';
 
 /**
@@ -16,9 +17,14 @@ export class InputApplicationService {
 
   private applyPlayerDirections(state: GameState, config: GameConfig, input: InputSnapshot): void {
     for (let playerIndex = 0; playerIndex < config.playerCount; playerIndex++) {
-      const requestedDirection = input.directions[playerIndex];
       const playerSnake = state.snakes[playerIndex];
-      if (!requestedDirection || !playerSnake || !playerSnake.alive) continue;
+      if (!playerSnake || !playerSnake.alive) continue;
+      const queuedDirections = input.directionQueues?.[playerIndex]
+        ?? (input.directions[playerIndex] ? [input.directions[playerIndex] as NonNullable<typeof input.directions[number]>] : []);
+      const requestedDirection = [...queuedDirections]
+        .reverse()
+        .find(direction => !isReverseDirection(playerSnake.direction, direction));
+      if (!requestedDirection) continue;
       applyDirection(playerSnake, requestedDirection);
     }
   }

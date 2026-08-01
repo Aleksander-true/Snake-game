@@ -1,9 +1,9 @@
-import { GameState, Snake } from '../types';
+import { Food, GameState, Position, Snake } from '../types';
 import { EngineContext } from '../context';
 import { DomainEvent } from '../events';
 import { buildBoard } from '../board';
 import { moveSnake } from './movementSystem';
-import { collidesWithWall, collidesWithSnake, selfCollision } from '../collision';
+import { collidesWithWall } from '../collision';
 import { processHunger, resetHunger } from './hungerSystem';
 import { awardFoodPoints } from './scoringSystem';
 import { processFoodLifecycle } from './rabbitsReproductionSystem';
@@ -23,58 +23,120 @@ export function runTickPipeline(state: GameState, ctx: EngineContext, events: Do
 
 /* ---- System 1: Movement + collisions + eating ---- */
 function movementSystem(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
-  for (const snake of state.snakes) {
-    if (!snake.alive) continue;
+  const intents = state.snakes
+    .filter(snake => snake.alive)
+    .map(snake => createMoveIntent(snake, state.foods, ctx));
+  const deathReasons = resolveMoveDeaths(intents, state);
 
-    const nextHeadPosition = snake.getNextHeadPosition();
-
-    if (collidesWithWall(nextHeadPosition, state)) {
-      markSnakeDead(snake, 'Врезалась в стену', events);
+  for (const intent of intents) {
+    const deathReason = deathReasons.get(intent.snake.id);
+    if (deathReason) {
+      markSnakeDead(intent.snake, deathReason, events);
       continue;
     }
+    applyMoveIntent(intent, state, ctx, events);
+  }
+}
 
-    // "Collision with other snakes" must not include the snake itself.
-    // Self-collision is checked later, after movement, per tick order.
-    if (collidesWithSnake(nextHeadPosition, state.snakes.filter(otherSnake => otherSnake.id !== snake.id))) {
-      markSnakeDead(snake, 'Столкнулась с другой змейкой', events);
-      continue;
-    }
+interface MoveIntent {
+  snake: Snake;
+  nextHead: Position;
+  eatenFood: Food | null;
+  growth: number;
+  projectedBody: Position[];
+}
 
-    const foodIndex = state.foods.findIndex(
-      food => food.pos.x === nextHeadPosition.x && food.pos.y === nextHeadPosition.y
-    );
-    const eatenFood = foodIndex !== -1 ? state.foods[foodIndex] : null;
-    const growth = eatenFood ? getFoodReward(eatenFood, ctx.settings).growth : 0;
-    const hasEatenFood = growth > 0;
+function createMoveIntent(snake: Snake, foods: Food[], ctx: EngineContext): MoveIntent {
+  const nextHead = snake.getNextHeadPosition();
+  const eatenFood = foods.find(food => samePosition(food.pos, nextHead)) ?? null;
+  const growth = eatenFood ? getFoodReward(eatenFood, ctx.settings).growth : 0;
+  const retainedBody = growth > 0 ? snake.segments : snake.segments.slice(0, -1);
+  return {
+    snake,
+    nextHead,
+    eatenFood,
+    growth,
+    projectedBody: [nextHead, ...retainedBody],
+  };
+}
 
-    moveSnake(snake, hasEatenFood);
-    if (growth > 1) {
-      const tail = snake.segments[snake.segments.length - 1];
-      for (let growthStep = 1; growthStep < growth; growthStep++) {
-        snake.segments.push({ ...tail });
-      }
-    }
+function resolveMoveDeaths(intents: MoveIntent[], state: GameState): Map<number, string> {
+  const deaths = new Map<number, string>();
 
-    if (selfCollision(snake)) {
-      markSnakeDead(snake, 'Съела саму себя', events);
-      continue;
-    }
-
-    if (eatenFood) {
-      const eatenFoodPosition = eatenFood.pos;
-      const reward = getFoodReward(eatenFood, ctx.settings);
-      state.foods.splice(foodIndex, 1);
-      awardFoodPoints(snake, reward.points);
-      resetHunger(snake);
-      syncLegacyFoodAlias(state);
-      events.push({
-        type: 'FOOD_EATEN',
-        snakeId: snake.id,
-        pos: eatenFoodPosition,
-        newScore: snake.score,
-      });
+  for (const intent of intents) {
+    if (collidesWithWall(intent.nextHead, state)) {
+      deaths.set(intent.snake.id, 'Врезалась в стену');
     }
   }
+
+  for (const intent of intents) {
+    if (deaths.has(intent.snake.id)) continue;
+    const sameTarget = intents.some(other =>
+      other.snake.id !== intent.snake.id && samePosition(other.nextHead, intent.nextHead)
+    );
+    const swappedHeads = intents.some(other =>
+      other.snake.id !== intent.snake.id &&
+      samePosition(intent.nextHead, other.snake.head) &&
+      samePosition(other.nextHead, intent.snake.head)
+    );
+    if (sameTarget || swappedHeads) {
+      deaths.set(intent.snake.id, 'Столкнулась с другой змейкой');
+    }
+  }
+
+  for (const intent of intents) {
+    if (deaths.has(intent.snake.id)) continue;
+    const hitsOwnBody = intent.projectedBody.slice(1).some(segment => samePosition(segment, intent.nextHead));
+    if (hitsOwnBody) {
+      deaths.set(intent.snake.id, 'Съела саму себя');
+      continue;
+    }
+
+    const hitsOtherBody = intents.some(other => {
+      if (other.snake.id === intent.snake.id) return false;
+      const body = deaths.has(other.snake.id) ? other.snake.segments : other.projectedBody.slice(1);
+      return body.some(segment => samePosition(segment, intent.nextHead));
+    });
+    if (hitsOtherBody) {
+      deaths.set(intent.snake.id, 'Столкнулась с другой змейкой');
+    }
+  }
+
+  return deaths;
+}
+
+function applyMoveIntent(
+  intent: MoveIntent,
+  state: GameState,
+  ctx: EngineContext,
+  events: DomainEvent[]
+): void {
+  moveSnake(intent.snake, intent.growth > 0);
+  if (intent.growth > 1) {
+    const tail = intent.snake.segments[intent.snake.segments.length - 1];
+    for (let growthStep = 1; growthStep < intent.growth; growthStep++) {
+      intent.snake.segments.push({ ...tail });
+    }
+  }
+
+  if (!intent.eatenFood) return;
+  const foodIndex = state.foods.indexOf(intent.eatenFood);
+  if (foodIndex === -1) return;
+  const reward = getFoodReward(intent.eatenFood, ctx.settings);
+  state.foods.splice(foodIndex, 1);
+  awardFoodPoints(intent.snake, reward.points);
+  resetHunger(intent.snake);
+  syncLegacyFoodAlias(state);
+  events.push({
+    type: 'FOOD_EATEN',
+    snakeId: intent.snake.id,
+    pos: { ...intent.eatenFood.pos },
+    newScore: intent.snake.score,
+  });
+}
+
+function samePosition(left: Position, right: Position): boolean {
+  return left.x === right.x && left.y === right.y;
 }
 
 /* ---- System 2: Hunger ---- */

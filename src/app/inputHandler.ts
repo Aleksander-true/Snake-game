@@ -19,6 +19,7 @@ const PLAYER2_KEYS: KeyMap = {
 /** Consumed directions for all players in a single tick. */
 export interface InputSnapshot {
   directions: (Direction | null)[];
+  directionQueues?: Direction[][];
 }
 
 /**
@@ -32,6 +33,7 @@ export interface InputSnapshot {
  */
 export class InputHandler {
   private pendingDirections: (Direction | null)[] = [null, null];
+  private pendingDirectionQueues: Direction[][] = [[], []];
   private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
   private pauseCallback: (() => void) | null = null;
   private escapeCallback: (() => void) | null = null;
@@ -58,6 +60,7 @@ export class InputHandler {
   queueDirection(playerIndex: number, direction: Direction): void {
     if (playerIndex < 0 || playerIndex > 1) return;
     this.pendingDirections[playerIndex] = direction;
+    this.pendingDirectionQueues[playerIndex].push(direction);
   }
 
   start(): void {
@@ -84,15 +87,15 @@ export class InputHandler {
       // Player 1
       if (PLAYER1_KEYS[event.code]) {
         event.preventDefault();
-        this.pendingDirections[0] = PLAYER1_KEYS[event.code];
+        this.queueDirection(0, PLAYER1_KEYS[event.code]);
       }
       // Player 2 (in single-player arrow keys also control player 1)
       if (PLAYER2_KEYS[event.code]) {
         event.preventDefault();
         if (this.playerCount === 1) {
-          this.pendingDirections[0] = PLAYER2_KEYS[event.code];
+          this.queueDirection(0, PLAYER2_KEYS[event.code]);
         } else {
-          this.pendingDirections[1] = PLAYER2_KEYS[event.code];
+          this.queueDirection(1, PLAYER2_KEYS[event.code]);
         }
       }
     };
@@ -109,6 +112,7 @@ export class InputHandler {
     this.escapeCallback = null;
     this.confirmCallback = null;
     this.pendingDirections = [null, null];
+    this.pendingDirectionQueues = [[], []];
   }
 
   /**
@@ -118,8 +122,10 @@ export class InputHandler {
   consumeAll(): InputSnapshot {
     const snapshot: InputSnapshot = {
       directions: [...this.pendingDirections],
+      directionQueues: this.pendingDirectionQueues.map(queue => [...queue]),
     };
     this.pendingDirections = [null, null];
+    this.pendingDirectionQueues = [[], []];
     return snapshot;
   }
 
@@ -130,6 +136,7 @@ export class InputHandler {
   consumeDirection(playerIndex: number): Direction | null {
     const pendingDirection = this.pendingDirections[playerIndex];
     this.pendingDirections[playerIndex] = null;
+    this.pendingDirectionQueues[playerIndex] = [];
     return pendingDirection;
   }
 }
