@@ -3,7 +3,7 @@ import { EngineContext } from '../src/engine/context';
 import { RandomPort } from '../src/engine/ports';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
 import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { RabbitEntity } from '../src/engine/entities/RabbitEntity';
+import { RabbitFoodEntity } from '../src/engine/entities/RabbitFoodEntity';
 import { applyDirection, getNextHeadPosition, moveSnake } from '../src/engine/systems/movementSystem';
 import { collidesWithSnake, collidesWithWall, selfCollision } from '../src/engine/collision';
 import { processHunger, resetHunger } from '../src/engine/systems/hungerSystem';
@@ -329,7 +329,7 @@ describe('Engine implemented behavior', () => {
       const snake = new SnakeEntity(0, 'P1', [{ x: 2, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 2 }], 'right', false);
       snake.ticksWithoutFood = 10;
       state.snakes = [snake];
-      state.foods = [RabbitEntity.newborn({ x: 3, y: 2 })];
+      state.foods = [RabbitFoodEntity.newborn({ x: 3, y: 2 })];
       state.rabbits = state.foods;
 
       const beforeLen = snake.segments.length;

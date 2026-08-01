@@ -3,7 +3,7 @@ import { EngineContext } from '../src/engine/context';
 import { RandomPort } from '../src/engine/ports';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
 import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { RabbitEntity } from '../src/engine/entities/RabbitEntity';
+import { RabbitFoodEntity } from '../src/engine/entities/RabbitFoodEntity';
 import { GameConfig, GameState } from '../src/engine/types';
 import { createEmptyBoard } from '../src/engine/board';
 import { InputApplicationService } from '../src/app/services/InputApplicationService';
@@ -153,7 +153,7 @@ describe('Board integration - single player mode', () => {
     );
     snake.ticksWithoutFood = 9;
     state.snakes = [snake];
-    state.foods = [RabbitEntity.newborn({ x: 5, y: 4 })];
+    state.foods = [RabbitFoodEntity.newborn({ x: 5, y: 4 })];
     state.rabbits = state.foods;
 
     const lengthBefore = snake.segments.length;
@@ -206,7 +206,7 @@ describe('Board integration - single player mode', () => {
       false
     );
     state.snakes = [snake];
-    state.foods = [RabbitEntity.newborn({ x: 3, y: 2 })];
+    state.foods = [RabbitFoodEntity.newborn({ x: 3, y: 2 })];
     state.rabbits = state.foods;
 
     const result = engine.processTick(state);
@@ -234,8 +234,8 @@ describe('Board integration - single player mode', () => {
     );
     state.snakes = [snake];
     state.foods = [
-      RabbitEntity.newborn({ x: 4, y: 6 }),
-      RabbitEntity.newborn({ x: 4, y: 3 }),
+      RabbitFoodEntity.newborn({ x: 4, y: 6 }),
+      RabbitFoodEntity.newborn({ x: 4, y: 3 }),
     ];
     state.rabbits = state.foods;
 

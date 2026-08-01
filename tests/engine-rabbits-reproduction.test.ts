@@ -1,6 +1,6 @@
 import { createEmptyBoard } from '../src/engine/board';
 import { EngineContext } from '../src/engine/context';
-import { RabbitEntity } from '../src/engine/entities/RabbitEntity';
+import { RabbitFoodEntity } from '../src/engine/entities/RabbitFoodEntity';
 import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
 import { RandomPort } from '../src/engine/ports';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
@@ -39,7 +39,7 @@ describe('Rabbit lifecycle and reproduction', () => {
 
   test('distance, phase and nearby counting helpers work as expected', () => {
     const settings = createDefaultSettings();
-    const rabbit = new RabbitEntity({ x: 5, y: 5 }, 0, 0, 0);
+    const rabbit = new RabbitFoodEntity({ x: 5, y: 5 }, 0, 0, 0);
 
     expect(chebyshevDistance({ x: 1, y: 1 }, { x: 4, y: 3 })).toBe(3);
     expect(getRabbitPhase(rabbit, settings)).toBe('young');
@@ -52,8 +52,8 @@ describe('Rabbit lifecycle and reproduction', () => {
 
     const rabbits = [
       rabbit,
-      new RabbitEntity({ x: 6, y: 6 }, 10, 0, 0),
-      new RabbitEntity({ x: 12, y: 12 }, 10, 0, 0),
+      new RabbitFoodEntity({ x: 6, y: 6 }, 10, 0, 0),
+      new RabbitFoodEntity({ x: 12, y: 12 }, 10, 0, 0),
     ];
     expect(countNearbyRabbits({ x: 5, y: 5 }, rabbits, 2, rabbit)).toBe(1);
   });
@@ -62,7 +62,7 @@ describe('Rabbit lifecycle and reproduction', () => {
     const state = createState(10, 10);
     state.walls = [{ x: 2, y: 2 }];
     state.snakes = [new SnakeEntity(0, 'P1', [{ x: 3, y: 3 }, { x: 3, y: 4 }], 'up', false)];
-    state.foods = [new RabbitEntity({ x: 5, y: 5 }, 0, 0, 0)];
+    state.foods = [new RabbitFoodEntity({ x: 5, y: 5 }, 0, 0, 0)];
     state.rabbits = state.foods;
 
     expect(isValidRabbitPosition({ x: -1, y: 0 }, state)).toBe(false);
@@ -86,7 +86,7 @@ describe('Rabbit lifecycle and reproduction', () => {
     };
     const ctx: EngineContext = { settings, rng };
     const state = createState(30, 30);
-    const parent = new RabbitEntity({ x: 15, y: 15 }, settings.rabbitYoungAge, 1, 0);
+    const parent = new RabbitFoodEntity({ x: 15, y: 15 }, settings.rabbitYoungAge, 1, 0);
     state.foods = [parent];
     state.rabbits = state.foods;
 
@@ -121,9 +121,9 @@ describe('Rabbit lifecycle and reproduction', () => {
       },
     };
     const state = createState(20, 20);
-    const adult = new RabbitEntity({ x: 10, y: 10 }, settings.rabbitYoungAge, 2, 0);
-    const neighbor = new RabbitEntity({ x: 11, y: 10 }, settings.rabbitYoungAge, 2, 0);
-    const old = new RabbitEntity({ x: 2, y: 2 }, settings.rabbitMaxAge - 1, 0, 0);
+    const adult = new RabbitFoodEntity({ x: 10, y: 10 }, settings.rabbitYoungAge, 2, 0);
+    const neighbor = new RabbitFoodEntity({ x: 11, y: 10 }, settings.rabbitYoungAge, 2, 0);
+    const old = new RabbitFoodEntity({ x: 2, y: 2 }, settings.rabbitMaxAge - 1, 0, 0);
     state.foods = [adult, neighbor, old];
     state.rabbits = state.foods;
 
@@ -148,7 +148,7 @@ describe('Rabbit lifecycle and reproduction', () => {
       },
     };
     const state = createState(20, 20);
-    const adultAtLimit = new RabbitEntity(
+    const adultAtLimit = new RabbitFoodEntity(
       { x: 10, y: 10 },
       settings.rabbitYoungAge,
       settings.reproductionMinCooldown,

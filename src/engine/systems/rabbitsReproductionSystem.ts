@@ -3,7 +3,7 @@ import { EngineContext } from '../context';
 import { GameSettings } from '../settings';
 import { inBounds } from '../board';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
-import { RabbitEntity } from '../entities/RabbitEntity';
+import { RabbitFoodEntity } from '../entities/RabbitFoodEntity';
 
 export interface FoodBirth {
   parentPos: Position;
@@ -157,7 +157,7 @@ function trySpawnOffspring(parent: Food, state: GameState, rng: { next(): number
       if (parent.kind === 'apple') {
         return AppleFoodEntity.newborn(candidatePosition);
       }
-      return RabbitEntity.newborn(candidatePosition);
+      return RabbitFoodEntity.newborn(candidatePosition);
     }
   }
 
