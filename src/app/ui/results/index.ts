@@ -1,89 +1,189 @@
-import { GameState } from '../../../engine/types';
+import { GameState, RoundResult, Snake } from '../../../engine/types';
+import { getOverallWinner } from '../../../engine/systems/levelSystem';
 import { getScores } from '../../../storage/scoreStorage';
 import { escapeHtml } from '../shared/escapeHtml';
 
-/**
- * Render the results screen.
- */
+function sortByFinalPlace(snakes: Snake[]): Snake[] {
+  return [...snakes].sort((left, right) =>
+    right.levelsWon - left.levelsWon
+    || right.score - left.score
+    || left.id - right.id
+  );
+}
+
+function getRoundStatus(result: RoundResult, snakeId: number): string {
+  const snakeResult = result.snakes.find(snake => snake.snakeId === snakeId);
+  if (!snakeResult) return 'Нет данных';
+  if (!snakeResult.alive) return snakeResult.deathReason || 'Мёртв';
+  return result.winnerId === snakeId ? 'Жив · победитель' : 'Жив';
+}
+
+function buildRoundTable(state: GameState): string {
+  if (state.roundResults.length === 0) {
+    return '<p class="results-empty">Подробные данные по раундам отсутствуют.</p>';
+  }
+
+  const participantHeaders = state.snakes
+    .map(snake => `<th scope="col">${escapeHtml(snake.name)}</th>`)
+    .join('');
+  const roundRows = state.roundResults
+    .map(result => {
+      const participantCells = state.snakes.map(snake => {
+        const snakeResult = result.snakes.find(item => item.snakeId === snake.id);
+        if (!snakeResult) return '<td class="results-round-cell">Нет данных</td>';
+        return `
+          <td class="results-round-cell">
+            <span>Еда: ${snakeResult.foodsEaten}</span>
+            <span>Очки: +${snakeResult.scoreGained} · всего ${snakeResult.totalScore}</span>
+            <span>${escapeHtml(getRoundStatus(result, snake.id))}</span>
+          </td>
+        `;
+      }).join('');
+
+      return `<tr><th scope="row">${result.level}</th>${participantCells}</tr>`;
+    })
+    .join('');
+
+  return `
+    <div class="results-table-scroll">
+      <table class="results-table results-rounds-table">
+        <thead><tr><th scope="col">Раунд</th>${participantHeaders}</tr></thead>
+        <tbody>${roundRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildFinalTable(state: GameState, ranking: Snake[]): string {
+  const foodTotals = new Map<number, number>();
+  for (const round of state.roundResults) {
+    for (const snake of round.snakes) {
+      foodTotals.set(snake.snakeId, (foodTotals.get(snake.snakeId) ?? 0) + snake.foodsEaten);
+    }
+  }
+
+  const rows = ranking.map((snake, index) => {
+    const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(snake.name)}</td>
+        <td>${snake.isBot ? 'Бот' : 'Игрок'}</td>
+        <td>${foodTotals.get(snake.id) ?? 0}</td>
+        <td>${snake.levelsWon}</td>
+        <td>${snake.score}</td>
+        <td>${escapeHtml(status)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="results-table-scroll">
+      <table class="results-table results-final-table">
+        <thead>
+          <tr>
+            <th>Место</th><th>Имя</th><th>Участник</th><th>Съедено</th>
+            <th>Победы</th><th>Очки</th><th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildWinnerAnnouncement(state: GameState, ranking: Snake[]): string {
+  const winner = getOverallWinner(state.snakes);
+  if (winner) {
+    return `Победитель: ${escapeHtml(winner.name)} — ${winner.levelsWon} побед, ${winner.score} очков`;
+  }
+
+  if (ranking.length === 0) return 'Победитель не определён';
+  const leaders = ranking.filter(snake =>
+    snake.levelsWon === ranking[0].levelsWon && snake.score === ranking[0].score
+  );
+  return `Ничья: ${leaders.map(snake => escapeHtml(snake.name)).join(', ')}`;
+}
+
+function buildPodiumPlace(snake: Snake | undefined, place: 1 | 2 | 3): string {
+  const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  const labels = { 1: 'Первое место', 2: 'Второе место', 3: 'Третье место' };
+  if (!snake) {
+    return `<div class="podium-place podium-place--${place} podium-place--empty" aria-hidden="true"></div>`;
+  }
+
+  return `
+    <div class="podium-place podium-place--${place}">
+      <span class="podium-medal" aria-hidden="true">${medals[place]}</span>
+      <strong>${labels[place]}</strong>
+      <span class="podium-name">${escapeHtml(snake.name)}</span>
+      <span>${snake.levelsWon} побед · ${snake.score} очков</span>
+    </div>
+  `;
+}
+
+function buildPodium(ranking: Snake[]): string {
+  return `
+    <div class="results-podium" aria-label="Пьедестал победителей">
+      ${buildPodiumPlace(ranking[2], 3)}
+      ${buildPodiumPlace(ranking[0], 1)}
+      ${buildPodiumPlace(ranking[1], 2)}
+    </div>
+  `;
+}
+
+/** Render the results screen. */
 export function renderResults(
   container: HTMLElement,
   state: GameState,
   onRestart: () => void,
   onMenu: () => void
 ): void {
+  const ranking = sortByFinalPlace(state.snakes);
   const scores = getScores();
+  const scoreRows = scores.slice(0, 10).map((scoreRecord, scoreIndex) => `
+    <tr>
+      <td>${scoreIndex + 1}</td>
+      <td>${escapeHtml(scoreRecord.playerName)}</td>
+      <td>${scoreRecord.score}</td>
+      <td>${scoreRecord.date}</td>
+    </tr>
+  `).join('');
+  const highScores = scoreRows ? `
+    <h3 class="results-section-title">Таблица рекордов</h3>
+    <div class="results-table-scroll">
+      <table class="results-table">
+        <thead><tr><th>#</th><th>Имя</th><th>Очки</th><th>Дата</th></tr></thead>
+        <tbody>${scoreRows}</tbody>
+      </table>
+    </div>
+  ` : '';
 
-  let html = `
-    <div class="results-wrapper">
+  container.innerHTML = `
+    <main class="results-wrapper">
       <h2 class="results-title">Игра окончена</h2>
 
-      <h3>Результаты</h3>
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>Имя</th>
-            <th>Очки</th>
-            <th>Победы</th>
-            <th>Статус</th>
-          </tr>
-        </thead>
-        <tbody>
+      <section class="results-section" aria-labelledby="round-results-title">
+        <h3 id="round-results-title">Результаты по раундам</h3>
+        ${buildRoundTable(state)}
+      </section>
+
+      <section class="results-section" aria-labelledby="final-results-title">
+        <h3 id="final-results-title">Итоговые результаты</h3>
+        ${buildFinalTable(state, ranking)}
+        <p class="results-winner">${buildWinnerAnnouncement(state, ranking)}</p>
+        ${buildPodium(ranking)}
+      </section>
+
+      ${highScores}
+
+      <div class="results-buttons">
+        <button id="restartBtn" class="btn btn-restart">Заново</button>
+        <button id="menuBtn" class="btn btn-secondary">Меню</button>
+      </div>
+    </main>
   `;
 
-  for (const snake of state.snakes) {
-    const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
-    html += `
-      <tr>
-        <td>${escapeHtml(snake.name)}</td>
-        <td>${snake.score}</td>
-        <td>${snake.levelsWon}</td>
-        <td>${escapeHtml(status)}</td>
-      </tr>
-    `;
-  }
-
-  html += `</tbody></table>`;
-
-  // High scores table
-  if (scores.length > 0) {
-    html += `
-      <h3 class="results-section-title">Таблица рекордов</h3>
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Имя</th>
-            <th>Очки</th>
-            <th>Дата</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    for (let rankIndex = 0; rankIndex < Math.min(scores.length, 10); rankIndex++) {
-      const scoreRecord = scores[rankIndex];
-      html += `
-        <tr>
-          <td>${rankIndex + 1}</td>
-          <td>${escapeHtml(scoreRecord.playerName)}</td>
-          <td>${scoreRecord.score}</td>
-          <td>${scoreRecord.date}</td>
-        </tr>
-      `;
-    }
-
-    html += `</tbody></table>`;
-  }
-
-  html += `
-    <div class="results-buttons">
-      <button id="restartBtn" class="btn btn-restart">Заново</button>
-      <button id="menuBtn" class="btn btn-secondary">Меню</button>
-    </div>
-  </div>`;
-
-  container.innerHTML = html;
-
-  (container.querySelector('#restartBtn') as HTMLButtonElement).addEventListener('click', onRestart);
-  (container.querySelector('#menuBtn') as HTMLButtonElement).addEventListener('click', onMenu);
+  container.querySelector<HTMLButtonElement>('#restartBtn')?.addEventListener('click', onRestart);
+  container.querySelector<HTMLButtonElement>('#menuBtn')?.addEventListener('click', onMenu);
 }

@@ -197,7 +197,8 @@ describe('Settings, storage and app state helpers', () => {
     expect(fsm.handleSpace()).toBe('CONTINUE');
     expect(fsm.send('CONTINUE')).toBe('Playing');
     expect(fsm.send('GAME_END')).toBe('GameOver');
-    expect(fsm.handleSpace()).toBe('GO_TO_MENU');
+    expect(fsm.handleSpace()).toBe('SHOW_RESULTS');
+    expect(fsm.send('SHOW_RESULTS')).toBe('Results');
     expect(fsm.send('GO_TO_MENU')).toBe('Menu');
     expect(fsm.send('RESUME')).toBeNull();
     expect(fsm.isStopped()).toBe(true);
@@ -236,8 +237,7 @@ describe('Settings, storage and app state helpers', () => {
     const actions = {
       setState: jest.fn(),
       onContinue: jest.fn(),
-      onRestart: jest.fn(),
-      onMenu: jest.fn(),
+      onResults: jest.fn(),
       onRestartSameLevel: jest.fn(),
     };
 
@@ -255,6 +255,9 @@ describe('Settings, storage and app state helpers', () => {
     service.handleCompletion(gameOver, false, settings, actions);
     expect(actions.setState).toHaveBeenCalledWith('GameOver');
     expect(showGameOverModal).toHaveBeenCalled();
+    const showResults = (showGameOverModal as jest.Mock).mock.calls[0][1] as () => void;
+    showResults();
+    expect(actions.onResults).toHaveBeenCalled();
 
     jest.clearAllMocks();
     service.handleCompletion(gameOver, true, settings, actions);

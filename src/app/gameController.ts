@@ -292,8 +292,7 @@ export class GameController {
     this.levelCompletionService.handleCompletion(this.state, this.devModeActive, this.getSettings(), {
       setState: (fsmState) => this.fsm.reset(fsmState),
       onContinue: () => this.handleFSMEvent('CONTINUE'),
-      onRestart: () => this.handleFSMEvent('RESTART'),
-      onMenu: () => this.handleFSMEvent('GO_TO_MENU'),
+      onResults: () => this.handleFSMEvent('SHOW_RESULTS'),
       onRestartSameLevel: (level) => {
         if (this.config && this.canvas) {
           this.startGame(this.config, this.canvas, level);

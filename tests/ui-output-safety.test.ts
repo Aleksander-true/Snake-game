@@ -28,12 +28,43 @@ function createUnsafeState(): GameState {
 describe('UI output safety', () => {
   beforeEach(() => localStorage.clear());
 
-  test('results render player names as text instead of markup', () => {
+  test('results render round history, final ranking and safe player names', () => {
     const root = document.createElement('div');
-    renderResults(root, createUnsafeState(), jest.fn(), jest.fn());
+    const state = createUnsafeState();
+    state.snakes[0].score = 30;
+    state.snakes[0].levelsWon = 2;
+    state.snakes.push(
+      new SnakeEntity(1, 'Серебряный', [{ x: 3, y: 3 }], 'right', true),
+      new SnakeEntity(2, 'Бронзовый', [{ x: 4, y: 4 }], 'right', true)
+    );
+    state.snakes[1].score = 20;
+    state.snakes[1].levelsWon = 1;
+    state.snakes[2].score = 10;
+    state.roundResults = [1, 2].map(level => ({
+      level,
+      winnerId: level === 1 ? 0 : 1,
+      snakes: state.snakes.map(snake => ({
+        snakeId: snake.id,
+        name: snake.name,
+        isBot: snake.isBot,
+        foodsEaten: level + snake.id,
+        scoreGained: 5,
+        totalScore: level * 5,
+        alive: snake.id !== 2,
+        deathReason: snake.id === 2 ? 'Столкновение со стеной' : undefined,
+      })),
+    }));
+
+    renderResults(root, state, jest.fn(), jest.fn());
 
     expect(root.querySelector('img')).toBeNull();
     expect(root.textContent).toContain('<img src=x onerror="alert(1)">');
+    expect(root.querySelectorAll('.results-rounds-table tbody tr')).toHaveLength(2);
+    expect(root.querySelector('.podium-place--1')?.textContent).toContain('<img src=x onerror="alert(1)">');
+    expect(root.querySelector('.podium-place--2')?.textContent).toContain('Серебряный');
+    expect(root.querySelector('.podium-place--3')?.textContent).toContain('Бронзовый');
+    expect(root.querySelector('.results-winner')?.textContent).toContain('Победитель');
+    expect(root.textContent).toContain('Столкновение со стеной');
   });
 
   test('HUD renders player names as text instead of markup', () => {

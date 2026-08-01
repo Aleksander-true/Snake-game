@@ -6,8 +6,7 @@ import { showLevelCompleteModal, showGameOverModal, hideModal } from '../ui/moda
 export interface LevelCompletionActions {
   setState: (state: GameFSMState) => void;
   onContinue: () => void;
-  onRestart: () => void;
-  onMenu: () => void;
+  onResults: () => void;
   onRestartSameLevel: (level: number) => void;
 }
 
@@ -36,7 +35,7 @@ export class LevelCompletionService {
       }
 
       actions.setState('GameOver');
-      showGameOverModal(state, actions.onRestart, actions.onMenu);
+      showGameOverModal(state, actions.onResults);
       return;
     }
 
@@ -69,6 +68,6 @@ export class LevelCompletionService {
     }
 
     actions.setState('GameOver');
-    showGameOverModal(state, actions.onRestart, actions.onMenu);
+    showGameOverModal(state, actions.onResults);
   }
 }
