@@ -107,7 +107,7 @@ export function renderResults(
     </tr>
   `).join('');
   const highScores = scoreRows ? `
-    <section class="results-summary-section" aria-labelledby="high-scores-title">
+    <section class="results-summary-section results-high-scores-section" aria-labelledby="high-scores-title">
       <h3 id="high-scores-title">Таблица рекордов</h3>
       <div class="results-table-scroll">
         <table class="results-table results-high-scores-table">
@@ -121,16 +121,14 @@ export function renderResults(
   container.innerHTML = `
     <main class="results-wrapper">
       <h2 class="results-title">Итоговые результаты</h2>
+      <section class="results-summary-section results-final-section" aria-labelledby="participants-title">
+        <h3 id="participants-title">Итоги по всем раундам</h3>
+        ${buildFinalTable(state, ranking)}
+      </section>
+
       <p class="results-winner">${buildWinnerAnnouncement(state, ranking)}</p>
       ${buildPodium(ranking)}
-
-      <div class="results-summary-grid">
-        <section class="results-summary-section" aria-labelledby="participants-title">
-          <h3 id="participants-title">Участники</h3>
-          ${buildFinalTable(state, ranking)}
-        </section>
-        ${highScores}
-      </div>
+      ${highScores}
 
       <div class="results-buttons">
         <button id="restartBtn" class="btn btn-restart">Заново</button>

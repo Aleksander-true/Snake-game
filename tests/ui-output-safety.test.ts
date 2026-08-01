@@ -7,6 +7,7 @@ import { GameLayoutBuilder } from '../src/app/ui/game-layout';
 import { createDefaultSettings } from '../src/engine/settings';
 import { getDeadSnakeColor } from '../src/shared/color';
 import { renderGame } from '../src/renderer/canvasRenderer';
+import { saveScore } from '../src/storage/scoreStorage';
 
 function createUnsafeState(): GameState {
   return {
@@ -109,6 +110,13 @@ describe('UI output safety', () => {
         deathReason: snake.id === 2 ? 'Столкновение со стеной' : undefined,
       })),
     }));
+    saveScore({
+      playerName: 'Рекордсмен',
+      score: 100,
+      levelsWon: 3,
+      date: '01.08.2026',
+      isBot: false,
+    });
 
     renderResults(root, state, jest.fn(), jest.fn());
 
@@ -122,6 +130,15 @@ describe('UI output safety', () => {
     expect(root.querySelector('.podium-place--3')?.textContent).toContain('Бронзовый');
     expect(root.querySelector('.results-winner')?.textContent).toContain('Победитель');
     expect(root.textContent).toContain('Столкновение со стеной');
+    expect(root.querySelector('#participants-title')?.textContent).toBe('Итоги по всем раундам');
+    const finalSection = root.querySelector('.results-final-section')!;
+    const winner = root.querySelector('.results-winner')!;
+    const podium = root.querySelector('.results-podium')!;
+    const highScores = root.querySelector('.results-high-scores-section')!;
+    expect(finalSection.compareDocumentPosition(winner) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(winner.compareDocumentPosition(podium) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(podium.compareDocumentPosition(highScores) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(root.querySelector('.results-summary-grid')).toBeNull();
   });
 
   test('HUD renders player names as text instead of markup', () => {

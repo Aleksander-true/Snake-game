@@ -1,5 +1,5 @@
 .results-wrapper {
-  width: min(1380px, 100%);
+  width: min(960px, 100%);
   text-align: center;
   padding: 14px 18px 18px;
 }
@@ -105,12 +105,16 @@
   overflow-wrap: anywhere;
 }
 
-.results-summary-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  align-items: start;
-  gap: 14px;
-  margin-top: 10px;
+.results-summary-section {
+  width: 100%;
+}
+
+.results-final-section {
+  margin-top: 8px;
+}
+
+.results-high-scores-section {
+  margin-top: 22px;
 }
 
 .results-summary-section h3 {
@@ -130,10 +134,6 @@
 @media (max-width: 800px) {
   .results-wrapper {
     padding: 12px 8px 20px;
-  }
-
-  .results-summary-grid {
-    grid-template-columns: 1fr;
   }
 
   .results-podium {
