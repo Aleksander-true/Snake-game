@@ -3,6 +3,7 @@ import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
 import { GameState } from '../src/engine/types';
 import { renderResults } from '../src/app/ui/results';
 import { renderHUD } from '../src/app/ui/game';
+import { GameLayoutBuilder } from '../src/app/ui/game-layout';
 import { createDefaultSettings } from '../src/engine/settings';
 import { getDeadSnakeColor } from '../src/shared/color';
 
@@ -71,21 +72,32 @@ describe('UI output safety', () => {
   });
 
   test('HUD renders player names as text instead of markup', () => {
-    const top = document.createElement('div');
-    const left = document.createElement('div');
+    const appRoot = document.createElement('div');
+    document.body.appendChild(appRoot);
+    new GameLayoutBuilder(appRoot).build(false);
+    const top = appRoot.querySelector<HTMLElement>('#hud-top')!;
+    const left = appRoot.querySelector<HTMLElement>('#hud-left')!;
+    const right = appRoot.querySelector<HTMLElement>('#hud-right')!;
+    const bots = appRoot.querySelector<HTMLElement>('#hud-bottom')!;
     const state = createUnsafeState();
     const settings = createDefaultSettings();
-    renderHUD(top, left, null, null, state, false, settings);
+    renderHUD(top, left, right, bots, state, false, settings);
 
+    expect(left.previousElementSibling?.textContent).toBe('Игрок 1');
+    expect(right.previousElementSibling?.textContent).toBe('Игрок 2');
+    expect(left.closest('.game-players-panel')).toBe(right.closest('.game-players-panel'));
+    expect(bots.closest('.game-bots-panel')).not.toBeNull();
+    expect(appRoot.querySelector('.game-middle')?.children[1].id).toBe('gameCanvas');
     expect(left.querySelector('img')).toBeNull();
     expect(left.textContent).toContain('<img src=x onerror="alert(1)">');
     expect(left.querySelector<HTMLElement>('.hud-snake-stats')?.style.getPropertyValue('--hud-snake-color'))
       .toBe(settings.snakeColors[0]);
 
     state.snakes[0].alive = false;
-    renderHUD(top, left, null, null, state, false, settings);
+    renderHUD(top, left, right, bots, state, false, settings);
     expect(left.querySelector<HTMLElement>('.hud-snake-stats')?.style.getPropertyValue('--hud-snake-color'))
       .toBe(getDeadSnakeColor(settings.snakeColors[0]));
+    appRoot.remove();
   });
 
   test('HUD offers fast-forwarding a mixed game after all human snakes die', () => {

@@ -8,17 +8,17 @@ import { renderHUD } from '../ui/game';
 export class HudPresenter {
   render(state: GameState, paused: boolean, settings: GameSettings, onFastForward: () => void): void {
     const topBarElement = document.getElementById('hud-top');
-    const leftPanelElement = document.getElementById('hud-left');
-    const rightPanelElement = document.getElementById('hud-right');
-    const bottomPanelElement = document.getElementById('hud-bottom');
+    const player1PanelElement = document.getElementById('hud-left');
+    const player2PanelElement = document.getElementById('hud-right');
+    const botsPanelElement = document.getElementById('hud-bottom');
 
     if (!topBarElement) return;
 
     renderHUD(
       topBarElement,
-      leftPanelElement,
-      rightPanelElement,
-      bottomPanelElement,
+      player1PanelElement,
+      player2PanelElement,
+      botsPanelElement,
       state,
       paused,
       settings,

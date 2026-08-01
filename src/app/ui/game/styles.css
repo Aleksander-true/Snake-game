@@ -40,33 +40,44 @@
   justify-content: flex-start;
 }
 
-.game-side-panel {
-  width: 140px;
-  min-width: 120px;
+.game-players-panel,
+.game-bots-panel {
+  width: 150px;
+  min-width: 130px;
+}
+
+.game-player-section + .game-player-section {
+  margin-top: 12px;
+}
+
+.game-hud-title {
+  margin: 0 0 4px;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.game-hud-card,
+.game-bot-list > div {
   background: var(--color-panel);
   border: 1px solid var(--color-panel-border);
   border-radius: 6px;
   padding: 8px;
   font-size: 0.8em;
   line-height: 1.6;
+  min-height: 92px;
 }
 
-.game-bottom-panel {
+.game-bot-list {
   display: flex;
-  gap: 16px;
-  justify-content: center;
-  padding: 4px 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
 }
 
-.game-bottom-panel > div {
-  background: var(--color-panel);
-  border: 1px solid var(--color-panel-border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.8em;
-  line-height: 1.6;
-  min-width: 120px;
+.game-bots-panel .game-hud-title {
+  text-align: center;
 }
 
 .hud-bar {
@@ -172,16 +183,6 @@
   gap: 8px;
 }
 
-.game-side-panel--touch-left {
-  transform: rotate(-90deg);
-  transform-origin: center;
-}
-
-.game-side-panel--touch-right {
-  transform: rotate(90deg);
-  transform-origin: center;
-}
-
 .arena-demo-mode .game-layout-row {
   height: calc(100vh - 8px);
 }
@@ -191,8 +192,8 @@
 }
 
 .arena-demo-mode .game-top-bar,
-.arena-demo-mode .game-side-panel,
-.arena-demo-mode .game-bottom-panel,
+.arena-demo-mode .game-players-panel,
+.arena-demo-mode .game-bots-panel,
 .arena-demo-mode .touch-controls-single,
 .arena-demo-mode .touch-controls-duo {
   display: none;
@@ -217,8 +218,8 @@
 }
 
 .training-lab-mode .game-top-bar,
-.training-lab-mode .game-side-panel,
-.training-lab-mode .game-bottom-panel,
+.training-lab-mode .game-players-panel,
+.training-lab-mode .game-bots-panel,
 .training-lab-mode .touch-controls-single,
 .training-lab-mode .touch-controls-duo {
   display: none;

@@ -74,15 +74,14 @@ function renderLeftPlayerPanel(
 /**
  * Render the in-game HUD.
  *  - Top bar: level, target, time, pause hint
- *  - Left panel: player 1 stats
- *  - Right panel: player 2 stats
- *  - Bottom panel: bot stats
+ *  - Left column: player 1 and player 2 stats
+ *  - Right column: bot stats
  */
 export function renderHUD(
   topBar: HTMLElement,
-  leftPanel: HTMLElement | null,
-  rightPanel: HTMLElement | null,
-  bottomPanel: HTMLElement | null,
+  player1Panel: HTMLElement | null,
+  player2Panel: HTMLElement | null,
+  botsPanel: HTMLElement | null,
   state: GameState,
   paused: boolean,
   settings: GameSettings,
@@ -109,18 +108,15 @@ export function renderHUD(
   const humanSnakes = state.snakes.filter(snake => !snake.isBot);
   const botSnakes = state.snakes.filter(snake => snake.isBot);
 
-  // Left panel → player 1 (first human)
-  if (leftPanel) {
-    renderLeftPlayerPanel(leftPanel, humanSnakes, botSnakes, state, settings, onFastForward);
+  if (player1Panel) {
+    renderLeftPlayerPanel(player1Panel, humanSnakes, botSnakes, state, settings, onFastForward);
   }
 
-  // Right panel → player 2 (second human)
-  if (rightPanel) {
-    renderSnakeStats(rightPanel, humanSnakes.slice(1, 2), settings);
+  if (player2Panel) {
+    renderSnakeStats(player2Panel, humanSnakes.slice(1, 2), settings);
   }
 
-  // Bottom panel → all bots
-  if (bottomPanel) {
-    renderSnakeStats(bottomPanel, botSnakes, settings);
+  if (botsPanel) {
+    renderSnakeStats(botsPanel, botSnakes, settings);
   }
 }

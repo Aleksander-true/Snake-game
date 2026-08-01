@@ -53,26 +53,35 @@ export class GameLayoutBuilder {
     const middleRow = document.createElement('div');
     middleRow.className = devModeEnabled ? 'game-middle game-middle--dev' : 'game-middle';
 
-    const leftPanel = document.createElement('div');
-    leftPanel.id = 'hud-left';
-    leftPanel.className = 'game-side-panel';
-    middleRow.appendChild(leftPanel);
+    const playersPanel = document.createElement('aside');
+    playersPanel.className = 'game-players-panel';
+    playersPanel.setAttribute('aria-label', 'Игроки');
+    playersPanel.innerHTML = `
+      <section class="game-player-section">
+        <h2 class="game-hud-title">Игрок 1</h2>
+        <div id="hud-left" class="game-hud-card"></div>
+      </section>
+      <section class="game-player-section">
+        <h2 class="game-hud-title">Игрок 2</h2>
+        <div id="hud-right" class="game-hud-card"></div>
+      </section>
+    `;
+    middleRow.appendChild(playersPanel);
 
     const canvas = document.createElement('canvas');
     canvas.id = 'gameCanvas';
     middleRow.appendChild(canvas);
 
-    const rightPanel = document.createElement('div');
-    rightPanel.id = 'hud-right';
-    rightPanel.className = 'game-side-panel';
-    middleRow.appendChild(rightPanel);
+    const botsPanel = document.createElement('aside');
+    botsPanel.className = 'game-bots-panel';
+    botsPanel.setAttribute('aria-label', 'Боты');
+    botsPanel.innerHTML = `
+      <h2 class="game-hud-title">Боты</h2>
+      <div id="hud-bottom" class="game-bot-list"></div>
+    `;
+    middleRow.appendChild(botsPanel);
 
     gameArea.appendChild(middleRow);
-
-    const bottomPanel = document.createElement('div');
-    bottomPanel.id = 'hud-bottom';
-    bottomPanel.className = 'game-bottom-panel';
-    gameArea.appendChild(bottomPanel);
 
     const touchControls = document.createElement('div');
     touchControls.id = 'touch-controls-single';

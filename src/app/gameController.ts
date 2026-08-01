@@ -472,21 +472,18 @@ export class GameController {
     if (!this.isTouchDevice()) {
       touchRootSingle.classList.remove('touch-controls-single--visible');
       touchRootDuo.classList.remove('touch-controls-duo--visible');
-      this.setTouchHudOrientation(false);
       return;
     }
 
     if (config.playerCount === 1) {
       this.setupSinglePlayerTouchControls(touchRootSingle);
       touchRootDuo.classList.remove('touch-controls-duo--visible');
-      this.setTouchHudOrientation(false);
       return;
     }
 
     if (config.playerCount >= 2) {
       this.setupMultiPlayerTouchControls(touchRootDuo);
       touchRootSingle.classList.remove('touch-controls-single--visible');
-      this.setTouchHudOrientation(true);
       return;
     }
   }
@@ -539,7 +536,6 @@ export class GameController {
     this.touchCleanup = () => {
       for (const dispose of disposeHandlers) dispose();
       touchRoot.classList.remove('touch-controls-duo--visible');
-      this.setTouchHudOrientation(false);
     };
   }
 
@@ -564,20 +560,11 @@ export class GameController {
     return map[localDirection];
   }
 
-  private setTouchHudOrientation(enabled: boolean): void {
-    const leftPanel = document.getElementById('hud-left');
-    const rightPanel = document.getElementById('hud-right');
-    if (!leftPanel || !rightPanel) return;
-    leftPanel.classList.toggle('game-side-panel--touch-left', enabled);
-    rightPanel.classList.toggle('game-side-panel--touch-right', enabled);
-  }
-
   private teardownTouchControls(): void {
     if (this.touchCleanup) {
       this.touchCleanup();
       this.touchCleanup = null;
     }
-    this.setTouchHudOrientation(false);
   }
 
   private showExitConfirmationFromPlaying(): void {
