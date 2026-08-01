@@ -79,7 +79,7 @@ describe('Board integration - single player mode', () => {
 
   test('initLevel builds board with walls, food and snake segments in correct cells', () => {
     const ctx = createCtx();
-    ctx.settings.levelOverrides['1'] = { wallClusters: 3, wallLength: 5, rabbitCount: 8 };
+    ctx.settings.levelOverrides['1'] = { wallClusters: 3, wallLength: 5, foodCount: 8 };
 
     const engine = new GameEngine(ctx);
     const config: GameConfig = {

@@ -12,7 +12,6 @@ export interface LevelOverride {
   wallClusters?: number;
   wallLength?: number;
   foodCount?: number;
-  rabbitCount?: number;
 }
 
 export type LevelSettingsOverride = Record<string, number | string>;
@@ -103,19 +102,6 @@ export interface GameSettings {
   levelSettingsOverrides: Record<string, LevelSettingsOverride>;
   fieldScopes: Record<string, boolean>;
 
-  // Deprecated compatibility aliases (tests/legacy modules)
-  rabbitYoungAge: number;
-  rabbitAdultAge: number;
-  rabbitMaxAge: number;
-  rabbitMinDistance: number;
-  rabbitCountPerSnakeCoeff: number;
-  rabbitCountBase: number;
-  rabbitSignalClose: number;
-  rabbitSignalDecay: number;
-  rabbitSignalMin: number;
-  colorRabbit: string;
-  colorRabbitYoung: string;
-  colorRabbitOld: string;
 }
 
 /* ====== Build defaults from JSON ====== */
@@ -123,7 +109,7 @@ export interface GameSettings {
 export function createDefaultSettings(): GameSettings {
   const defaultJson = defaults;
   const fieldScopes = createDefaultFieldScopes();
-  const settings = {
+  const settings: GameSettings = {
     hungerThreshold:              defaultJson.snake.hungerThreshold,
     minSnakeLength:               defaultJson.snake.minSnakeLength,
     initialSnakeLength:           defaultJson.snake.initialSnakeLength,
@@ -175,9 +161,7 @@ export function createDefaultSettings(): GameSettings {
     levelOverrides:               { ...(defaultJson.levelOverrides as Record<string, LevelOverride>) },
     levelSettingsOverrides:       {},
     fieldScopes,
-  } as unknown as GameSettings;
-
-  defineLegacyAliases(settings);
+  };
   return settings;
 }
 
@@ -453,8 +437,6 @@ export function resolveSettingsForLevel(level: number, baseSettings: GameSetting
     levelSettingsOverrides: { ...baseSettings.levelSettingsOverrides },
     fieldScopes: { ...baseSettings.fieldScopes },
   } as GameSettings;
-  defineLegacyAliases(resolved);
-
   const override = baseSettings.levelSettingsOverrides[String(level)];
   if (!override) return resolved;
   for (const [key, value] of Object.entries(override)) {
@@ -480,36 +462,6 @@ function createDefaultFieldScopes(): Record<string, boolean> {
   const scopes: Record<string, boolean> = {};
   for (const key of keys) scopes[key] = true;
   return scopes;
-}
-
-function defineLegacyAliases(settings: GameSettings): void {
-  const aliases: Array<[keyof GameSettings, keyof GameSettings]> = [
-    ['rabbitYoungAge', 'foodYoungAge'],
-    ['rabbitAdultAge', 'foodAdultAge'],
-    ['rabbitMaxAge', 'foodMaxAge'],
-    ['rabbitMinDistance', 'foodMinDistance'],
-    ['rabbitCountPerSnakeCoeff', 'foodCountPerSnakeCoeff'],
-    ['rabbitCountBase', 'foodCountBase'],
-    ['rabbitSignalClose', 'foodSignalClose'],
-    ['rabbitSignalDecay', 'foodSignalDecay'],
-    ['rabbitSignalMin', 'foodSignalMin'],
-    ['colorRabbit', 'colorFoodAdult'],
-    ['colorRabbitYoung', 'colorFoodYoung'],
-    ['colorRabbitOld', 'colorFoodOld'],
-  ];
-
-  for (const [legacyKey, modernKey] of aliases) {
-    Object.defineProperty(settings, legacyKey, {
-      get() {
-        return (settings as any)[modernKey];
-      },
-      set(value: unknown) {
-        (settings as any)[modernKey] = value;
-      },
-      configurable: true,
-      enumerable: false,
-    });
-  }
 }
 
 function deepCopyBotProfiles(source: BotProfilesSettings): BotProfilesSettings {

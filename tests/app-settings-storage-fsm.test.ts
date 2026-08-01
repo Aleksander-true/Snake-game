@@ -72,11 +72,11 @@ describe('Settings, storage and app state helpers', () => {
 
   test('settings JSON export/import and override helpers work', () => {
     gameSettings.hungerThreshold = 99;
-    setLevelOverride(3, { wallClusters: 7, rabbitCount: 4 });
+    setLevelOverride(3, { wallClusters: 7, foodCount: 4 });
 
     const json = settingsToJSON();
     expect(json.snake.hungerThreshold).toBe(99);
-    expect(json.levelOverrides['3']).toEqual({ wallClusters: 7, rabbitCount: 4 });
+    expect(json.levelOverrides['3']).toEqual({ wallClusters: 7, foodCount: 4 });
 
     resetSettings();
     applyJSONToSettings({

@@ -105,7 +105,6 @@ export class GameEngine {
 
     const foodCount =
       levelOverride.foodCount
-      ?? levelOverride.rabbitCount
       ?? getInitialFoodCount(totalSnakes, state.difficultyLevel, settings);
     state.foods = spawnFood(foodCount, state, this.activeContext);
 
