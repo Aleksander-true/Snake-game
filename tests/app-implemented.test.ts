@@ -13,6 +13,7 @@ import { createEmptyBoard } from '../src/engine/board';
 import { clearScores, getScores } from '../src/storage/scoreStorage';
 import { processBots } from '../src/ai/botController';
 import { hideModal } from '../src/app/ui/modal';
+import { renderGame } from '../src/renderer/canvasRenderer';
 
 jest.mock('../src/ai/botController', () => ({
   processBots: jest.fn(),
@@ -59,6 +60,7 @@ describe('App implemented behavior', () => {
     localStorage.clear();
     clearScores();
     (processBots as jest.Mock).mockReturnValue(new Map());
+    (renderGame as jest.Mock).mockClear();
   });
 
   describe('InputHandler', () => {
@@ -369,6 +371,20 @@ describe('App implemented behavior', () => {
 
     test('fast-forward calculates bot ticks to the real round result', () => {
       jest.useFakeTimers();
+      let currentTime = 0;
+      const performanceNowSpy = jest.spyOn(performance, 'now').mockImplementation(() => {
+        currentTime += 5;
+        return currentTime;
+      });
+      (processBots as jest.Mock).mockImplementation((gameState: GameState) => {
+        const directions = ['right', 'down', 'left', 'up'] as const;
+        const direction = directions[gameState.tickCount % directions.length];
+        return new Map(
+          gameState.snakes
+            .filter(snake => snake.isBot && snake.alive)
+            .map(snake => [snake.id, direction])
+        );
+      });
       document.body.innerHTML = `
         <div id="hud-top"></div>
         <div id="hud-left"></div>
@@ -399,17 +415,26 @@ describe('App implemented behavior', () => {
       ];
       state.foods = [];
       state.walls = [];
-      state.levelTimeLeft = 1;
+      state.levelTimeLeft = 30;
       state.tickCount = 0;
+      controller.getSettings().hungerThreshold = 10_000;
 
+      const rendersBeforeFastForward = (renderGame as jest.Mock).mock.calls.length;
       controller.fastForwardBots();
       jest.runAllTimers();
 
       expect(state.tickCount).toBeGreaterThan(0);
+      expect(state.difficultyLevel).toBeGreaterThan(1);
       expect(state.levelComplete).toBe(true);
       expect(state.gameOver).toBe(true);
       expect(callbacks.onShowResults).toHaveBeenCalledWith(state);
+      expect((renderGame as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(rendersBeforeFastForward + 2);
+      const renderCallOrder = (renderGame as jest.Mock).mock.invocationCallOrder;
+      expect(renderCallOrder[renderCallOrder.length - 1]).toBeLessThan(
+        callbacks.onShowResults.mock.invocationCallOrder[0]
+      );
       controller.stop();
+      performanceNowSpy.mockRestore();
       jest.useRealTimers();
     });
   });

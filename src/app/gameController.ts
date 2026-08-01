@@ -323,7 +323,7 @@ export class GameController {
     this.hudPresenter.render(this.state, paused, this.getSettings(), () => this.fastForwardBots());
   }
 
-  /** Finish the current mixed-game round by calculating bot ticks without intermediate rendering. */
+  /** Finish the current mixed-game round with accelerated bot ticks and periodic rendering. */
   fastForwardBots(): void {
     if (!this.state || !this.config || this.fastForwarding) return;
     const humanSnakes = this.state.snakes.filter(snake => !snake.isBot);
@@ -334,11 +334,7 @@ export class GameController {
     this.fastForwarding = true;
     this.fsm.reset('Paused');
 
-    const button = document.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
-    if (button) {
-      button.disabled = true;
-      button.textContent = 'Доигрываем…';
-    }
+    this.renderFastForwardFrame();
 
     const startedAt = performance.now();
     let simulatedMilliseconds = 0;
@@ -366,17 +362,22 @@ export class GameController {
 
         const elapsedMilliseconds = performance.now() - startedAt;
         while (elapsedMilliseconds >= nextDifficultyIncreaseAt) {
+          this.renderFastForwardFrame();
           this.state.difficultyLevel = Math.min(10, this.state.difficultyLevel + 1);
           nextDifficultyIncreaseAt += 1000;
         }
       }
 
       if (this.state.levelComplete) {
-        this.fastForwarding = false;
         this.state.gameOver = true;
-        this.fsm.reset('Results');
-        this.renderFrame();
-        this.onEnterResults();
+        this.renderFastForwardFrame();
+        this.fastForwardTimeoutId = window.setTimeout(() => {
+          this.fastForwardTimeoutId = null;
+          if (!this.fastForwarding || !this.state) return;
+          this.fastForwarding = false;
+          this.fsm.reset('Results');
+          this.onEnterResults();
+        }, 1000);
         return;
       }
 
@@ -384,6 +385,15 @@ export class GameController {
     };
 
     this.fastForwardTimeoutId = window.setTimeout(runBatch, 0);
+  }
+
+  private renderFastForwardFrame(): void {
+    this.renderFrame();
+    this.updateHUD();
+    const button = document.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Доигрываем…';
   }
 
   private cancelFastForward(): void {
