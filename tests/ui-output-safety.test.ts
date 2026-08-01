@@ -79,13 +79,15 @@ describe('UI output safety', () => {
     const left = appRoot.querySelector<HTMLElement>('#hud-left')!;
     const right = appRoot.querySelector<HTMLElement>('#hud-right')!;
     const bots = appRoot.querySelector<HTMLElement>('#hud-bottom')!;
+    const fastForwardSlot = appRoot.querySelector<HTMLElement>('#hud-fast-forward')!;
     const state = createUnsafeState();
     const settings = createDefaultSettings();
-    renderHUD(top, left, right, bots, state, false, settings);
+    renderHUD(top, left, right, bots, fastForwardSlot, state, false, settings);
 
     expect(left.previousElementSibling?.textContent).toBe('Игрок 1');
     expect(right.previousElementSibling?.textContent).toBe('Игрок 2');
     expect(left.closest('.game-players-panel')).toBe(right.closest('.game-players-panel'));
+    expect(right.closest<HTMLElement>('.game-player-section')?.hidden).toBe(true);
     expect(bots.closest('.game-bots-panel')).not.toBeNull();
     expect(appRoot.querySelector('.game-middle')?.children[1].id).toBe('gameCanvas');
     expect(left.querySelector('img')).toBeNull();
@@ -94,16 +96,21 @@ describe('UI output safety', () => {
       .toBe(settings.snakeColors[0]);
 
     state.snakes[0].alive = false;
-    renderHUD(top, left, right, bots, state, false, settings);
+    renderHUD(top, left, right, bots, fastForwardSlot, state, false, settings);
     expect(left.querySelector<HTMLElement>('.hud-snake-stats')?.style.getPropertyValue('--hud-snake-color'))
       .toBe(getDeadSnakeColor(settings.snakeColors[0]));
     appRoot.remove();
   });
 
   test('HUD offers fast-forwarding a mixed game after all human snakes die', () => {
-    const top = document.createElement('div');
-    const left = document.createElement('div');
-    document.body.appendChild(left);
+    const appRoot = document.createElement('div');
+    document.body.appendChild(appRoot);
+    new GameLayoutBuilder(appRoot).build(false);
+    const top = appRoot.querySelector<HTMLElement>('#hud-top')!;
+    const left = appRoot.querySelector<HTMLElement>('#hud-left')!;
+    const right = appRoot.querySelector<HTMLElement>('#hud-right')!;
+    const bots = appRoot.querySelector<HTMLElement>('#hud-bottom')!;
+    const fastForwardSlot = appRoot.querySelector<HTMLElement>('#hud-fast-forward')!;
     const state = createUnsafeState();
     state.gameOver = false;
     state.levelComplete = false;
@@ -114,18 +121,20 @@ describe('UI output safety', () => {
     );
     const onFastForward = jest.fn();
 
-    renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFastForward);
-    const fastForwardButton = left.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    renderHUD(top, left, right, bots, fastForwardSlot, state, false, createDefaultSettings(), onFastForward);
+    const fastForwardButton = fastForwardSlot.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
     expect(fastForwardButton?.textContent).toBe('Быстро доиграть');
     expect(fastForwardButton?.classList.contains('btn-primary')).toBe(true);
     expect(document.activeElement).toBe(fastForwardButton);
+    expect(fastForwardSlot.previousElementSibling).toBe(right.closest('.game-player-section'));
+    expect(right.closest<HTMLElement>('.game-player-section')?.hidden).toBe(true);
 
-    renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFastForward);
-    const buttonAfterHudUpdate = left.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    renderHUD(top, left, right, bots, fastForwardSlot, state, false, createDefaultSettings(), onFastForward);
+    const buttonAfterHudUpdate = fastForwardSlot.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
     expect(buttonAfterHudUpdate).toBe(fastForwardButton);
 
     buttonAfterHudUpdate?.click();
     expect(onFastForward).toHaveBeenCalledTimes(1);
-    left.remove();
+    appRoot.remove();
   });
 });

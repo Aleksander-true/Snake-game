@@ -11,6 +11,7 @@ export class HudPresenter {
     const player1PanelElement = document.getElementById('hud-left');
     const player2PanelElement = document.getElementById('hud-right');
     const botsPanelElement = document.getElementById('hud-bottom');
+    const fastForwardSlotElement = document.getElementById('hud-fast-forward');
 
     if (!topBarElement) return;
 
@@ -19,6 +20,7 @@ export class HudPresenter {
       player1PanelElement,
       player2PanelElement,
       botsPanelElement,
+      fastForwardSlotElement,
       state,
       paused,
       settings,

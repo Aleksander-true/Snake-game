@@ -65,6 +65,7 @@ export class GameLayoutBuilder {
         <h2 class="game-hud-title">Игрок 2</h2>
         <div id="hud-right" class="game-hud-card"></div>
       </section>
+      <div id="hud-fast-forward" class="hud-fast-forward-slot"></div>
     `;
     middleRow.appendChild(playersPanel);
 

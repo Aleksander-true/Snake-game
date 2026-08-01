@@ -39,22 +39,13 @@ function canFinishGameEarly(humanSnakes: Snake[], botSnakes: Snake[], state: Gam
     && !state.gameOver;
 }
 
-function renderLeftPlayerPanel(
+function renderFastForwardControl(
   container: HTMLElement,
   humanSnakes: Snake[],
   botSnakes: Snake[],
   state: GameState,
-  settings: GameSettings,
   onFastForward?: () => void
 ): void {
-  let statsContainer = container.querySelector<HTMLElement>('.hud-player-stats-container');
-  if (!statsContainer) {
-    statsContainer = document.createElement('div');
-    statsContainer.className = 'hud-player-stats-container';
-    container.replaceChildren(statsContainer);
-  }
-  renderSnakeStats(statsContainer, humanSnakes.slice(0, 1), settings);
-
   const existingButton = container.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
   if (!canFinishGameEarly(humanSnakes, botSnakes, state)) {
     existingButton?.remove();
@@ -82,6 +73,7 @@ export function renderHUD(
   player1Panel: HTMLElement | null,
   player2Panel: HTMLElement | null,
   botsPanel: HTMLElement | null,
+  fastForwardSlot: HTMLElement | null,
   state: GameState,
   paused: boolean,
   settings: GameSettings,
@@ -109,14 +101,27 @@ export function renderHUD(
   const botSnakes = state.snakes.filter(snake => snake.isBot);
 
   if (player1Panel) {
-    renderLeftPlayerPanel(player1Panel, humanSnakes, botSnakes, state, settings, onFastForward);
+    const player1 = humanSnakes[0];
+    const player1Section = player1Panel.closest<HTMLElement>('.game-player-section');
+    if (player1Section) player1Section.hidden = !player1;
+    renderSnakeStats(player1Panel, player1 ? [player1] : [], settings);
   }
 
   if (player2Panel) {
-    renderSnakeStats(player2Panel, humanSnakes.slice(1, 2), settings);
+    const player2 = humanSnakes[1];
+    const player2Section = player2Panel.closest<HTMLElement>('.game-player-section');
+    if (player2Section) player2Section.hidden = !player2;
+    renderSnakeStats(player2Panel, player2 ? [player2] : [], settings);
   }
 
   if (botsPanel) {
     renderSnakeStats(botsPanel, botSnakes, settings);
+  }
+
+  const playersPanel = player1Panel?.closest<HTMLElement>('.game-players-panel');
+  if (playersPanel) playersPanel.hidden = humanSnakes.length === 0;
+
+  if (fastForwardSlot) {
+    renderFastForwardControl(fastForwardSlot, humanSnakes, botSnakes, state, onFastForward);
   }
 }
