@@ -56,6 +56,7 @@ describe('UI output safety', () => {
   test('HUD offers fast-forwarding a mixed game after all human snakes die', () => {
     const top = document.createElement('div');
     const left = document.createElement('div');
+    document.body.appendChild(left);
     const state = createUnsafeState();
     state.gameOver = false;
     state.levelComplete = false;
@@ -69,6 +70,8 @@ describe('UI output safety', () => {
     renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFastForward);
     const fastForwardButton = left.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
     expect(fastForwardButton?.textContent).toBe('Быстро доиграть');
+    expect(fastForwardButton?.classList.contains('btn-primary')).toBe(true);
+    expect(document.activeElement).toBe(fastForwardButton);
 
     renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFastForward);
     const buttonAfterHudUpdate = left.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
@@ -76,5 +79,6 @@ describe('UI output safety', () => {
 
     buttonAfterHudUpdate?.click();
     expect(onFastForward).toHaveBeenCalledTimes(1);
+    left.remove();
   });
 });

@@ -64,10 +64,11 @@ function renderLeftPlayerPanel(
 
   const fastForwardButton = document.createElement('button');
   fastForwardButton.type = 'button';
-  fastForwardButton.className = 'btn btn-secondary hud-fast-forward-button';
+  fastForwardButton.className = 'btn btn-primary hud-fast-forward-button';
   fastForwardButton.textContent = 'Быстро доиграть';
   if (onFastForward) fastForwardButton.addEventListener('click', onFastForward);
   container.appendChild(fastForwardButton);
+  fastForwardButton.focus();
 }
 
 /**

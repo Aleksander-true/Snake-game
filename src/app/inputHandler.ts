@@ -80,6 +80,11 @@ export class InputHandler {
       }
       if (event.code === 'Enter' || event.code === 'NumpadEnter') {
         event.preventDefault();
+        const focusedElement = document.activeElement;
+        if (focusedElement instanceof HTMLButtonElement && !focusedElement.disabled) {
+          focusedElement.click();
+          return;
+        }
         if (this.confirmCallback) this.confirmCallback();
         return;
       }

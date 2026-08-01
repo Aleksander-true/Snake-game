@@ -139,6 +139,25 @@ describe('App implemented behavior', () => {
 
       input.stop();
     });
+
+    test('enter activates a focused button before the generic confirm callback', () => {
+      const input = new InputHandler();
+      const confirmSpy = jest.fn();
+      const clickSpy = jest.fn();
+      const button = document.createElement('button');
+      button.addEventListener('click', clickSpy);
+      document.body.appendChild(button);
+      button.focus();
+      input.onConfirm(confirmSpy);
+      input.start();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }));
+
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      input.stop();
+      button.remove();
+    });
   });
 
   describe('InputApplicationService', () => {
