@@ -17,4 +17,17 @@ describe('training lab baseline algorithm', () => {
     expect(result.snakes).toHaveLength(1);
     expect(result.snakes[0].algorithmId).toBe('random-turns');
   });
+
+  test('random-turns produces identical metrics for the same arena seed', () => {
+    const run = () => runArenaSimulation({
+      participants: [{ name: 'Тест', algorithm: randomArenaAlgorithm }],
+      seed: 19,
+      level: 1,
+      difficultyLevel: 1,
+      gameMode: 'classic',
+      maxTicks: 500,
+    });
+
+    expect(run()).toEqual(run());
+  });
 });

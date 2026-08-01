@@ -110,6 +110,7 @@ In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has
 
 - The lab runs **headless** simulations: no live game loop on the canvas; results are shown as text (ticks, score, death reason). Parameters are edited on the lab screen, not in the menu.
 - **Step 0** policy: `randomArenaAlgorithm` in `src/ai/ai_algorithm.ts` (`id: random-turns`). Replace this `ArenaAlgorithm` with a neural policy when ready; keep using `runArenaSimulation` from `src/arena/runBatch.ts`.
+- Arena injects a seeded RNG into participant algorithms. Random decisions and neural-network initialization must use that RNG, so the same configuration and seed produce the same metrics.
 - UI copy and layout live in `SnakeGameApplication.mountTrainingLabPanel` (Russian strings).
 
 ## Future Improvements

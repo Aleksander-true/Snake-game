@@ -5,6 +5,7 @@ import { GameConfig, GameState } from '../engine/types';
 import { GameEngine } from '../engine/GameEngine';
 import { TickResult } from '../engine/events';
 import { createSeededRng } from './seededRng';
+import { RandomPort } from '../engine/ports';
 import type {
   ArenaBatchConfig,
   ArenaBatchResult,
@@ -21,10 +22,12 @@ export class Arena {
   private readonly settings: GameSettings;
   private readonly participants: ArenaParticipant[];
   private readonly seed: number;
+  private readonly algorithmRng: RandomPort;
   private readonly deathTickBySnakeId = new Map<number, number>();
 
   constructor(config: ArenaConfig) {
     this.seed = config.seed ?? 1;
+    this.algorithmRng = createSeededRng(this.seed ^ 0x5f3759df);
     this.settings = this.createArenaSettings(config.settings);
     const context: EngineContext = {
       settings: this.settings,
@@ -88,7 +91,8 @@ export class Arena {
       const direction = this.participants[i].algorithm.chooseDirection(
         this.state,
         snake,
-        this.settings
+        this.settings,
+        this.algorithmRng
       );
       applyDirection(snake, direction);
     }

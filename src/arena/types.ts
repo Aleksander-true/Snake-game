@@ -1,5 +1,6 @@
 import { Direction, GameConfig, GameMode, GameState, Snake } from '../engine/types';
 import { GameSettings } from '../engine/settings';
+import { RandomPort } from '../engine/ports';
 
 /**
  * Algorithm interface for arena participants.
@@ -7,7 +8,7 @@ import { GameSettings } from '../engine/settings';
  */
 export interface ArenaAlgorithm {
   id: string;
-  chooseDirection(state: GameState, snake: Snake, settings: GameSettings): Direction;
+  chooseDirection(state: GameState, snake: Snake, settings: GameSettings, rng?: RandomPort): Direction;
 }
 
 export interface ArenaParticipant {

@@ -9,6 +9,7 @@ import {
     type DenseLayer,
     type SimpleNetwork,
   } from '../../src/ai/nn/simpleNetwork';
+import { createSeededRng } from '../../src/arena/seededRng';
   
   describe('simpleNetwork', () => {
     test('maps action index to decision', () => {
@@ -72,12 +73,20 @@ import {
     });
   
     test('createSimpleNetwork creates layers with expected sizes', () => {
-      const network = createSimpleNetwork(6, 4);
+      const network = createSimpleNetwork(6, createSeededRng(1), 4);
   
       expect(network.hiddenLayer.inputSize).toBe(6);
       expect(network.hiddenLayer.outputSize).toBe(4);
       expect(network.outputLayer.inputSize).toBe(4);
       expect(network.outputLayer.outputSize).toBe(3);
+    });
+
+    test('creates identical networks from identical seeds', () => {
+      const first = createSimpleNetwork(6, createSeededRng(42), 4);
+      const second = createSimpleNetwork(6, createSeededRng(42), 4);
+
+      expect(first.hiddenLayer.weights).toEqual(second.hiddenLayer.weights);
+      expect(first.outputLayer.weights).toEqual(second.outputLayer.weights);
     });
   
     test('runSimpleNetwork returns 3 scores and a valid action', () => {

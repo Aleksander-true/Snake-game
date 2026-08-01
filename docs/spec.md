@@ -723,6 +723,7 @@ function botDecide(input: BotInput): BotDecision;
    - класс `Arena` — симуляция до смерти, завершения уровня или `maxTicks`;
    - `runOne(maxTicks?)` возвращает фитнес: score, survivedTicks, survivedMs, aliveAtEnd, deathReason;
    - `runArenaSimulation(config)` / `runArenaBatch(config)` — одиночный и пакетный прогоны.
+   - seeded RNG передаётся не только Engine, но и алгоритмам участников; одинаковые конфигурация и seed должны давать одинаковый результат, включая случайную и нейросетевую политики.
 2. **Сравнение алгоритмов**:
    - разные алгоритмы назначаются разным змейкам через `participants`;
    - агрегируются средние показатели по каждому алгоритму.

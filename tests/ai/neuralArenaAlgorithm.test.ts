@@ -2,6 +2,7 @@ import { runArenaSimulation } from '../../src/arena';
 import { createDefaultSettings, GameSettings } from '../../src/engine/settings';
 import type { GameState, Snake, Direction, BotInput } from '../../src/engine/types';
 import { createSimpleNetwork, type SimpleNetwork } from '../../src/ai/nn/simpleNetwork';
+import { createSeededRng } from '../../src/arena/seededRng';
 import {
   buildBotInput,
   chooseNeuralDecision,
@@ -212,7 +213,7 @@ describe('neuralArenaAlgorithm', () => {
 
     const NETWORK_INPUT_SIZE = 10;
 
-    const network = createSimpleNetwork(NETWORK_INPUT_SIZE);
+    const network = createSimpleNetwork(NETWORK_INPUT_SIZE, createSeededRng(1));
 
     const settings = {
       hungerThreshold: 15,

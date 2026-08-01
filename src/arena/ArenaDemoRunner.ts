@@ -7,6 +7,7 @@ import { TickResult } from '../engine/events';
 import { renderGame } from '../renderer/canvasRenderer';
 import { createSeededRng } from './seededRng';
 import type { ArenaParticipant } from './types';
+import { RandomPort } from '../engine/ports';
 
 export interface ArenaDemoOptions {
   canvas: HTMLCanvasElement;
@@ -36,6 +37,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
   private readonly participants: ArenaParticipant[];
   private readonly canvas: HTMLCanvasElement;
   private readonly onTick?: (state: GameState, result: TickResult) => void;
+  private readonly algorithmRng: RandomPort;
 
   private ctx: CanvasRenderingContext2D;
   private cellSize = 2;
@@ -54,6 +56,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
       Object.assign(settings, options.settings);
     }
     this.settings = settings;
+    this.algorithmRng = createSeededRng((options.seed ?? 1) ^ 0x5f3759df);
 
     const context: EngineContext = {
       settings: this.settings,
@@ -177,7 +180,8 @@ export class ArenaDemoRunner implements ArenaDemoController {
       const direction = this.participants[i].algorithm.chooseDirection(
         this.state,
         snake,
-        this.settings
+        this.settings,
+        this.algorithmRng
       );
       applyDirection(snake, direction);
     }

@@ -1,4 +1,5 @@
 import type { BotDecision } from '../../engine/types';
+import type { RandomPort } from '../../engine/ports';
 
 export interface DenseLayer {
   inputSize: number;
@@ -56,6 +57,7 @@ export function argmax(values: Float32Array): number {
   export function createRandomLayer(
     inputSize: number,
     outputSize: number,
+    rng: RandomPort,
     randomScale: number = 0.1
   ): DenseLayer {
     if (inputSize <= 0) {
@@ -70,7 +72,7 @@ export function argmax(values: Float32Array): number {
     const bias = new Float32Array(outputSize);
   
     for (let i = 0; i < weights.length; i++) {
-      weights[i] = (Math.random() * randomScale * 2) - randomScale;
+      weights[i] = (rng.next() * randomScale * 2) - randomScale;
     }
   
     for (let i = 0; i < bias.length; i++) {
@@ -114,11 +116,12 @@ export function argmax(values: Float32Array): number {
 
   export function createSimpleNetwork(
     inputSize: number,
+    rng: RandomPort,
     hiddenSize: number = 16
   ): SimpleNetwork {
     return {
-      hiddenLayer: createRandomLayer(inputSize, hiddenSize),
-      outputLayer: createRandomLayer(hiddenSize, 3),
+      hiddenLayer: createRandomLayer(inputSize, hiddenSize, rng),
+      outputLayer: createRandomLayer(hiddenSize, 3, rng),
     };
   }
 
