@@ -1,4 +1,4 @@
-import { GameState, RoundResult, Snake } from '../../../engine/types';
+import { GameState, Snake } from '../../../engine/types';
 import { getOverallWinner } from '../../../engine/systems/levelSystem';
 import { getScores } from '../../../storage/scoreStorage';
 import { escapeHtml } from '../shared/escapeHtml';
@@ -9,49 +9,6 @@ function sortByFinalPlace(snakes: Snake[]): Snake[] {
     || right.score - left.score
     || left.id - right.id
   );
-}
-
-function getRoundStatus(result: RoundResult, snakeId: number): string {
-  const snakeResult = result.snakes.find(snake => snake.snakeId === snakeId);
-  if (!snakeResult) return 'Нет данных';
-  if (!snakeResult.alive) return snakeResult.deathReason || 'Мёртв';
-  return result.winnerId === snakeId ? 'Жив · победитель' : 'Жив';
-}
-
-function buildRoundTable(state: GameState): string {
-  if (state.roundResults.length === 0) {
-    return '<p class="results-empty">Подробные данные по раундам отсутствуют.</p>';
-  }
-
-  const participantHeaders = state.snakes
-    .map(snake => `<th scope="col">${escapeHtml(snake.name)}</th>`)
-    .join('');
-  const roundRows = state.roundResults
-    .map(result => {
-      const participantCells = state.snakes.map(snake => {
-        const snakeResult = result.snakes.find(item => item.snakeId === snake.id);
-        if (!snakeResult) return '<td class="results-round-cell">Нет данных</td>';
-        return `
-          <td class="results-round-cell">
-            <span>Еда: ${snakeResult.foodsEaten}</span>
-            <span>Очки: +${snakeResult.scoreGained} · всего ${snakeResult.totalScore}</span>
-            <span>${escapeHtml(getRoundStatus(result, snake.id))}</span>
-          </td>
-        `;
-      }).join('');
-
-      return `<tr><th scope="row">${result.level}</th>${participantCells}</tr>`;
-    })
-    .join('');
-
-  return `
-    <div class="results-table-scroll">
-      <table class="results-table results-rounds-table">
-        <thead><tr><th scope="col">Раунд</th>${participantHeaders}</tr></thead>
-        <tbody>${roundRows}</tbody>
-      </table>
-    </div>
-  `;
 }
 
 function buildFinalTable(state: GameState, ranking: Snake[]): string {
@@ -150,32 +107,30 @@ export function renderResults(
     </tr>
   `).join('');
   const highScores = scoreRows ? `
-    <h3 class="results-section-title">Таблица рекордов</h3>
-    <div class="results-table-scroll">
-      <table class="results-table">
-        <thead><tr><th>#</th><th>Имя</th><th>Очки</th><th>Дата</th></tr></thead>
-        <tbody>${scoreRows}</tbody>
-      </table>
-    </div>
+    <section class="results-summary-section" aria-labelledby="high-scores-title">
+      <h3 id="high-scores-title">Таблица рекордов</h3>
+      <div class="results-table-scroll">
+        <table class="results-table results-high-scores-table">
+          <thead><tr><th>#</th><th>Имя</th><th>Очки</th><th>Дата</th></tr></thead>
+          <tbody>${scoreRows}</tbody>
+        </table>
+      </div>
+    </section>
   ` : '';
 
   container.innerHTML = `
     <main class="results-wrapper">
-      <h2 class="results-title">Игра окончена</h2>
+      <h2 class="results-title">Итоговые результаты</h2>
+      <p class="results-winner">${buildWinnerAnnouncement(state, ranking)}</p>
+      ${buildPodium(ranking)}
 
-      <section class="results-section" aria-labelledby="round-results-title">
-        <h3 id="round-results-title">Результаты по раундам</h3>
-        ${buildRoundTable(state)}
-      </section>
-
-      <section class="results-section" aria-labelledby="final-results-title">
-        <h3 id="final-results-title">Итоговые результаты</h3>
-        ${buildFinalTable(state, ranking)}
-        <p class="results-winner">${buildWinnerAnnouncement(state, ranking)}</p>
-        ${buildPodium(ranking)}
-      </section>
-
-      ${highScores}
+      <div class="results-summary-grid">
+        <section class="results-summary-section" aria-labelledby="participants-title">
+          <h3 id="participants-title">Участники</h3>
+          ${buildFinalTable(state, ranking)}
+        </section>
+        ${highScores}
+      </div>
 
       <div class="results-buttons">
         <button id="restartBtn" class="btn btn-restart">Заново</button>

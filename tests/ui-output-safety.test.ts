@@ -28,7 +28,7 @@ function createUnsafeState(): GameState {
 describe('UI output safety', () => {
   beforeEach(() => localStorage.clear());
 
-  test('results render round history, final ranking and safe player names', () => {
+  test('results render compact final ranking and safe player names', () => {
     const root = document.createElement('div');
     const state = createUnsafeState();
     state.snakes[0].score = 30;
@@ -40,6 +40,7 @@ describe('UI output safety', () => {
     state.snakes[1].score = 20;
     state.snakes[1].levelsWon = 1;
     state.snakes[2].score = 10;
+    state.snakes[2].die('Столкновение со стеной');
     state.roundResults = [1, 2].map(level => ({
       level,
       winnerId: level === 1 ? 0 : 1,
@@ -59,7 +60,9 @@ describe('UI output safety', () => {
 
     expect(root.querySelector('img')).toBeNull();
     expect(root.textContent).toContain('<img src=x onerror="alert(1)">');
-    expect(root.querySelectorAll('.results-rounds-table tbody tr')).toHaveLength(2);
+    expect(root.querySelector('.results-rounds-table')).toBeNull();
+    expect(root.querySelector('.results-title')?.textContent).toBe('Итоговые результаты');
+    expect(root.querySelectorAll('.results-final-table tbody tr')).toHaveLength(3);
     expect(root.querySelector('.podium-place--1')?.textContent).toContain('<img src=x onerror="alert(1)">');
     expect(root.querySelector('.podium-place--2')?.textContent).toContain('Серебряный');
     expect(root.querySelector('.podium-place--3')?.textContent).toContain('Бронзовый');
