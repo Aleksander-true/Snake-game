@@ -12,7 +12,6 @@ function createState(width = 12, height = 12): GameState {
     height,
     snakes: [],
     foods: [],
-    rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
@@ -59,7 +58,6 @@ describe('greedy board heuristic', () => {
       AppleFoodEntity.newborn({ x: 5, y: 4 }, 0),
       AppleFoodEntity.newborn({ x: 6, y: 5 }, settings.foodYoungAge),
     ];
-    state.rabbits = state.foods;
 
     const direction = chooseGreedyBoardDirection(state, snake, settings);
     expect(direction).toBe('right');

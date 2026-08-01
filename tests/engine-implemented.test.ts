@@ -7,11 +7,11 @@ import { RabbitFoodEntity } from '../src/engine/entities/RabbitFoodEntity';
 import { applyDirection, getNextHeadPosition, moveSnake } from '../src/engine/systems/movementSystem';
 import { collidesWithSnake, collidesWithWall, selfCollision } from '../src/engine/collision';
 import { processHunger, resetHunger } from '../src/engine/systems/hungerSystem';
-import { spawnRabbits } from '../src/engine/spawning/rabbitsSpawner';
+import { spawnFood } from '../src/engine/spawning/rabbitsSpawner';
 import { generateWalls, validateWalls } from '../src/engine/spawning/wallsGenerator';
 import {
   getCumulativeTargetScore,
-  getInitialRabbitCount,
+  getInitialFoodCount,
   getTargetScore,
   getWallClusterCount,
   getWallLength,
@@ -39,7 +39,6 @@ function createState(width = 10, height = 10): GameState {
     height,
     snakes: [],
     foods: [],
-    rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
@@ -163,7 +162,7 @@ describe('Engine implemented behavior', () => {
   });
 
   describe('Spawning and walls', () => {
-    test('spawnRabbits respects walls/snakes/bounds and initializes rabbit fields', () => {
+    test('spawnFood respects walls, snakes and bounds and initializes food fields', () => {
       let seq = 0;
       const spawningCtx: EngineContext = {
         settings: createDefaultSettings(),
@@ -182,25 +181,25 @@ describe('Engine implemented behavior', () => {
         new SnakeEntity(0, 'P1', [{ x: 1, y: 1 }, { x: 1, y: 2 }, { x: 1, y: 3 }], 'down', false),
       ];
 
-      const rabbits = spawnRabbits(6, state, spawningCtx);
-      expect(rabbits.length).toBe(6);
-      const adultStartAge = spawningCtx.settings.rabbitYoungAge;
-      expect(rabbits.filter(food => food.age === adultStartAge).length).toBeGreaterThanOrEqual(1);
-      for (const rabbit of rabbits) {
-        expect(rabbit.age).toBeGreaterThanOrEqual(0);
-        expect(rabbit.clockNum).toBe(rabbit.age);
-        expect(rabbit.reproductionCount).toBe(0);
-        expect(rabbit.pos.x).toBeGreaterThanOrEqual(0);
-        expect(rabbit.pos.x).toBeLessThan(state.width);
-        expect(rabbit.pos.y).toBeGreaterThanOrEqual(0);
-        expect(rabbit.pos.y).toBeLessThan(state.height);
-        expect(state.walls.some(w => w.x === rabbit.pos.x && w.y === rabbit.pos.y)).toBe(false);
-        expect(state.snakes[0].segments.some(s => s.x === rabbit.pos.x && s.y === rabbit.pos.y)).toBe(false);
+      const foods = spawnFood(6, state, spawningCtx);
+      expect(foods.length).toBe(6);
+      const adultStartAge = spawningCtx.settings.foodYoungAge;
+      expect(foods.filter(food => food.age === adultStartAge).length).toBeGreaterThanOrEqual(1);
+      for (const food of foods) {
+        expect(food.age).toBeGreaterThanOrEqual(0);
+        expect(food.clockNum).toBe(food.age);
+        expect(food.reproductionCount).toBe(0);
+        expect(food.pos.x).toBeGreaterThanOrEqual(0);
+        expect(food.pos.x).toBeLessThan(state.width);
+        expect(food.pos.y).toBeGreaterThanOrEqual(0);
+        expect(food.pos.y).toBeLessThan(state.height);
+        expect(state.walls.some(w => w.x === food.pos.x && w.y === food.pos.y)).toBe(false);
+        expect(state.snakes[0].segments.some(s => s.x === food.pos.x && s.y === food.pos.y)).toBe(false);
       }
-      for (let i = 0; i < rabbits.length; i++) {
-        for (let j = i + 1; j < rabbits.length; j++) {
-          const dx = Math.abs(rabbits[i].pos.x - rabbits[j].pos.x);
-          const dy = Math.abs(rabbits[i].pos.y - rabbits[j].pos.y);
+      for (let i = 0; i < foods.length; i++) {
+        for (let j = i + 1; j < foods.length; j++) {
+          const dx = Math.abs(foods[i].pos.x - foods[j].pos.x);
+          const dy = Math.abs(foods[i].pos.y - foods[j].pos.y);
           expect(Math.max(dx, dy)).toBeGreaterThan(1);
         }
       }
@@ -240,8 +239,8 @@ describe('Engine implemented behavior', () => {
       expect(getCumulativeTargetScore(3, settings)).toBe(
         getTargetScore(1, settings) + getTargetScore(2, settings) + getTargetScore(3, settings)
       );
-      expect(getInitialRabbitCount(2, 3, settings)).toBe(
-        Math.floor(settings.rabbitCountPerSnakeCoeff * 2 + (settings.rabbitCountBase - 3))
+      expect(getInitialFoodCount(2, 3, settings)).toBe(
+        Math.floor(settings.foodCountPerSnakeCoeff * 2 + (settings.foodCountBase - 3))
       );
       expect(getWallClusterCount(3, settings)).toBe(
         Math.floor(settings.wallClusterCoeff * 3 + settings.wallClusterBase)
@@ -330,7 +329,6 @@ describe('Engine implemented behavior', () => {
       snake.ticksWithoutFood = 10;
       state.snakes = [snake];
       state.foods = [RabbitFoodEntity.newborn({ x: 3, y: 2 })];
-      state.rabbits = state.foods;
 
       const beforeLen = snake.segments.length;
       engine.processTick(state);

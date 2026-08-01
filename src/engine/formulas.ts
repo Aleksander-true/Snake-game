@@ -42,6 +42,3 @@ export function getInitialFoodCount(
 ): number {
   return Math.floor(settings.foodCountPerSnakeCoeff * snakeCount + (settings.foodCountBase - difficultyLevel));
 }
-
-// Backward-compatible alias for older tests/modules.
-export const getInitialRabbitCount = getInitialFoodCount;

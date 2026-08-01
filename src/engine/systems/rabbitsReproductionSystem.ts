@@ -18,7 +18,7 @@ export function chebyshevDistance(positionA: Position, positionB: Position): num
 }
 
 /**
- * Determine the lifecycle phase of a rabbit based on its age.
+ * Determine the lifecycle phase of a food item based on its age.
  */
 export function getFoodPhase(food: Food, settings: GameSettings): FoodPhase {
   if (food.age < settings.foodYoungAge) return 'young';
@@ -27,7 +27,7 @@ export function getFoodPhase(food: Food, settings: GameSettings): FoodPhase {
 }
 
 /**
- * Count rabbits within Chebyshev distance <= radius from position.
+ * Count food items within Chebyshev distance <= radius from position.
  */
 export function countNearbyFood(pos: Position, foods: Food[], radius: number, excludeSelf?: Food): number {
   let count = 0;
@@ -41,7 +41,7 @@ export function countNearbyFood(pos: Position, foods: Food[], radius: number, ex
 }
 
 /**
- * Check if a position is valid for a new rabbit (not on wall/snake, far enough from other rabbits).
+ * Check if a position is valid for new food (not on a wall or snake, and far enough from other food).
  */
 export function isValidFoodPosition(
   pos: Position,
@@ -58,7 +58,7 @@ export function isValidFoodPosition(
     if (snake.segments.some(segment => segment.x === pos.x && segment.y === pos.y)) return false;
   }
 
-  // Chebyshev distance > 1 from all existing rabbits
+  // Chebyshev distance > 1 from all existing food
   for (const food of state.foods) {
     if (chebyshevDistance(pos, food.pos) <= 1) return false;
   }
@@ -67,10 +67,10 @@ export function isValidFoodPosition(
 }
 
 /**
- * Process rabbit aging, reproduction, and death for one tick.
+ * Process food aging, reproduction, and expiration for one tick.
  * - Increments age and clockNum
  * - Reproduction only during adult phase
- * - Removes rabbits that reached max age
+ * - Removes food that reached max age
  */
 export function processFoodLifecycle(state: GameState, ctx: EngineContext): FoodBirth[] {
   const settings = ctx.settings;
@@ -112,22 +112,14 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     }
   }
 
-  // Add newborn rabbit-food
+  // Add newborn food
   state.foods.push(...births.map(birth => birth.child));
 
   // Remove expired food (keeps lifecycle bounded in dense levels)
   state.foods = state.foods.filter(food => food.age < settings.foodMaxAge);
-  state.rabbits = state.foods;
 
   return births;
 }
-
-// Backward-compatible aliases for older tests/modules.
-export type RabbitBirth = FoodBirth;
-export const getRabbitPhase = getFoodPhase;
-export const countNearbyRabbits = countNearbyFood;
-export const isValidRabbitPosition = isValidFoodPosition;
-export const processRabbitReproduction = processFoodLifecycle;
 
 /**
  * Try to find a valid position for offspring near the parent.

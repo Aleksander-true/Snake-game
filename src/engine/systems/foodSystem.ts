@@ -25,10 +25,6 @@ export function createLevelFood(level: number, pos: Position, settings: GameSett
   return AppleFoodEntity.newborn(pos, age);
 }
 
-export function syncLegacyFoodAlias(state: GameState): void {
-  state.rabbits = state.foods;
-}
-
 export function autoReplenishFood(state: GameState, ctx: EngineContext): void {
   const aliveSnakes = state.snakes.filter(snake => snake.alive);
   if (aliveSnakes.length === 0) return;
@@ -44,7 +40,6 @@ export function autoReplenishFood(state: GameState, ctx: EngineContext): void {
   if (!spawnPos) return;
   state.foods.push(createLevelFood(state.level, spawnPos, ctx.settings, 'adult'));
   state.lastAutoFoodSpawnTick = state.tickCount;
-  syncLegacyFoodAlias(state);
 }
 
 function findFarthestFoodPosition(state: GameState): Position | null {

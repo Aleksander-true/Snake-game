@@ -64,7 +64,6 @@ export interface GameState {
   height: number;
   snakes: Snake[];
   foods: Food[];
-  rabbits: Food[]; // legacy alias kept for compatibility in tests/modules
   walls: Position[];
   level: number;
   gameMode?: GameMode;

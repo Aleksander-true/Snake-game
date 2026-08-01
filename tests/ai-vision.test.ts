@@ -11,7 +11,6 @@ function createState(width = 11, height = 11): GameState {
     height,
     snakes: [],
     foods: [],
-    rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
@@ -44,7 +43,6 @@ describe('ai vision', () => {
       AppleFoodEntity.newborn({ x: 6, y: 5 }, 0),
       AppleFoodEntity.newborn({ x: 7, y: 5 }, 0),
     ];
-    state.rabbits = state.foods;
 
     const vision = generateVision(head, 'up', state, settings, 5);
     const frontNearObstacle = vision[1][2];
@@ -61,4 +59,3 @@ describe('ai vision', () => {
     expect(rightNearFood).toBeGreaterThanOrEqual(rightFarFood);
   });
 });
-

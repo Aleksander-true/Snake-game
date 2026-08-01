@@ -41,7 +41,6 @@ function createState(width = 12, height = 12): GameState {
     height,
     snakes: [],
     foods: [],
-    rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
@@ -78,7 +77,7 @@ describe('Board integration - single player mode', () => {
     resetSettings();
   });
 
-  test('initLevel builds board with walls, rabbits and snake segments in correct cells', () => {
+  test('initLevel builds board with walls, food and snake segments in correct cells', () => {
     const ctx = createCtx();
     ctx.settings.levelOverrides['1'] = { wallClusters: 3, wallLength: 5, rabbitCount: 8 };
 
@@ -93,13 +92,13 @@ describe('Board integration - single player mode', () => {
     engine.initLevel(state, config);
 
     expect(validateWalls(state.walls, state.width, state.height)).toBe(true);
-    expect(state.rabbits.length).toBeGreaterThan(0);
+    expect(state.foods.length).toBeGreaterThan(0);
 
     for (const wall of state.walls) {
       expect(state.board[wall.y][wall.x]).toBe('*');
     }
-    for (const rabbit of state.rabbits) {
-      expect(state.board[rabbit.pos.y][rabbit.pos.x].startsWith('&x')).toBe(true);
+    for (const food of state.foods) {
+      expect(state.board[food.pos.y][food.pos.x].startsWith('&x')).toBe(true);
     }
     for (const seg of state.snakes[0].segments) {
       expect(state.board[seg.y][seg.x]).toBe('1');
@@ -154,7 +153,6 @@ describe('Board integration - single player mode', () => {
     snake.ticksWithoutFood = 9;
     state.snakes = [snake];
     state.foods = [RabbitFoodEntity.newborn({ x: 5, y: 4 })];
-    state.rabbits = state.foods;
 
     const lengthBefore = snake.segments.length;
     engine.processTick(state);
@@ -207,7 +205,6 @@ describe('Board integration - single player mode', () => {
     );
     state.snakes = [snake];
     state.foods = [RabbitFoodEntity.newborn({ x: 3, y: 2 })];
-    state.rabbits = state.foods;
 
     const result = engine.processTick(state);
     expect(state.levelComplete).toBe(true);
@@ -237,7 +234,6 @@ describe('Board integration - single player mode', () => {
       RabbitFoodEntity.newborn({ x: 4, y: 6 }),
       RabbitFoodEntity.newborn({ x: 4, y: 3 }),
     ];
-    state.rabbits = state.foods;
 
     // Tick 1: move right, eat first rabbit.
     engine.processTick(state);

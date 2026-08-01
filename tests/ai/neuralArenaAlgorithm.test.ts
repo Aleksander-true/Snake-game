@@ -42,7 +42,6 @@ const defaultState: GameState = {
     foods: [],
     snakes: [],
     board: [],
-    rabbits: [],
     level: 0,
     difficultyLevel: 0,
     tickCount: 0,

@@ -8,7 +8,7 @@ import { processHunger, resetHunger } from './hungerSystem';
 import { awardFoodPoints } from './scoringSystem';
 import { processFoodLifecycle } from './rabbitsReproductionSystem';
 import { checkLevelComplete, getMaxLevel } from './levelSystem';
-import { autoReplenishFood, getFoodReward, syncLegacyFoodAlias } from './foodSystem';
+import { autoReplenishFood, getFoodReward } from './foodSystem';
 
 /**
  * Run all tick systems in the required order.
@@ -126,7 +126,6 @@ function applyMoveIntent(
   state.foods.splice(foodIndex, 1);
   awardFoodPoints(intent.snake, reward.points);
   resetHunger(intent.snake);
-  syncLegacyFoodAlias(state);
   events.push({
     type: 'FOOD_EATEN',
     snakeId: intent.snake.id,

@@ -51,7 +51,6 @@ function createState(): GameState {
     height: 10,
     snakes: [],
     foods: [],
-    rabbits: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,

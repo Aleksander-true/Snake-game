@@ -8,7 +8,6 @@ import { runTickPipeline } from './systems/tickPipeline';
 import { DomainEvent, TickResult } from './events';
 import { SnakeEntity } from './entities/SnakeEntity';
 import { getInitialFoodCount, getWallClusterCount, getWallLength } from './formulas';
-import { syncLegacyFoodAlias } from './systems/foodSystem';
 
 /**
  * OOP facade for core game engine operations.
@@ -37,7 +36,6 @@ export class GameEngine {
       height,
       snakes: [],
       foods: [],
-      rabbits: [],
       walls: [],
       level,
       gameMode: config.gameMode ?? 'classic',
@@ -110,7 +108,6 @@ export class GameEngine {
       ?? levelOverride.rabbitCount
       ?? getInitialFoodCount(totalSnakes, state.difficultyLevel, settings);
     state.foods = spawnFood(foodCount, state, this.activeContext);
-    syncLegacyFoodAlias(state);
 
     state.board = buildBoard(state, this.activeContext.settings);
     state.tickCount = 0;

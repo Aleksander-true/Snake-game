@@ -55,6 +55,3 @@ export function spawnFood(
 
   return foods;
 }
-
-// Backward-compatible alias for older tests/modules.
-export const spawnRabbits = spawnFood;

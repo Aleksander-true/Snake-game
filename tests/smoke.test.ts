@@ -1,7 +1,7 @@
 import { buildBoard, createEmptyBoard, inBounds } from '../src/engine/board';
 import { isReverseDirection } from '../src/engine/collision';
 import { GameEngine } from '../src/engine/GameEngine';
-import { getTargetScore, getCumulativeTargetScore, getInitialRabbitCount } from '../src/engine/formulas';
+import { getTargetScore, getCumulativeTargetScore, getInitialFoodCount } from '../src/engine/formulas';
 import { EngineContext } from '../src/engine/context';
 import { RandomPort } from '../src/engine/ports';
 import { createDefaultSettings, gameSettings, resetSettings } from '../src/engine/settings';
@@ -68,12 +68,12 @@ describe('Smoke tests — project skeleton', () => {
     expect(getCumulativeTargetScore(3, settings)).toBe(level1Target + level2Target + level3Target);
   });
 
-  test('getInitialRabbitCount computes correctly', () => {
+  test('getInitialFoodCount computes correctly', () => {
     const settings = testCtx.settings;
-    const expected1 = Math.floor(settings.rabbitCountPerSnakeCoeff * 1 + (settings.rabbitCountBase - 5));
-    const expected2 = Math.floor(settings.rabbitCountPerSnakeCoeff * 2 + (settings.rabbitCountBase - 3));
-    expect(getInitialRabbitCount(1, 5, settings)).toBe(expected1);
-    expect(getInitialRabbitCount(2, 3, settings)).toBe(expected2);
+    const expected1 = Math.floor(settings.foodCountPerSnakeCoeff * 1 + (settings.foodCountBase - 5));
+    const expected2 = Math.floor(settings.foodCountPerSnakeCoeff * 2 + (settings.foodCountBase - 3));
+    expect(getInitialFoodCount(1, 5, settings)).toBe(expected1);
+    expect(getInitialFoodCount(2, 3, settings)).toBe(expected2);
   });
 
   test('resetSettings restores singleton runtime settings', () => {
