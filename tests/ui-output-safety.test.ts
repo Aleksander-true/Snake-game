@@ -117,6 +117,13 @@ describe('UI output safety', () => {
       date: '01.08.2026',
       isBot: false,
     });
+    saveScore({
+      playerName: 'Старый рекорд бота',
+      score: 200,
+      levelsWon: 10,
+      date: '01.08.2026',
+      isBot: true,
+    });
 
     renderResults(root, state, jest.fn(), jest.fn());
 
@@ -131,6 +138,8 @@ describe('UI output safety', () => {
     expect(root.querySelector('.results-winner')?.textContent).toContain('Победитель');
     expect(root.textContent).toContain('Столкновение со стеной');
     expect(root.querySelector('#participants-title')?.textContent).toBe('Итоги по всем раундам');
+    expect(root.querySelector('.results-high-scores-table')?.textContent).toContain('Рекордсмен');
+    expect(root.querySelector('.results-high-scores-table')?.textContent).not.toContain('Старый рекорд бота');
     const finalSection = root.querySelector('.results-final-section')!;
     const winner = root.querySelector('.results-winner')!;
     const podium = root.querySelector('.results-podium')!;

@@ -97,7 +97,7 @@ export function renderResults(
   onMenu: () => void
 ): void {
   const ranking = sortByFinalPlace(state.snakes);
-  const scores = getScores();
+  const scores = getScores().filter(score => !score.isBot);
   const scoreRows = scores.slice(0, 10).map((scoreRecord, scoreIndex) => `
     <tr>
       <td>${scoreIndex + 1}</td>

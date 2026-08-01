@@ -350,7 +350,7 @@ describe('App implemented behavior', () => {
   });
 
   describe('ScorePersistenceService', () => {
-    test('saves session scores for every snake', () => {
+    test('saves session scores only for human players', () => {
       const service = new ScorePersistenceService();
       const state = createState();
       state.snakes = [
@@ -366,9 +366,9 @@ describe('App implemented behavior', () => {
       service.saveSessionScores(state);
 
       const scores = getScores();
-      expect(scores).toHaveLength(2);
+      expect(scores).toHaveLength(1);
       expect(scores.some(score => score.playerName === 'Игрок 1' && score.score === 7 && !score.isBot)).toBe(true);
-      expect(scores.some(score => score.playerName === 'Бот 1' && score.score === 3 && score.isBot)).toBe(true);
+      expect(scores.some(score => score.isBot)).toBe(false);
     });
   });
 
