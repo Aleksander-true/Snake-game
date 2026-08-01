@@ -369,14 +369,12 @@ export class GameController {
       }
 
       if (this.state.levelComplete) {
-        this.state.gameOver = true;
         this.renderFastForwardFrame();
         this.fastForwardTimeoutId = window.setTimeout(() => {
           this.fastForwardTimeoutId = null;
           if (!this.fastForwarding || !this.state) return;
           this.fastForwarding = false;
-          this.fsm.reset('Results');
-          this.onEnterResults();
+          this.handleLevelComplete();
         }, 1000);
         return;
       }

@@ -426,14 +426,13 @@ describe('App implemented behavior', () => {
       expect(state.tickCount).toBeGreaterThan(0);
       expect(state.difficultyLevel).toBeGreaterThan(1);
       expect(state.levelComplete).toBe(true);
-      expect(state.gameOver).toBe(true);
-      expect(callbacks.onShowResults).toHaveBeenCalledWith(state);
+      expect(state.gameOver).toBe(false);
+      expect(controller.getFSM().getState()).toBe('LevelComplete');
+      expect(document.getElementById('modal-overlay')).not.toBeNull();
+      expect(callbacks.onShowResults).not.toHaveBeenCalled();
       expect((renderGame as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(rendersBeforeFastForward + 2);
-      const renderCallOrder = (renderGame as jest.Mock).mock.invocationCallOrder;
-      expect(renderCallOrder[renderCallOrder.length - 1]).toBeLessThan(
-        callbacks.onShowResults.mock.invocationCallOrder[0]
-      );
       controller.stop();
+      hideModal();
       performanceNowSpy.mockRestore();
       jest.useRealTimers();
     });
