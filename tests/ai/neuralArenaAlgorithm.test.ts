@@ -40,6 +40,7 @@ const defaultState: GameState = {
     height: 10,
     walls: [],
     foods: [],
+    roundResults: [],
     snakes: [],
     board: [],
     level: 0,

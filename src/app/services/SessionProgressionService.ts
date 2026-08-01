@@ -12,6 +12,7 @@ export class SessionProgressionService {
     const nextState = gameEngine.createGameState(config, nextLevel);
     gameEngine.initLevel(nextState, config);
     this.copySnakeProgress(previousSnakes, nextState);
+    nextState.roundResults = [...currentState.roundResults];
 
     return nextState;
   }

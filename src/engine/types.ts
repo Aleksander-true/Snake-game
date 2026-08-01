@@ -57,6 +57,25 @@ export interface Snake {
   die(reason: string): void;
 }
 
+/** Result of one snake in a completed round. */
+export interface SnakeRoundResult {
+  snakeId: number;
+  name: string;
+  isBot: boolean;
+  foodsEaten: number;
+  scoreGained: number;
+  totalScore: number;
+  alive: boolean;
+  deathReason?: string;
+}
+
+/** Immutable summary of a completed round. */
+export interface RoundResult {
+  level: number;
+  winnerId: number | null;
+  snakes: SnakeRoundResult[];
+}
+
 /** Full game state for one level */
 export interface GameState {
   board: CellContent[][];
@@ -64,6 +83,7 @@ export interface GameState {
   height: number;
   snakes: Snake[];
   foods: Food[];
+  roundResults: RoundResult[];
   walls: Position[];
   level: number;
   gameMode?: GameMode;

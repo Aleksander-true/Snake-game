@@ -13,6 +13,7 @@ function createUnsafeState(): GameState {
     height: 8,
     snakes: [new SnakeEntity(0, '<img src=x onerror="alert(1)">', [{ x: 2, y: 2 }], 'right', false)],
     foods: [],
+    roundResults: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,

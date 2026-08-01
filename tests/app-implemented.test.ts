@@ -43,6 +43,7 @@ function createState(width = 12, height = 12): GameState {
     height,
     snakes: [],
     foods: [],
+    roundResults: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,
@@ -272,11 +273,26 @@ describe('App implemented behavior', () => {
       engine.initLevel(current, config);
       current.snakes[0].score = 9;
       current.snakes[0].levelsWon = 2;
+      current.roundResults.push({
+        level: 1,
+        winnerId: 0,
+        snakes: [{
+          snakeId: 0,
+          name: 'Игрок 1',
+          isBot: false,
+          foodsEaten: 2,
+          scoreGained: 9,
+          totalScore: 9,
+          alive: true,
+        }],
+      });
 
       const next = progression.advanceToNextLevel(current, config, engine);
       expect(next.level).toBe(2);
       expect(next.snakes[0].score).toBe(9);
       expect(next.snakes[0].levelsWon).toBe(2);
+      expect(next.roundResults).toEqual(current.roundResults);
+      expect(next.roundResults).not.toBe(current.roundResults);
       expect(next.tickCount).toBe(0);
       expect(next.levelComplete).toBe(false);
     });
@@ -446,6 +462,9 @@ describe('App implemented behavior', () => {
       expect(state.difficultyLevel).toBeGreaterThan(1);
       expect(state.levelComplete).toBe(true);
       expect(state.gameOver).toBe(false);
+      expect(state.roundResults).toHaveLength(1);
+      expect(state.roundResults[0].level).toBe(1);
+      expect(state.roundResults[0].snakes).toHaveLength(3);
       expect(controller.getFSM().getState()).toBe('LevelComplete');
       expect(document.getElementById('modal-overlay')).not.toBeNull();
       expect(callbacks.onShowResults).not.toHaveBeenCalled();

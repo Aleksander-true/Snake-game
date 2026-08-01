@@ -11,6 +11,7 @@ function createState(width = 11, height = 11): GameState {
     height,
     snakes: [],
     foods: [],
+    roundResults: [],
     walls: [],
     level: 1,
     difficultyLevel: 1,

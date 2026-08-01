@@ -54,6 +54,8 @@ export class GameController {
   private exitConfirmActive = false;
   private fastForwarding = false;
   private fastForwardTimeoutId: number | null = null;
+  private roundStartScores = new Map<number, number>();
+  private foodsEatenThisRound = new Map<number, number>();
 
   constructor(
     ctx: EngineContext,
@@ -90,6 +92,7 @@ export class GameController {
     const level = overrideLevel ?? 1;
     this.state = this.gameEngine.createGameState(config, level);
     this.gameEngine.initLevel(this.state, config);
+    this.resetRoundTracking();
 
     this.resizeCanvas();
 
@@ -260,9 +263,12 @@ export class GameController {
   /* ======================== Domain Events ======================== */
 
   private handleDomainEvents(result: TickResult): void {
+    this.trackFoodEvents(result);
+
     for (const event of result.events) {
       switch (event.type) {
         case 'LEVEL_COMPLETED':
+          this.recordRoundResult(event.winnerId ?? null);
           this.handleLevelComplete();
           return; // stop processing further events this tick
         case 'GAME_OVER':
@@ -302,6 +308,7 @@ export class GameController {
     if (!this.state || !this.config || !this.canvas) return;
 
     this.state = this.sessionProgressionService.advanceToNextLevel(this.state, this.config, this.gameEngine);
+    this.resetRoundTracking();
 
     this.resizeCanvas();
     this.updateHUD();
@@ -352,7 +359,12 @@ export class GameController {
           this.getSettings(),
           { directions: [null, null], directionQueues: [[], []] }
         );
-        this.gameEngine.processTick(this.state);
+        const result = this.gameEngine.processTick(this.state);
+        this.trackFoodEvents(result);
+        const completionEvent = result.events.find(event => event.type === 'LEVEL_COMPLETED');
+        if (completionEvent?.type === 'LEVEL_COMPLETED') {
+          this.recordRoundResult(completionEvent.winnerId ?? null);
+        }
 
         simulatedMilliseconds += this.getSettings().tickIntervalMs;
         while (simulatedMilliseconds >= 1000 && !this.state.levelComplete) {
@@ -400,6 +412,39 @@ export class GameController {
       window.clearTimeout(this.fastForwardTimeoutId);
       this.fastForwardTimeoutId = null;
     }
+  }
+
+  private resetRoundTracking(): void {
+    if (!this.state) return;
+    this.roundStartScores = new Map(this.state.snakes.map(snake => [snake.id, snake.score]));
+    this.foodsEatenThisRound = new Map(this.state.snakes.map(snake => [snake.id, 0]));
+  }
+
+  private trackFoodEvents(result: TickResult): void {
+    for (const event of result.events) {
+      if (event.type !== 'FOOD_EATEN') continue;
+      const eaten = this.foodsEatenThisRound.get(event.snakeId) ?? 0;
+      this.foodsEatenThisRound.set(event.snakeId, eaten + 1);
+    }
+  }
+
+  private recordRoundResult(winnerId: number | null): void {
+    if (!this.state || this.state.roundResults.some(result => result.level === this.state!.level)) return;
+
+    this.state.roundResults.push({
+      level: this.state.level,
+      winnerId,
+      snakes: this.state.snakes.map(snake => ({
+        snakeId: snake.id,
+        name: snake.name,
+        isBot: snake.isBot,
+        foodsEaten: this.foodsEatenThisRound.get(snake.id) ?? 0,
+        scoreGained: snake.score - (this.roundStartScores.get(snake.id) ?? 0),
+        totalScore: snake.score,
+        alive: snake.alive,
+        deathReason: snake.deathReason,
+      })),
+    });
   }
 
   private resizeCanvas(): void {

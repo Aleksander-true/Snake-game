@@ -36,6 +36,7 @@ export class GameEngine {
       height,
       snakes: [],
       foods: [],
+      roundResults: [],
       walls: [],
       level,
       gameMode: config.gameMode ?? 'classic',
