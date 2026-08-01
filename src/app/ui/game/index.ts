@@ -1,16 +1,16 @@
 import { GameState, Snake } from '../../../engine/types';
 import { GameSettings } from '../../../engine/settings';
 import { getCumulativeTargetScore } from '../../../engine/formulas';
+import { getDeadSnakeColor } from '../../../shared/color';
 import { escapeHtml } from '../shared/escapeHtml';
 
 /**
  * Render a single snake stats block.
  */
 function buildSnakeStatsHtml(snake: Snake): string {
-  const cssClass = snake.alive ? 'hud-snake-alive' : 'hud-snake-dead';
   const status = snake.alive ? 'Жив' : (snake.deathReason || 'Мёртв');
   return `
-    <div class="${cssClass}">
+    <div class="hud-snake-stats">
       <strong>${escapeHtml(snake.name)}</strong><br>
       Очки: ${snake.score}<br>
       Длина: ${snake.segments.length}<br>
@@ -18,6 +18,25 @@ function buildSnakeStatsHtml(snake: Snake): string {
       ${escapeHtml(status)}
     </div>
   `;
+}
+
+function renderSnakeStats(container: HTMLElement, snakes: Snake[], settings: GameSettings): void {
+  container.innerHTML = snakes.map(buildSnakeStatsHtml).join('');
+  const statsElements = container.querySelectorAll<HTMLElement>('.hud-snake-stats');
+  statsElements.forEach((statsElement, index) => {
+    const snake = snakes[index];
+    const baseColor = settings.snakeColors[snake.id % settings.snakeColors.length];
+    const displayColor = snake.alive ? baseColor : getDeadSnakeColor(baseColor);
+    statsElement.style.setProperty('--hud-snake-color', displayColor);
+  });
+}
+
+function canFinishGameEarly(humanSnakes: Snake[], botSnakes: Snake[], state: GameState): boolean {
+  return humanSnakes.length > 0
+    && humanSnakes.every(snake => !snake.alive)
+    && botSnakes.some(snake => snake.alive)
+    && !state.levelComplete
+    && !state.gameOver;
 }
 
 /**
@@ -34,7 +53,8 @@ export function renderHUD(
   bottomPanel: HTMLElement | null,
   state: GameState,
   paused: boolean,
-  settings: GameSettings
+  settings: GameSettings,
+  onFinishGame?: () => void
 ): void {
   const minutes = Math.floor(state.levelTimeLeft / 60);
   const seconds = state.levelTimeLeft % 60;
@@ -59,20 +79,24 @@ export function renderHUD(
 
   // Left panel → player 1 (first human)
   if (leftPanel) {
-    leftPanel.innerHTML = humanSnakes[0] ? buildSnakeStatsHtml(humanSnakes[0]) : '';
+    renderSnakeStats(leftPanel, humanSnakes.slice(0, 1), settings);
+    if (canFinishGameEarly(humanSnakes, botSnakes, state)) {
+      const finishButton = document.createElement('button');
+      finishButton.type = 'button';
+      finishButton.className = 'btn btn-secondary hud-finish-button';
+      finishButton.textContent = 'Завершить игру';
+      if (onFinishGame) finishButton.addEventListener('click', onFinishGame);
+      leftPanel.appendChild(finishButton);
+    }
   }
 
   // Right panel → player 2 (second human)
   if (rightPanel) {
-    rightPanel.innerHTML = humanSnakes[1] ? buildSnakeStatsHtml(humanSnakes[1]) : '';
+    renderSnakeStats(rightPanel, humanSnakes.slice(1, 2), settings);
   }
 
   // Bottom panel → all bots
   if (bottomPanel) {
-    if (botSnakes.length > 0) {
-      bottomPanel.innerHTML = botSnakes.map(botSnake => buildSnakeStatsHtml(botSnake)).join('');
-    } else {
-      bottomPanel.innerHTML = '';
-    }
+    renderSnakeStats(bottomPanel, botSnakes, settings);
   }
 }

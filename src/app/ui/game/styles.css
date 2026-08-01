@@ -95,12 +95,14 @@
   50% { opacity: 0; }
 }
 
-.hud-snake-alive {
-  color: var(--color-primary-bright);
+.hud-snake-stats {
+  color: var(--hud-snake-color);
 }
 
-.hud-snake-dead {
-  color: var(--color-danger);
+.hud-finish-button {
+  margin-top: 10px;
+  padding: 6px 10px;
+  width: 100%;
 }
 
 .touch-controls-single {

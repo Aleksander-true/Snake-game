@@ -1,26 +1,7 @@
 import { GameState, Snake, Food } from '../engine/types';
 import { GameSettings } from '../engine/settings';
 import { getFoodPhase } from '../engine/systems/foodSystem';
-
-/* ====== Color helpers ====== */
-
-/** Darken a hex color by a factor (0 = unchanged, 1 = black). */
-function darkenColor(hex: string, factor: number): string {
-  const redChannel = parseInt(hex.slice(1, 3), 16);
-  const green = parseInt(hex.slice(3, 5), 16);
-  const blue = parseInt(hex.slice(5, 7), 16);
-  const brightnessMultiplier = 1 - factor;
-  return `rgb(${Math.round(redChannel * brightnessMultiplier)},${Math.round(green * brightnessMultiplier)},${Math.round(blue * brightnessMultiplier)})`;
-}
-
-/** Desaturate + darken for dead snakes. */
-function deadColor(hex: string): string {
-  const redChannel = parseInt(hex.slice(1, 3), 16);
-  const green = parseInt(hex.slice(3, 5), 16);
-  const blue = parseInt(hex.slice(5, 7), 16);
-  const greyLevel = Math.round(redChannel * 0.3 + green * 0.3 + blue * 0.3);
-  return `rgb(${greyLevel},${greyLevel},${greyLevel})`;
-}
+import { darkenColor, getDeadSnakeColor } from '../shared/color';
 
 /* ====== Eye drawing ====== */
 
@@ -187,11 +168,11 @@ function drawSnakes(
 ): void {
   for (let snakeIndex = 0; snakeIndex < snakes.length; snakeIndex++) {
     const snake = snakes[snakeIndex];
-    const baseColor = settings.snakeColors[snakeIndex % settings.snakeColors.length];
+    const baseColor = settings.snakeColors[snake.id % settings.snakeColors.length];
 
     if (!snake.alive) {
       // Dead snake — greyed-out body with darker outline, no eyes
-      const grey = deadColor(baseColor);
+      const grey = getDeadSnakeColor(baseColor);
       const greyStroke = darkenColor(grey, 0.35);
       for (const segment of snake.segments) {
         const segmentX = segment.x * cellSize;

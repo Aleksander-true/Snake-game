@@ -315,7 +315,19 @@ export class GameController {
   private updateHUD(): void {
     if (!this.state) return;
     const paused = this.fsm.getState() === 'Paused';
-    this.hudPresenter.render(this.state, paused, this.getSettings());
+    this.hudPresenter.render(this.state, paused, this.getSettings(), () => this.finishGameEarly());
+  }
+
+  private finishGameEarly(): void {
+    if (!this.state) return;
+    const humanSnakes = this.state.snakes.filter(snake => !snake.isBot);
+    const hasAliveBot = this.state.snakes.some(snake => snake.isBot && snake.alive);
+    if (humanSnakes.length === 0 || humanSnakes.some(snake => snake.alive) || !hasAliveBot) return;
+
+    this.state.levelComplete = true;
+    this.state.gameOver = true;
+    this.fsm.reset('Results');
+    this.onEnterResults();
   }
 
   private resizeCanvas(): void {

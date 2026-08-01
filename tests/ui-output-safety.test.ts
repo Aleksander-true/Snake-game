@@ -4,6 +4,7 @@ import { GameState } from '../src/engine/types';
 import { renderResults } from '../src/app/ui/results';
 import { renderHUD } from '../src/app/ui/game';
 import { createDefaultSettings } from '../src/engine/settings';
+import { getDeadSnakeColor } from '../src/shared/color';
 
 function createUnsafeState(): GameState {
   return {
@@ -37,9 +38,39 @@ describe('UI output safety', () => {
   test('HUD renders player names as text instead of markup', () => {
     const top = document.createElement('div');
     const left = document.createElement('div');
-    renderHUD(top, left, null, null, createUnsafeState(), false, createDefaultSettings());
+    const state = createUnsafeState();
+    const settings = createDefaultSettings();
+    renderHUD(top, left, null, null, state, false, settings);
 
     expect(left.querySelector('img')).toBeNull();
     expect(left.textContent).toContain('<img src=x onerror="alert(1)">');
+    expect(left.querySelector<HTMLElement>('.hud-snake-stats')?.style.getPropertyValue('--hud-snake-color'))
+      .toBe(settings.snakeColors[0]);
+
+    state.snakes[0].alive = false;
+    renderHUD(top, left, null, null, state, false, settings);
+    expect(left.querySelector<HTMLElement>('.hud-snake-stats')?.style.getPropertyValue('--hud-snake-color'))
+      .toBe(getDeadSnakeColor(settings.snakeColors[0]));
+  });
+
+  test('HUD offers finishing a mixed game after all human snakes die', () => {
+    const top = document.createElement('div');
+    const left = document.createElement('div');
+    const state = createUnsafeState();
+    state.gameOver = false;
+    state.levelComplete = false;
+    state.snakes[0].alive = false;
+    state.snakes.push(
+      new SnakeEntity(1, 'Бот 1', [{ x: 3, y: 3 }], 'right', true),
+      new SnakeEntity(2, 'Бот 2', [{ x: 4, y: 4 }], 'right', true)
+    );
+    const onFinishGame = jest.fn();
+
+    renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFinishGame);
+    const finishButton = left.querySelector<HTMLButtonElement>('.hud-finish-button');
+    expect(finishButton?.textContent).toBe('Завершить игру');
+
+    finishButton?.click();
+    expect(onFinishGame).toHaveBeenCalledTimes(1);
   });
 });
