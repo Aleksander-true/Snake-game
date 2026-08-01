@@ -99,7 +99,7 @@
   color: var(--hud-snake-color);
 }
 
-.hud-finish-button {
+.hud-fast-forward-button {
   margin-top: 10px;
   padding: 6px 10px;
   width: 100%;

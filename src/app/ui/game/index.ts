@@ -54,7 +54,7 @@ export function renderHUD(
   state: GameState,
   paused: boolean,
   settings: GameSettings,
-  onFinishGame?: () => void
+  onFastForward?: () => void
 ): void {
   const minutes = Math.floor(state.levelTimeLeft / 60);
   const seconds = state.levelTimeLeft % 60;
@@ -81,12 +81,12 @@ export function renderHUD(
   if (leftPanel) {
     renderSnakeStats(leftPanel, humanSnakes.slice(0, 1), settings);
     if (canFinishGameEarly(humanSnakes, botSnakes, state)) {
-      const finishButton = document.createElement('button');
-      finishButton.type = 'button';
-      finishButton.className = 'btn btn-secondary hud-finish-button';
-      finishButton.textContent = 'Завершить игру';
-      if (onFinishGame) finishButton.addEventListener('click', onFinishGame);
-      leftPanel.appendChild(finishButton);
+      const fastForwardButton = document.createElement('button');
+      fastForwardButton.type = 'button';
+      fastForwardButton.className = 'btn btn-secondary hud-fast-forward-button';
+      fastForwardButton.textContent = 'Быстро доиграть';
+      if (onFastForward) fastForwardButton.addEventListener('click', onFastForward);
+      leftPanel.appendChild(fastForwardButton);
     }
   }
 

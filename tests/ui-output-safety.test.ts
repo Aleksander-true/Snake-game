@@ -53,7 +53,7 @@ describe('UI output safety', () => {
       .toBe(getDeadSnakeColor(settings.snakeColors[0]));
   });
 
-  test('HUD offers finishing a mixed game after all human snakes die', () => {
+  test('HUD offers fast-forwarding a mixed game after all human snakes die', () => {
     const top = document.createElement('div');
     const left = document.createElement('div');
     const state = createUnsafeState();
@@ -64,13 +64,13 @@ describe('UI output safety', () => {
       new SnakeEntity(1, 'Бот 1', [{ x: 3, y: 3 }], 'right', true),
       new SnakeEntity(2, 'Бот 2', [{ x: 4, y: 4 }], 'right', true)
     );
-    const onFinishGame = jest.fn();
+    const onFastForward = jest.fn();
 
-    renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFinishGame);
-    const finishButton = left.querySelector<HTMLButtonElement>('.hud-finish-button');
-    expect(finishButton?.textContent).toBe('Завершить игру');
+    renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFastForward);
+    const fastForwardButton = left.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    expect(fastForwardButton?.textContent).toBe('Быстро доиграть');
 
-    finishButton?.click();
-    expect(onFinishGame).toHaveBeenCalledTimes(1);
+    fastForwardButton?.click();
+    expect(onFastForward).toHaveBeenCalledTimes(1);
   });
 });

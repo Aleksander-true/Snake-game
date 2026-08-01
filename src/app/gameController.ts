@@ -52,6 +52,8 @@ export class GameController {
   private canvasCtx: CanvasRenderingContext2D | null = null;
   private touchCleanup: (() => void) | null = null;
   private exitConfirmActive = false;
+  private fastForwarding = false;
+  private fastForwardTimeoutId: number | null = null;
 
   constructor(
     ctx: EngineContext,
@@ -80,6 +82,7 @@ export class GameController {
    * Expects the DOM to be built externally; just needs the canvas element.
    */
   startGame(config: GameConfig, canvas: HTMLCanvasElement, overrideLevel?: number): void {
+    this.cancelFastForward();
     this.config = config;
     this.canvas = canvas;
     this.canvasCtx = canvas.getContext('2d')!;
@@ -107,13 +110,14 @@ export class GameController {
   /** Stop and cleanup everything. */
   stop(): void {
     this.stopGameLoop();
+    this.cancelFastForward();
     this.teardownTouchControls();
     this.inputHandler.stop();
   }
 
   /** Handle Space key press — context-dependent via FSM. */
   handleSpaceKey(): void {
-    if (this.exitConfirmActive) return;
+    if (this.exitConfirmActive || this.fastForwarding) return;
     const event = this.fsm.handleSpace();
     if (!event) return;
     this.handleFSMEvent(event);
@@ -143,6 +147,7 @@ export class GameController {
   /** Restart the game at a specific level (for dev panel). */
   restartAtLevel(level: number): void {
     if (!this.config || !this.canvas) return;
+    this.cancelFastForward();
     this.stopGameLoop();
     hideModal();
     this.startGame(this.config, this.canvas, level);
@@ -315,19 +320,78 @@ export class GameController {
   private updateHUD(): void {
     if (!this.state) return;
     const paused = this.fsm.getState() === 'Paused';
-    this.hudPresenter.render(this.state, paused, this.getSettings(), () => this.finishGameEarly());
+    this.hudPresenter.render(this.state, paused, this.getSettings(), () => this.fastForwardBots());
   }
 
-  private finishGameEarly(): void {
-    if (!this.state) return;
+  /** Finish the current mixed-game round by calculating bot ticks without intermediate rendering. */
+  fastForwardBots(): void {
+    if (!this.state || !this.config || this.fastForwarding) return;
     const humanSnakes = this.state.snakes.filter(snake => !snake.isBot);
     const hasAliveBot = this.state.snakes.some(snake => snake.isBot && snake.alive);
     if (humanSnakes.length === 0 || humanSnakes.some(snake => snake.alive) || !hasAliveBot) return;
 
-    this.state.levelComplete = true;
-    this.state.gameOver = true;
-    this.fsm.reset('Results');
-    this.onEnterResults();
+    this.stopGameLoop();
+    this.fastForwarding = true;
+    this.fsm.reset('Paused');
+
+    const button = document.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Доигрываем…';
+    }
+
+    const startedAt = performance.now();
+    let simulatedMilliseconds = 0;
+    let nextDifficultyIncreaseAt = 1000;
+
+    const runBatch = () => {
+      this.fastForwardTimeoutId = null;
+      if (!this.fastForwarding || !this.state || !this.config) return;
+
+      const batchStartedAt = performance.now();
+      while (!this.state.levelComplete && performance.now() - batchStartedAt < 12) {
+        this.inputApplicationService.applyTickCommands(
+          this.state,
+          this.config,
+          this.getSettings(),
+          { directions: [null, null], directionQueues: [[], []] }
+        );
+        this.gameEngine.processTick(this.state);
+
+        simulatedMilliseconds += this.getSettings().tickIntervalMs;
+        while (simulatedMilliseconds >= 1000 && !this.state.levelComplete) {
+          this.gameEngine.elapseLevelSecond(this.state);
+          simulatedMilliseconds -= 1000;
+        }
+
+        const elapsedMilliseconds = performance.now() - startedAt;
+        while (elapsedMilliseconds >= nextDifficultyIncreaseAt) {
+          this.state.difficultyLevel = Math.min(10, this.state.difficultyLevel + 1);
+          nextDifficultyIncreaseAt += 1000;
+        }
+      }
+
+      if (this.state.levelComplete) {
+        this.fastForwarding = false;
+        this.state.gameOver = true;
+        this.fsm.reset('Results');
+        this.renderFrame();
+        this.onEnterResults();
+        return;
+      }
+
+      this.fastForwardTimeoutId = window.setTimeout(runBatch, 0);
+    };
+
+    this.fastForwardTimeoutId = window.setTimeout(runBatch, 0);
+  }
+
+  private cancelFastForward(): void {
+    this.fastForwarding = false;
+    if (this.fastForwardTimeoutId !== null) {
+      window.clearTimeout(this.fastForwardTimeoutId);
+      this.fastForwardTimeoutId = null;
+    }
   }
 
   private resizeCanvas(): void {
@@ -492,6 +556,7 @@ export class GameController {
 
   private exitToMenu(): void {
     this.stopGameLoop();
+    this.cancelFastForward();
     this.exitConfirmActive = false;
     hideModal();
     this.callbacks.onGoToMenu();

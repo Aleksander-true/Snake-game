@@ -6,7 +6,7 @@ import { renderHUD } from '../ui/game';
  * Responsible only for reading HUD DOM nodes and rendering their content.
  */
 export class HudPresenter {
-  render(state: GameState, paused: boolean, settings: GameSettings, onFinishGame: () => void): void {
+  render(state: GameState, paused: boolean, settings: GameSettings, onFastForward: () => void): void {
     const topBarElement = document.getElementById('hud-top');
     const leftPanelElement = document.getElementById('hud-left');
     const rightPanelElement = document.getElementById('hud-right');
@@ -22,7 +22,7 @@ export class HudPresenter {
       state,
       paused,
       settings,
-      onFinishGame
+      onFastForward
     );
   }
 }

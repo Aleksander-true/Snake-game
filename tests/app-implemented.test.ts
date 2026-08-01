@@ -18,6 +18,11 @@ jest.mock('../src/ai/botController', () => ({
   processBots: jest.fn(),
 }));
 
+jest.mock('../src/renderer/canvasRenderer', () => ({
+  renderGame: jest.fn(),
+  calculateCellSize: jest.fn(() => 10),
+}));
+
 const testRng: RandomPort = {
   next: () => 0.5,
   nextInt: (max: number) => Math.floor(max / 2),
@@ -360,6 +365,52 @@ describe('App implemented behavior', () => {
       controller.handleConfirmKey();
       expect(callbacks.onGoToMenu).toHaveBeenCalledTimes(1);
       hideModal();
+    });
+
+    test('fast-forward calculates bot ticks to the real round result', () => {
+      jest.useFakeTimers();
+      document.body.innerHTML = `
+        <div id="hud-top"></div>
+        <div id="hud-left"></div>
+        <div id="hud-right"></div>
+        <div id="hud-bottom"></div>
+      `;
+      const callbacks = {
+        onShowResults: jest.fn(),
+        onGoToMenu: jest.fn(),
+      };
+      const controller = new GameController(createCtx(), new InputHandler(), callbacks, false);
+      const canvas = document.createElement('canvas');
+      canvas.getContext = jest.fn().mockReturnValue({});
+      controller.startGame({
+        playerCount: 1,
+        botCount: 2,
+        playerNames: ['Игрок 1'],
+        difficultyLevel: 1,
+      }, canvas);
+
+      const state = controller.getState()!;
+      const player = new SnakeEntity(0, 'Игрок 1', [{ x: 5, y: 5 }], 'right', false);
+      player.alive = false;
+      state.snakes = [
+        player,
+        new SnakeEntity(1, 'Бот 1', [{ x: 10, y: 10 }], 'right', true),
+        new SnakeEntity(2, 'Бот 2', [{ x: 30, y: 30 }], 'left', true),
+      ];
+      state.foods = [];
+      state.walls = [];
+      state.levelTimeLeft = 1;
+      state.tickCount = 0;
+
+      controller.fastForwardBots();
+      jest.runAllTimers();
+
+      expect(state.tickCount).toBeGreaterThan(0);
+      expect(state.levelComplete).toBe(true);
+      expect(state.gameOver).toBe(true);
+      expect(callbacks.onShowResults).toHaveBeenCalledWith(state);
+      controller.stop();
+      jest.useRealTimers();
     });
   });
 });
