@@ -4,6 +4,7 @@ import {
   gameSettings,
   getLevelOverride,
   resetSettings,
+  resolveSettingsForLevel,
   setLevelOverride,
   settingsToJSON,
 } from '../src/engine/settings';
@@ -35,6 +36,13 @@ jest.mock('../src/app/ui/modal', () => ({
 }));
 
 import { hideModal, showGameOverModal, showLevelCompleteModal } from '../src/app/ui/modal';
+
+function createDeterministicRng(): RandomPort {
+  return {
+    next: () => 0.5,
+    nextInt: (max: number) => Math.max(0, Math.min(max - 1, Math.floor(max / 2))),
+  };
+}
 
 function createState(): GameState {
   return {
@@ -94,6 +102,46 @@ describe('Settings, storage and app state helpers', () => {
     resetSettings();
     const defaults = createDefaultSettings();
     expect(gameSettings.hungerThreshold).toBe(defaults.hungerThreshold);
+  });
+
+  test('level settings are resolved without mutating or leaking into the base settings', () => {
+    const base = createDefaultSettings();
+    const defaultHungerThreshold = base.hungerThreshold;
+    base.levelSettingsOverrides = {
+      '2': { hungerThreshold: 3, tickIntervalMs: 40 },
+    };
+
+    const level2 = resolveSettingsForLevel(2, base);
+    const level3 = resolveSettingsForLevel(3, base);
+
+    expect(level2.hungerThreshold).toBe(3);
+    expect(level2.tickIntervalMs).toBe(40);
+    expect(level3.hungerThreshold).toBe(defaultHungerThreshold);
+    expect(base.hungerThreshold).toBe(defaultHungerThreshold);
+
+    const engine = new GameEngine({ settings: base, rng: createDeterministicRng() });
+    const config = { playerCount: 1, botCount: 0, playerNames: ['P1'], difficultyLevel: 1 };
+    engine.createGameState(config, 2);
+    expect(engine.getSettings().hungerThreshold).toBe(3);
+    engine.createGameState(config, 3);
+    expect(engine.getSettings().hungerThreshold).toBe(defaultHungerThreshold);
+  });
+
+  test('GameEngine owns multiplayer timer mutation', () => {
+    const settings = createDefaultSettings();
+    const engine = new GameEngine({ settings, rng: createDeterministicRng() });
+    const state = createState();
+    state.snakes = [
+      new SnakeEntity(0, 'P1', [{ x: 2, y: 2 }], 'right', false),
+      new SnakeEntity(1, 'P2', [{ x: 6, y: 6 }], 'left', false),
+    ];
+
+    engine.elapseLevelSecond(state);
+    expect(state.levelTimeLeft).toBe(179);
+
+    state.levelComplete = true;
+    engine.elapseLevelSecond(state);
+    expect(state.levelTimeLeft).toBe(179);
   });
 
   test('score and name storage keep sorted scores, deduplicate names and handle clear', () => {

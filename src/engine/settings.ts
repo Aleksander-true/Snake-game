@@ -443,6 +443,26 @@ export function applyLevelSettingOverrides(level: number, settings?: GameSetting
   }
 }
 
+/** Build effective settings for one level without mutating the runtime base settings. */
+export function resolveSettingsForLevel(level: number, baseSettings: GameSettings): GameSettings {
+  const resolved = {
+    ...baseSettings,
+    snakeColors: [...baseSettings.snakeColors],
+    botProfiles: deepCopyBotProfiles(baseSettings.botProfiles),
+    levelOverrides: { ...baseSettings.levelOverrides },
+    levelSettingsOverrides: { ...baseSettings.levelSettingsOverrides },
+    fieldScopes: { ...baseSettings.fieldScopes },
+  } as GameSettings;
+  defineLegacyAliases(resolved);
+
+  const override = baseSettings.levelSettingsOverrides[String(level)];
+  if (!override) return resolved;
+  for (const [key, value] of Object.entries(override)) {
+    (resolved as unknown as Record<string, unknown>)[key] = value;
+  }
+  return resolved;
+}
+
 function createDefaultFieldScopes(): Record<string, boolean> {
   const keys = [
     'hungerThreshold', 'initialSnakeLength', 'minSnakeLength',

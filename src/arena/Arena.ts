@@ -60,7 +60,7 @@ export class Arena {
     }
 
     const ticksExecuted = this.state.tickCount;
-    const elapsedMs = ticksExecuted * this.settings.tickIntervalMs;
+    const elapsedMs = ticksExecuted * this.engine.getSettings().tickIntervalMs;
     return {
       seed: this.seed,
       ticksExecuted,
@@ -91,7 +91,7 @@ export class Arena {
       const direction = this.participants[i].algorithm.chooseDirection(
         this.state,
         snake,
-        this.settings,
+        this.engine.getSettings(),
         this.algorithmRng
       );
       applyDirection(snake, direction);
@@ -122,7 +122,7 @@ export class Arena {
         score: snake.score,
         levelsWon: snake.levelsWon,
         survivedTicks,
-        survivedMs: survivedTicks * this.settings.tickIntervalMs,
+        survivedMs: survivedTicks * this.engine.getSettings().tickIntervalMs,
         aliveAtEnd: snake.alive,
         deathReason: snake.deathReason,
       };

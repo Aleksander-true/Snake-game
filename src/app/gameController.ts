@@ -72,7 +72,7 @@ export class GameController {
   getFSM(): GameFSM { return this.fsm; }
   getState(): GameState | null { return this.state; }
   getConfig(): GameConfig | null { return this.config; }
-  getSettings(): GameSettings { return this.ctx.settings; }
+  getSettings(): GameSettings { return this.gameEngine.getSettings(); }
   isDevMode(): boolean { return this.devModeActive; }
 
   /**
@@ -213,12 +213,10 @@ export class GameController {
   /* ======================== Game Loop ======================== */
 
   private startGameLoop(): void {
-    this.loopScheduler.start(this.ctx.settings.tickIntervalMs, {
+    this.loopScheduler.start(this.getSettings().tickIntervalMs, {
       onSecondElapsed: () => {
         if (this.state && this.fsm.isPlaying()) {
-          if (this.state.snakes.length > 1) {
-            this.state.levelTimeLeft = Math.max(0, this.state.levelTimeLeft - 1);
-          }
+          this.gameEngine.elapseLevelSecond(this.state);
           this.updateHUD();
         }
       },
@@ -241,7 +239,7 @@ export class GameController {
 
     // 1. Consume input buffer and apply all direction commands
     const inputSnapshot = this.inputHandler.consumeAll();
-    this.inputApplicationService.applyTickCommands(this.state, this.config, this.ctx.settings, inputSnapshot);
+    this.inputApplicationService.applyTickCommands(this.state, this.config, this.getSettings(), inputSnapshot);
 
     // 2. Process tick (engine — returns domain events)
     const result: TickResult = this.gameEngine.processTick(this.state);
@@ -280,7 +278,7 @@ export class GameController {
     if (this.state.gameOver) {
       this.scorePersistenceService.saveSessionScores(this.state);
     }
-    this.levelCompletionService.handleCompletion(this.state, this.devModeActive, this.ctx.settings, {
+    this.levelCompletionService.handleCompletion(this.state, this.devModeActive, this.getSettings(), {
       setState: (fsmState) => this.fsm.reset(fsmState),
       onContinue: () => this.handleFSMEvent('CONTINUE'),
       onRestart: () => this.handleFSMEvent('RESTART'),
@@ -311,13 +309,13 @@ export class GameController {
   private renderFrame(): void {
     if (!this.state || !this.canvasCtx || !this.canvas) return;
     const cellSize = (this.canvas as any).__cellSize || 10;
-    renderGame(this.canvasCtx, this.state, cellSize, this.ctx.settings);
+    renderGame(this.canvasCtx, this.state, cellSize, this.getSettings());
   }
 
   private updateHUD(): void {
     if (!this.state) return;
     const paused = this.fsm.getState() === 'Paused';
-    this.hudPresenter.render(this.state, paused, this.ctx.settings);
+    this.hudPresenter.render(this.state, paused, this.getSettings());
   }
 
   private resizeCanvas(): void {

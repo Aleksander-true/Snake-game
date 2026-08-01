@@ -80,7 +80,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
     this.onTick = options.onTick;
 
     this.resizeCanvasToFit();
-    renderGame(this.ctx, this.state, this.cellSize, this.settings);
+    renderGame(this.ctx, this.state, this.cellSize, this.engine.getSettings());
   }
 
   start(): void {
@@ -92,7 +92,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
     }
     const intervalMs = Math.max(
       1,
-      Math.floor(this.settings.tickIntervalMs / this.speedMultiplier)
+      Math.floor(this.engine.getSettings().tickIntervalMs / this.speedMultiplier)
     );
     this.timerId = setInterval(() => this.step(), intervalMs);
   }
@@ -129,7 +129,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
       const tickResult = this.engine.processTick(this.state);
       if (this.onTick) this.onTick(this.state, tickResult);
     }
-    renderGame(this.ctx, this.state, this.cellSize, this.settings);
+    renderGame(this.ctx, this.state, this.cellSize, this.engine.getSettings());
     if (this.state.gameOver || this.state.levelComplete) {
       this.stop();
     }
@@ -145,7 +145,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
       : Math.max(2, this.cellSize);
     this.canvas.width = this.state.width * this.cellSize;
     this.canvas.height = this.state.height * this.cellSize;
-    renderGame(this.ctx, this.state, this.cellSize, this.settings);
+    renderGame(this.ctx, this.state, this.cellSize, this.engine.getSettings());
   }
 
   private getDemoCellSize(): number {
@@ -180,7 +180,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
       const direction = this.participants[i].algorithm.chooseDirection(
         this.state,
         snake,
-        this.settings,
+        this.engine.getSettings(),
         this.algorithmRng
       );
       applyDirection(snake, direction);

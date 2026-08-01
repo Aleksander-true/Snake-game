@@ -1,7 +1,7 @@
 import { GameConfig, GameState, Direction, Snake } from './types';
 import { createEmptyBoard, buildBoard } from './board';
 import { EngineContext } from './context';
-import { applyLevelSettingOverrides, getLevelOverride, GameSettings } from './settings';
+import { getLevelOverride, GameSettings, resolveSettingsForLevel } from './settings';
 import { generateWalls } from './spawning/wallsGenerator';
 import { spawnFood } from './spawning/rabbitsSpawner';
 import { runTickPipeline } from './systems/tickPipeline';
@@ -15,10 +15,19 @@ import { syncLegacyFoodAlias } from './systems/foodSystem';
  * Keeps state initialization and tick progression in one cohesive class.
  */
 export class GameEngine {
-  constructor(private readonly context: EngineContext) {}
+  private activeContext: EngineContext;
+
+  constructor(private readonly context: EngineContext) {
+    this.activeContext = context;
+  }
+
+  getSettings(): GameSettings {
+    return this.activeContext.settings;
+  }
 
   createGameState(config: GameConfig, level: number): GameState {
-    const settings = this.context.settings;
+    this.activateLevelSettings(level);
+    const settings = this.activeContext.settings;
     const width = settings.baseWidth + (level - 1) * settings.levelSizeIncrement;
     const height = settings.baseHeight + (level - 1) * settings.levelSizeIncrement;
 
@@ -42,8 +51,8 @@ export class GameEngine {
   }
 
   initLevel(state: GameState, config: GameConfig): void {
-    const settings = this.context.settings;
-    applyLevelSettingOverrides(state.level, settings);
+    this.activateLevelSettings(state.level);
+    const settings = this.activeContext.settings;
     const totalSnakes = config.playerCount + config.botCount;
     const startPositions = this.getStartPositions(state.width, state.height, totalSnakes, settings);
 
@@ -63,7 +72,7 @@ export class GameEngine {
     const levelOverride = getLevelOverride(state.level, settings);
     const clusterCount = levelOverride.wallClusters ?? getWallClusterCount(state.level, settings);
     const wallLength = levelOverride.wallLength ?? getWallLength(state.difficultyLevel, settings);
-    state.walls = generateWalls(state.width, state.height, clusterCount, wallLength, exclusionZones, this.context);
+    state.walls = generateWalls(state.width, state.height, clusterCount, wallLength, exclusionZones, this.activeContext);
 
     state.snakes = [];
     let snakeId = 0;
@@ -100,10 +109,10 @@ export class GameEngine {
       levelOverride.foodCount
       ?? levelOverride.rabbitCount
       ?? getInitialFoodCount(totalSnakes, state.difficultyLevel, settings);
-    state.foods = spawnFood(foodCount, state, this.context);
+    state.foods = spawnFood(foodCount, state, this.activeContext);
     syncLegacyFoodAlias(state);
 
-    state.board = buildBoard(state, this.context.settings);
+    state.board = buildBoard(state, this.activeContext.settings);
     state.tickCount = 0;
     state.lastAutoFoodSpawnTick = 0;
     state.levelTimeLeft = settings.levelTimeLimit;
@@ -117,8 +126,13 @@ export class GameEngine {
     if (state.gameOver || state.levelComplete) return { events };
 
     state.tickCount++;
-    runTickPipeline(state, this.context, events);
+    runTickPipeline(state, this.activeContext, events);
     return { events };
+  }
+
+  elapseLevelSecond(state: GameState): void {
+    if (state.gameOver || state.levelComplete || state.snakes.length <= 1) return;
+    state.levelTimeLeft = Math.max(0, state.levelTimeLeft - 1);
   }
 
   createSnake(
@@ -128,7 +142,7 @@ export class GameEngine {
     direction: Direction,
     isBot: boolean
   ): Snake {
-    const settings = this.context.settings;
+    const settings = this.activeContext.settings;
     const segments: { x: number; y: number }[] = [];
 
     for (let segmentOffset = 0; segmentOffset < settings.initialSnakeLength; segmentOffset++) {
@@ -206,6 +220,13 @@ export class GameEngine {
       r: parseInt(value.slice(0, 2), 16),
       g: parseInt(value.slice(2, 4), 16),
       b: parseInt(value.slice(4, 6), 16),
+    };
+  }
+
+  private activateLevelSettings(level: number): void {
+    this.activeContext = {
+      settings: resolveSettingsForLevel(level, this.context.settings),
+      rng: this.context.rng,
     };
   }
 

@@ -1201,9 +1201,9 @@ Webpack определяет глобальную переменную `__DEV_MO
 
 ### Runtime настройки (`gameSettings`)
 
-`gameSettings` — мутабельный синглтон (объект `GameSettings`), инициализируемый из `gameDefaults.json` при загрузке модуля `settings.ts`.
+`gameSettings` — мутабельный базовый объект `GameSettings`, инициализируемый из `gameDefaults.json` при загрузке модуля `settings.ts`.
 
-Все игровые системы читают параметры **только** из `gameSettings`, а не из JSON напрямую.
+При создании уровня Engine строит отдельный объект эффективных настроек из `gameSettings` и override текущего уровня. Базовый `gameSettings` при этом не мутируется, поэтому настройки одного уровня не протекают в следующий. Все системы активного уровня читают параметры из этого объекта через `EngineContext`, а не из JSON напрямую.
 
 ```typescript
 export const gameSettings: GameSettings = createDefaultSettings();
@@ -1316,7 +1316,7 @@ Game loop реализован через `setInterval`. При паузе ин�
 
 ### Таймер уровня
 
-Отдельный `setInterval(1000 мс)` уменьшает `state.levelTimeLeft` на 1 каждую секунду. При паузе этот интервал тоже останавливается.
+Отдельный `setInterval(1000 мс)` вызывает команду Engine, уменьшающую `state.levelTimeLeft` на 1. App-слой не изменяет `GameState` напрямую. При паузе этот интервал тоже останавливается.
 
 ### Порядок операций в одном тике
 
