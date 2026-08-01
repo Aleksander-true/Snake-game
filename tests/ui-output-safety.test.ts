@@ -6,6 +6,7 @@ import { renderHUD } from '../src/app/ui/game';
 import { GameLayoutBuilder } from '../src/app/ui/game-layout';
 import { createDefaultSettings } from '../src/engine/settings';
 import { getDeadSnakeColor } from '../src/shared/color';
+import { renderGame } from '../src/renderer/canvasRenderer';
 
 function createUnsafeState(): GameState {
   return {
@@ -28,6 +29,58 @@ function createUnsafeState(): GameState {
 
 describe('UI output safety', () => {
   beforeEach(() => localStorage.clear());
+
+  test('canvas marks only human snakes with their colored player numbers during round start', () => {
+    const state = createUnsafeState();
+    state.gameOver = false;
+    state.levelComplete = false;
+    state.snakes.push(
+      new SnakeEntity(1, 'Игрок 2', [{ x: 5, y: 5 }], 'left', false),
+      new SnakeEntity(2, 'Бот', [{ x: 4, y: 4 }], 'up', true)
+    );
+    const settings = createDefaultSettings();
+    const markerTexts: Array<{ text: string; color: string | CanvasGradient | CanvasPattern }> = [];
+    let currentFillStyle: string | CanvasGradient | CanvasPattern = '';
+    const contextMethods = {
+      strokeStyle: '',
+      lineWidth: 1,
+      globalAlpha: 1,
+      font: '',
+      textAlign: 'start',
+      textBaseline: 'alphabetic',
+      filter: 'none',
+      fillRect: jest.fn(),
+      strokeRect: jest.fn(),
+      beginPath: jest.fn(),
+      moveTo: jest.fn(),
+      lineTo: jest.fn(),
+      stroke: jest.fn(),
+      arc: jest.fn(),
+      fill: jest.fn(),
+      save: jest.fn(),
+      restore: jest.fn(),
+      translate: jest.fn(),
+      scale: jest.fn(),
+      fillText(text: string) {
+        markerTexts.push({ text, color: currentFillStyle });
+      },
+    };
+    Object.defineProperty(contextMethods, 'fillStyle', {
+      get: () => currentFillStyle,
+      set: (value: string | CanvasGradient | CanvasPattern) => { currentFillStyle = value; },
+    });
+    const ctx = contextMethods as unknown as CanvasRenderingContext2D;
+
+    renderGame(ctx, state, 10, settings, { playerMarkerElapsedMs: 0 });
+    expect(markerTexts).toEqual([
+      { text: '1', color: settings.snakeColors[0] },
+      { text: '2', color: settings.snakeColors[1] },
+    ]);
+
+    markerTexts.length = 0;
+    renderGame(ctx, state, 10, settings, { playerMarkerElapsedMs: 1000 });
+    expect(markerTexts).toEqual([]);
+  });
 
   test('results render compact final ranking and safe player names', () => {
     const root = document.createElement('div');

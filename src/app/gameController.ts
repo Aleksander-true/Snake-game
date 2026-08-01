@@ -54,6 +54,7 @@ export class GameController {
   private exitConfirmActive = false;
   private fastForwarding = false;
   private fastForwardTimeoutId: number | null = null;
+  private roundStartedAt = 0;
   private roundStartScores = new Map<number, number>();
   private foodsEatenThisRound = new Map<number, number>();
 
@@ -92,6 +93,7 @@ export class GameController {
     const level = overrideLevel ?? 1;
     this.state = this.gameEngine.createGameState(config, level);
     this.gameEngine.initLevel(this.state, config);
+    this.roundStartedAt = performance.now();
     this.resetRoundTracking();
 
     this.resizeCanvas();
@@ -307,6 +309,7 @@ export class GameController {
     if (!this.state || !this.config || !this.canvas) return;
 
     this.state = this.sessionProgressionService.advanceToNextLevel(this.state, this.config, this.gameEngine);
+    this.roundStartedAt = performance.now();
     this.resetRoundTracking();
 
     this.resizeCanvas();
@@ -320,7 +323,8 @@ export class GameController {
   private renderFrame(): void {
     if (!this.state || !this.canvasCtx || !this.canvas) return;
     const cellSize = (this.canvas as any).__cellSize || 10;
-    renderGame(this.canvasCtx, this.state, cellSize, this.getSettings());
+    const playerMarkerElapsedMs = Math.max(0, performance.now() - this.roundStartedAt);
+    renderGame(this.canvasCtx, this.state, cellSize, this.getSettings(), { playerMarkerElapsedMs });
   }
 
   private updateHUD(): void {

@@ -3,6 +3,13 @@ import { GameSettings } from '../engine/settings';
 import { getFoodPhase } from '../engine/systems/foodSystem';
 import { darkenColor, getDeadSnakeColor } from '../shared/color';
 
+const PLAYER_MARKER_DURATION_MS = 1000;
+const PLAYER_MARKER_PULSE_MS = 300;
+
+export interface CanvasRenderOptions {
+  playerMarkerElapsedMs?: number;
+}
+
 /* ====== Eye drawing ====== */
 
 /**
@@ -58,7 +65,8 @@ export function renderGame(
   ctx: CanvasRenderingContext2D,
   state: GameState,
   cellSize: number,
-  settings: GameSettings
+  settings: GameSettings,
+  options: CanvasRenderOptions = {}
 ): void {
   const { width, height } = state;
   const canvasWidth = width * cellSize;
@@ -95,6 +103,21 @@ export function renderGame(
 
   // Draw snakes (alive and dead)
   drawSnakes(ctx, state.snakes, cellSize, settings);
+
+  if (
+    options.playerMarkerElapsedMs !== undefined
+    && options.playerMarkerElapsedMs < PLAYER_MARKER_DURATION_MS
+  ) {
+    drawPlayerMarkers(
+      ctx,
+      state.snakes,
+      cellSize,
+      canvasWidth,
+      canvasHeight,
+      settings,
+      options.playerMarkerElapsedMs
+    );
+  }
 }
 
 /* ====== Rabbits ====== */
@@ -215,6 +238,57 @@ function drawSnakes(
 
     // Eyes
     drawEyes(ctx, headX, headY, cellSize, snake.direction);
+  }
+}
+
+function drawPlayerMarkers(
+  ctx: CanvasRenderingContext2D,
+  snakes: Snake[],
+  cellSize: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  settings: GameSettings,
+  elapsedMs: number
+): void {
+  const humanSnakes = snakes.filter(snake => !snake.isBot);
+  const radius = Math.max(7, cellSize * 0.55);
+  const edgePadding = radius + 1;
+  const pulse = 0.55 + 0.45 * (
+    0.5 + 0.5 * Math.cos((elapsedMs / PLAYER_MARKER_PULSE_MS) * Math.PI * 2)
+  );
+
+  for (let playerIndex = 0; playerIndex < humanSnakes.length; playerIndex++) {
+    const snake = humanSnakes[playerIndex];
+    const head = snake.segments[0];
+    if (!head) continue;
+
+    const baseColor = settings.snakeColors[snake.id % settings.snakeColors.length];
+    const markerColor = snake.alive ? baseColor : getDeadSnakeColor(baseColor);
+    const markerX = Math.max(
+      edgePadding,
+      Math.min(canvasWidth - edgePadding, head.x * cellSize - radius * 0.35)
+    );
+    const markerY = Math.max(
+      edgePadding,
+      Math.min(canvasHeight - edgePadding, head.y * cellSize - radius * 0.35)
+    );
+
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = settings.colorBg;
+    ctx.strokeStyle = markerColor;
+    ctx.lineWidth = Math.max(2, cellSize * 0.12);
+    ctx.beginPath();
+    ctx.arc(markerX, markerY, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = markerColor;
+    ctx.font = `bold ${Math.max(10, Math.floor(radius * 1.35))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(playerIndex + 1), markerX, markerY + 0.5);
+    ctx.restore();
   }
 }
 

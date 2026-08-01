@@ -404,6 +404,34 @@ describe('App implemented behavior', () => {
       hideModal();
     });
 
+    test('passes player marker timing to canvas rendering during the first round second', () => {
+      jest.useFakeTimers();
+      const callbacks = {
+        onShowResults: jest.fn(),
+        onGoToMenu: jest.fn(),
+      };
+      const controller = new GameController(createCtx(), new InputHandler(), callbacks, false);
+      const canvas = document.createElement('canvas');
+      canvas.getContext = jest.fn().mockReturnValue({});
+
+      controller.startGame({
+        playerCount: 2,
+        botCount: 0,
+        playerNames: ['Игрок 1', 'Игрок 2'],
+        difficultyLevel: 1,
+      }, canvas);
+
+      expect((renderGame as jest.Mock).mock.calls[0][4].playerMarkerElapsedMs).toBeLessThan(1000);
+
+      jest.advanceTimersByTime(1050);
+      const renderCalls = (renderGame as jest.Mock).mock.calls;
+      const lastRenderCall = renderCalls[renderCalls.length - 1];
+      expect(lastRenderCall[4].playerMarkerElapsedMs).toBeGreaterThanOrEqual(1000);
+
+      controller.stop();
+      jest.useRealTimers();
+    });
+
     test('fast-forward calculates bot ticks to the real round result', () => {
       jest.useFakeTimers();
       let currentTime = 0;
