@@ -3,7 +3,7 @@ import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
 import { AppleFoodEntity } from '../src/engine/entities/AppleFoodEntity';
 import { createDefaultSettings, resetSettings } from '../src/engine/settings';
 import { GameState } from '../src/engine/types';
-import { chooseDirectionByDifficulty, chooseGreedyBoardDirection, rankDirectionsForDebug } from '../src/heuristic';
+import { chooseDirectionByDifficulty, chooseWiseDirection, rankDirectionsForDebug } from '../src/heuristic';
 
 function createState(width = 12, height = 12): GameState {
   return {
@@ -39,7 +39,7 @@ describe('greedy board heuristic', () => {
     );
     state.snakes = [snake];
 
-    const direction = chooseGreedyBoardDirection(state, snake, createDefaultSettings());
+    const direction = chooseWiseDirection(state, snake, createDefaultSettings());
     expect(direction).toBe('right');
   });
 
@@ -59,7 +59,7 @@ describe('greedy board heuristic', () => {
       AppleFoodEntity.newborn({ x: 6, y: 5 }, settings.foodYoungAge),
     ];
 
-    const direction = chooseGreedyBoardDirection(state, snake, settings);
+    const direction = chooseWiseDirection(state, snake, settings);
     expect(direction).toBe('right');
   });
 
@@ -118,7 +118,7 @@ describe('greedy board heuristic', () => {
     const opponent = new SnakeEntity(1, 'Opponent', [{ x: 6, y: 6 }, { x: 7, y: 6 }], 'left', true);
     state.snakes = [bot, opponent];
 
-    const direction = chooseGreedyBoardDirection(state, bot, settings);
+    const direction = chooseWiseDirection(state, bot, settings);
 
     expect(direction).not.toBe('right');
   });

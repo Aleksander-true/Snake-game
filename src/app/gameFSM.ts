@@ -16,7 +16,6 @@
  *   LEVEL_END     — engine signals level completion (can continue)
  *   GAME_END      — engine signals game over (no more levels)
  *   CONTINUE      — Space / button on LevelComplete → next level
- *   SHOW_RESULTS  — legacy transition to results screen (kept for compatibility)
  *   GO_TO_MENU    — button on Results → menu
  *   RESTART       — button on Results → restart game
  */
@@ -36,7 +35,6 @@ export type GameFSMEvent =
   | 'LEVEL_END'
   | 'GAME_END'
   | 'CONTINUE'
-  | 'SHOW_RESULTS'
   | 'GO_TO_MENU'
   | 'RESTART';
 
@@ -59,10 +57,9 @@ const transitions: Record<GameFSMState, Partial<Record<GameFSMEvent, GameFSMStat
     CONTINUE: 'Playing',
   },
   GameOver: {
-    SHOW_RESULTS: 'Results',
     GO_TO_MENU: 'Menu',
     RESTART: 'Playing',
-    // In dev mode, CONTINUE may be used instead of SHOW_RESULTS
+    // In dev mode, CONTINUE restarts the current level.
     CONTINUE: 'Playing',
   },
   Results: {

@@ -314,7 +314,3 @@ export function getSkillProfileById(settings: GameSettings, profileId: BotProfil
     badMoveBias: source.badMoveBias,
   };
 }
-
-// Backward-compat alias kept for existing tests and imports.
-export const greedyBoardHeuristic = wiseHeuristic;
-export const chooseGreedyBoardDirection = chooseWiseDirection;

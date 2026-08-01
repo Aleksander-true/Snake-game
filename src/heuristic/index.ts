@@ -1,8 +1,6 @@
 export {
   wiseHeuristic,
-  greedyBoardHeuristic,
   chooseWiseDirection,
-  chooseGreedyBoardDirection,
   chooseDirectionByDifficulty,
   chooseDirectionByProfile,
   rankDirectionsForDebug,

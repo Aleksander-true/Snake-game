@@ -1,44 +1,6 @@
-import { BotDecision, BotInput, GameState, Direction } from '../engine/types';
+import { BotDecision, GameState, Direction } from '../engine/types';
 import { GameSettings } from '../engine/settings';
 import { chooseDirectionByDifficulty } from '../heuristic';
-
-/**
- * Main bot decision function.
- */
-export function botDecide(input: BotInput): BotDecision {
-  // Placeholder heuristic — will be fully implemented in Stage 5
-  const half = Math.floor(input.vision.length / 2);
-  const center = half;
-
-  // Evaluate three directions: left, front, right
-  // In vision space: front = up (row decreasing), left = left column, right = right column
-  const scores: Record<BotDecision, number> = {
-    front: evaluateDirection(input.vision, center, center - 1),
-    left: evaluateDirection(input.vision, center - 1, center),
-    right: evaluateDirection(input.vision, center + 1, center),
-  };
-
-  // Pick the best
-  const decisions: BotDecision[] = ['front', 'left', 'right'];
-  let best: BotDecision = 'front';
-  let bestScore = -Infinity;
-
-  for (const decisionOption of decisions) {
-    if (scores[decisionOption] > bestScore) {
-      bestScore = scores[decisionOption];
-      best = decisionOption;
-    }
-  }
-
-  return best;
-}
-
-function evaluateDirection(vision: number[][], targetX: number, targetY: number): number {
-  if (targetY < 0 || targetY >= vision.length || targetX < 0 || targetX >= vision[0].length) {
-    return -Infinity;
-  }
-  return vision[targetY][targetX];
-}
 
 /**
  * Get the actual new direction for a bot given current direction and decision.

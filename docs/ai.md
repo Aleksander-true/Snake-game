@@ -6,6 +6,18 @@ The production bot uses a full-board greedy heuristic with flood-fill safety che
 
 ## Bot Interfaces
 
+Production and Arena algorithms use the same world-space interface:
+
+```typescript
+interface HeuristicAlgorithm {
+  id: string;
+  name: string;
+  chooseDirection(state, snake, settings, rng?): Direction;
+}
+```
+
+The observation-based neural policies use a relative decision as an intermediate representation:
+
 ```typescript
 type BotDecision = "left" | "right" | "front";
 
@@ -14,11 +26,9 @@ interface BotInput {
   snakeLength: number;
   ticksWithoutFood: number;
 }
-
-function botDecide(input: BotInput): BotDecision; // legacy/observation policy
 ```
 
-Production and Arena algorithms implement `chooseDirection(state, snake, settings, rng?)` and return a world-space `Direction`. Arena injects its seeded RNG into algorithms that need randomness.
+`getBotDirection` converts this relative neural action to a world-space `Direction`. Arena injects its seeded RNG into algorithms that need randomness.
 
 ## Vision System
 

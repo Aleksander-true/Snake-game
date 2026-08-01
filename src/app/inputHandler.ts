@@ -129,14 +129,4 @@ export class InputHandler {
     return snapshot;
   }
 
-  /**
-   * Get and consume the pending direction for a single player (0-indexed).
-   * Legacy helper — prefer consumeAll() in new code.
-   */
-  consumeDirection(playerIndex: number): Direction | null {
-    const pendingDirection = this.pendingDirections[playerIndex];
-    this.pendingDirections[playerIndex] = null;
-    this.pendingDirectionQueues[playerIndex] = [];
-    return pendingDirection;
-  }
 }

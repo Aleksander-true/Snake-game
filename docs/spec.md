@@ -650,26 +650,31 @@ cumulativeTarget(level) = Σ targetScore(l) для l = 1..level
 
 Боты — автономные змейки, управляемые эвристическим алгоритмом. Каждый тик бот анализирует видимую область вокруг головы и выбирает одно из трёх действий: повернуть влево, повернуть вправо или продолжить прямо.
 
-### Интерфейс решения
+### Интерфейс production-алгоритма
 
 ```typescript
-type BotDecision = 'left' | 'right' | 'front';
-
-interface BotInput {
-  vision: number[][];        // матрица visionSize × visionSize
-  snakeLength: number;       // текущая длина змейки
-  ticksWithoutFood: number;  // тиков без еды
+interface HeuristicAlgorithm {
+  id: string;
+  name: string;
+  chooseDirection(
+    state: GameState,
+    snake: Snake,
+    settings: GameSettings,
+    rng?: RandomPort
+  ): Direction;
 }
-
-function botDecide(input: BotInput): BotDecision;
 ```
 
-Решение `BotDecision` — поворот **относительно текущего направления** змейки:
+Production-бот анализирует полное состояние поля и сразу возвращает абсолютный `Direction`. Сложность выбирает профиль эвристики (`rookie`, `basic`, `solid`, `wise`).
+
+Для нейросетевых экспериментов сохраняется observation-интерфейс `BotInput` и относительное решение `BotDecision`:
+
+- `BotInput` содержит повёрнутую `vision`, длину змейки и число тиков без еды;
 - `'front'` — продолжить в текущем направлении.
 - `'left'` — повернуть налево (например, если змейка шла вправо → пойдёт вверх).
 - `'right'` — повернуть направо.
 
-Затем решение конвертируется в абсолютный `Direction` (`up/down/left/right`).
+Нейросетевое решение конвертируется в абсолютный `Direction` (`up/down/left/right`) через `getBotDirection`.
 
 ### Матрица vision
 
@@ -1375,7 +1380,7 @@ Game loop реализован через `setInterval`. При паузе ин�
 Направления от игроков и ботов применяются **до** вызова `processTick`:
 
 1. `InputHandler` собирает последовательность нажатий для каждого игрока. На границе тика выбирается последнее направление, которое не является разворотом на 180° относительно текущего направления; более позднее недопустимое нажатие не отменяет предыдущее допустимое.
-2. Для ботов вызывается `getBotDirection(state, snake)` → генерируется vision-матрица → `botDecide()` → конвертация в `Direction`.
+2. Для production-ботов `processBots()` выбирает профиль по сложности и вызывает full-board heuristic, возвращающую абсолютный `Direction`. Нейросетевые алгоритмы отдельно формируют `BotInput` и преобразуют относительный `BotDecision` через `getBotDirection()`.
 3. `applyDirection(snake, direction)` — устанавливает направление (с проверкой запрета 180°).
 4. Вызывается `processTick(state)`.
 
@@ -1804,6 +1809,7 @@ continueAfterLevelEnd()
 | Цвет HUD соответствует цвету живой/мёртвой змейки | ✅ |
 | Досрочное завершение смешанной игры после смерти людей | ✅ |
 | Удаление runtime-алиасов настроек `rabbit*` | ✅ |
+| Удаление неиспользуемых legacy API ввода, FSM и AI | ✅ |
 
 ---
 
