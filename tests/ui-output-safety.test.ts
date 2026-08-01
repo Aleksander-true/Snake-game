@@ -70,7 +70,11 @@ describe('UI output safety', () => {
     const fastForwardButton = left.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
     expect(fastForwardButton?.textContent).toBe('Быстро доиграть');
 
-    fastForwardButton?.click();
+    renderHUD(top, left, null, null, state, false, createDefaultSettings(), onFastForward);
+    const buttonAfterHudUpdate = left.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    expect(buttonAfterHudUpdate).toBe(fastForwardButton);
+
+    buttonAfterHudUpdate?.click();
     expect(onFastForward).toHaveBeenCalledTimes(1);
   });
 });

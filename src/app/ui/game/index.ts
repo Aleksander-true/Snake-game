@@ -39,6 +39,37 @@ function canFinishGameEarly(humanSnakes: Snake[], botSnakes: Snake[], state: Gam
     && !state.gameOver;
 }
 
+function renderLeftPlayerPanel(
+  container: HTMLElement,
+  humanSnakes: Snake[],
+  botSnakes: Snake[],
+  state: GameState,
+  settings: GameSettings,
+  onFastForward?: () => void
+): void {
+  let statsContainer = container.querySelector<HTMLElement>('.hud-player-stats-container');
+  if (!statsContainer) {
+    statsContainer = document.createElement('div');
+    statsContainer.className = 'hud-player-stats-container';
+    container.replaceChildren(statsContainer);
+  }
+  renderSnakeStats(statsContainer, humanSnakes.slice(0, 1), settings);
+
+  const existingButton = container.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+  if (!canFinishGameEarly(humanSnakes, botSnakes, state)) {
+    existingButton?.remove();
+    return;
+  }
+  if (existingButton) return;
+
+  const fastForwardButton = document.createElement('button');
+  fastForwardButton.type = 'button';
+  fastForwardButton.className = 'btn btn-secondary hud-fast-forward-button';
+  fastForwardButton.textContent = 'Быстро доиграть';
+  if (onFastForward) fastForwardButton.addEventListener('click', onFastForward);
+  container.appendChild(fastForwardButton);
+}
+
 /**
  * Render the in-game HUD.
  *  - Top bar: level, target, time, pause hint
@@ -79,15 +110,7 @@ export function renderHUD(
 
   // Left panel → player 1 (first human)
   if (leftPanel) {
-    renderSnakeStats(leftPanel, humanSnakes.slice(0, 1), settings);
-    if (canFinishGameEarly(humanSnakes, botSnakes, state)) {
-      const fastForwardButton = document.createElement('button');
-      fastForwardButton.type = 'button';
-      fastForwardButton.className = 'btn btn-secondary hud-fast-forward-button';
-      fastForwardButton.textContent = 'Быстро доиграть';
-      if (onFastForward) fastForwardButton.addEventListener('click', onFastForward);
-      leftPanel.appendChild(fastForwardButton);
-    }
+    renderLeftPlayerPanel(leftPanel, humanSnakes, botSnakes, state, settings, onFastForward);
   }
 
   // Right panel → player 2 (second human)
