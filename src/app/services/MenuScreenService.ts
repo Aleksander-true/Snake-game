@@ -1,6 +1,7 @@
 import { GameConfig } from '../../engine/types';
 import { renderMenu } from '../ui/menu';
 import { heuristicAlgorithmOptions } from '../../heuristic';
+import type { TrainingLabPolicyId } from '../../ai/nn/trainingLabPolicies';
 
 export interface MenuScreenCallbacks {
   onStart: (config: GameConfig) => void;
@@ -27,6 +28,7 @@ export interface TrainingLaunchConfig {
   difficultyLevel: number;
   maxTicks: number;
   gameMode: 'classic' | 'survival';
+  policyId: TrainingLabPolicyId;
 }
 
 /** Defaults when opening the training lab from the dev menu (parameters are editable on the lab screen). */
@@ -37,6 +39,7 @@ export function getDefaultTrainingLaunchConfig(): TrainingLaunchConfig {
     difficultyLevel: 1,
     maxTicks: 50_000,
     gameMode: 'classic',
+    policyId: 'random-turns',
   };
 }
 

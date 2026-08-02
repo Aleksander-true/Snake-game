@@ -1825,6 +1825,7 @@ continueAfterLevelEnd()
 | Headless test arena (batch simulations, compare algorithms) | ✅ |
 | Demo arena (render + speed 1x/2x/4x/8x) | ✅ |
 | Лаборатория обучения (dev): меню, headless прогон, базовая политика `random-turns` | ✅ |
+| Выбор нейрополитики `neural-simple-v1` со случайными детерминированными весами | ✅ |
 
 ---
 

@@ -15,7 +15,8 @@ import type { ArenaRunResult } from '../arena';
 import { ResultsScreenService } from './services/ResultsScreenService';
 import { DevPanelLoader } from './services/DevPanelLoader';
 import { createArenaDemoController, ArenaDemoController, getHeuristicAlgorithmById, HeuristicAlgorithm } from '../heuristic';
-import { randomArenaAlgorithm } from '../ai/ai_algorithm';
+import { getTrainingLabAlgorithm, isTrainingLabPolicyId } from '../ai/nn/trainingLabPolicies';
+import type { TrainingLabPolicyId } from '../ai/nn/trainingLabPolicies';
 
 /**
  * Application-level orchestrator.
@@ -191,7 +192,7 @@ export class SnakeGameApplication {
 
   /**
    * Training lab: headless arena run with metrics in the side panel (no live game loop on canvas).
-   * Step 0 uses randomArenaAlgorithm; later you can plug in a neural ArenaAlgorithm here.
+   * Supports registered ArenaAlgorithm policies without coupling the UI to their implementation.
    */
   private startTrainingLab(initialConfig: TrainingLaunchConfig): void {
     hideModal();
@@ -224,7 +225,11 @@ export class SnakeGameApplication {
       );
       const modeRaw = (container.querySelector('#trainingLabGameMode') as HTMLSelectElement).value;
       const gameMode = modeRaw === 'survival' ? 'survival' : 'classic';
-      return { seed, level, difficultyLevel, maxTicks, gameMode };
+      const policyRaw = (container.querySelector('#trainingLabPolicy') as HTMLSelectElement).value;
+      const policyId: TrainingLabPolicyId = isTrainingLabPolicyId(policyRaw)
+        ? policyRaw
+        : 'random-turns';
+      return { seed, level, difficultyLevel, maxTicks, gameMode, policyId };
     };
 
     container.innerHTML = `
@@ -265,10 +270,14 @@ export class SnakeGameApplication {
         </div>
         <div class="dev-section">
           <div class="dev-section-title">Политика</div>
-          <p class="training-lab-policy-note">
-            Сейчас: случайные повороты (<code class="training-lab-code">random-turns</code>) — одна змейка-бот.
-            Дальше замените алгоритм на свою сеть, оставив тот же <code class="training-lab-code">runArenaSimulation</code>.
-          </p>
+          <div class="dev-row">
+            <label class="dev-row-label" for="trainingLabPolicy">Алгоритм</label>
+            <select id="trainingLabPolicy" class="dev-input">
+              <option value="random-turns" ${initialConfig.policyId === 'random-turns' ? 'selected' : ''}>Случайные повороты (random-turns)</option>
+              <option value="neural-simple-v1" ${initialConfig.policyId === 'neural-simple-v1' ? 'selected' : ''}>Нейросеть без обучения (neural-simple-v1)</option>
+            </select>
+          </div>
+          <p class="training-lab-policy-note">Нейрополитика использует случайные детерминированные веса для выбранного seed. Обучение весов будет добавлено на следующих этапах.</p>
         </div>
         <div class="dev-buttons training-lab-actions">
           <button id="trainingLabRunBtn" type="button" class="btn btn-primary btn-small">Запустить прогон</button>
@@ -292,15 +301,16 @@ export class SnakeGameApplication {
 
       window.setTimeout(() => {
         try {
+          const algorithm = getTrainingLabAlgorithm(config.policyId);
           const result = runArenaSimulation({
-            participants: [{ name: 'Обучение', algorithm: randomArenaAlgorithm }],
+            participants: [{ name: 'Обучение', algorithm }],
             seed: config.seed,
             level: config.level,
             difficultyLevel: config.difficultyLevel,
             gameMode: config.gameMode,
             maxTicks: config.maxTicks,
           });
-          outputPre.textContent = this.formatTrainingLabResult(result);
+          outputPre.textContent = this.formatTrainingLabResult(result, config.policyId);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           outputPre.textContent = `Ошибка: ${message}`;
@@ -316,8 +326,9 @@ export class SnakeGameApplication {
     }
   }
 
-  private formatTrainingLabResult(result: ArenaRunResult): string {
+  private formatTrainingLabResult(result: ArenaRunResult, policyId: TrainingLabPolicyId): string {
     const lines: string[] = [
+      `Политика: ${policyId}`,
       `Seed: ${result.seed}`,
       `Выполнено тиков (симуляция): ${result.ticksExecuted}`,
       `Условное время: ${result.elapsedMs} мс (тик × интервал из настроек)`,

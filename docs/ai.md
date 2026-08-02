@@ -119,13 +119,14 @@ For each of `["left", "front", "right"]`:
 In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has a **«Лаборатория обучения»** button that opens the lab screen directly (defaults from `getDefaultTrainingLaunchConfig()` in `MenuScreenService.ts`).
 
 - The lab runs **headless** simulations: no live game loop on the canvas; results are shown as text (ticks, score, death reason). Parameters are edited on the lab screen, not in the menu.
-- **Step 0** policy: `randomArenaAlgorithm` in `src/ai/ai_algorithm.ts` (`id: random-turns`). Replace this `ArenaAlgorithm` with a neural policy when ready; keep using `runArenaSimulation` from `src/arena/runBatch.ts`.
+- The policy selector offers the deterministic `random-turns` baseline and `neural-simple-v1`, a small neural network with deterministic random weights. The neural policy is intentionally untrained at this stage.
+- Both policies implement `ArenaAlgorithm` and use `runArenaSimulation` from `src/arena/runBatch.ts`; the UI does not depend on their internal implementation.
 - Arena injects a seeded RNG into participant algorithms. Random decisions and neural-network initialization must use that RNG, so the same configuration and seed produce the same metrics.
 - UI copy and layout live in `SnakeGameApplication.mountTrainingLabPanel` (Russian strings).
 
 ## Future Improvements
 
-- Neural network–based decision making (trained via imitation / RL; training lab UI as the entry point)
+- Train the current neural policy via imitation and later reinforcement learning.
 - Multi-step lookahead (minimax or MCTS)
 - Opponent modeling (predict other snakes' moves)
 - Pathfinding integration (A* to nearest food)
