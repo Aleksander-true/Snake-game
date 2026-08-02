@@ -460,6 +460,10 @@ interface ControlPeriodDTO {
 
 ### Этап M3 — авторитетная комната
 
+- in-memory реестр публичных/приватных комнат — готов;
+- HTTP API создания комнаты и публичного списка — готов;
+- WebSocket-вход по room id/приватному коду, выдача player id и reconnect token — готов;
+- lobby ready-статусы и проверка заполнения всех человеческих мест — готовы;
 - `MatchSession` и серверный command buffer;
 - серверный tick loop;
 - полный snapshot каждый тик;

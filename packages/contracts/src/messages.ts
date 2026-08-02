@@ -64,6 +64,13 @@ export interface RoomStateMessage extends ProtocolMessage {
   room: RoomSnapshotDTO;
 }
 
+export interface RoomJoinedMessage extends ProtocolMessage {
+  type: 'room-joined';
+  room: RoomSnapshotDTO;
+  playerId: string;
+  reconnectToken: string;
+}
+
 export interface GameStateMessage extends ProtocolMessage {
   type: 'game-state';
   snapshot: GameSnapshotDTO;
@@ -75,4 +82,4 @@ export interface ProtocolErrorMessage extends ProtocolMessage {
   message: string;
 }
 
-export type ServerMessage = ConnectedMessage | RoomStateMessage | GameStateMessage | ProtocolErrorMessage;
+export type ServerMessage = ConnectedMessage | RoomJoinedMessage | RoomStateMessage | GameStateMessage | ProtocolErrorMessage;

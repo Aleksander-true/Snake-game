@@ -9,9 +9,12 @@ import {
   MAX_INCOMING_WEBSOCKET_MESSAGE_BYTES,
   NETWORK_PROTOCOL_VERSION,
   parseClientMessageText,
+  type CreateRoomRequestDTO,
   type ClientMessage,
   type ProtocolErrorMessage,
+  type RoomStateMessage,
 } from '@snake-game/contracts';
+import { RoomRegistry, RoomRegistryError } from './multiplayer/RoomRegistry';
 
 export interface ClientConnection {
   connectionId: string;
@@ -28,6 +31,7 @@ export interface MultiplayerServer {
   app: Express;
   httpServer: HttpServer;
   webSocketServer: WebSocketServer;
+  rooms: RoomRegistry;
   start(port?: number, host?: string): Promise<AddressInfo>;
   close(): Promise<void>;
 }
@@ -36,14 +40,28 @@ interface ConnectionState {
   connectionId: string;
   handshakeComplete: boolean;
   lastSeenAt: number;
+  roomId?: string;
+  playerId?: string;
 }
 
 export function createMultiplayerServer(options: MultiplayerServerOptions = {}): MultiplayerServer {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: MAX_INCOMING_WEBSOCKET_MESSAGE_BYTES }));
+  const rooms = new RoomRegistry();
   app.get('/health', (_request, response) => {
     response.json({ status: 'ok', protocolVersion: NETWORK_PROTOCOL_VERSION });
+  });
+  app.get('/api/rooms', (_request, response) => {
+    response.json(rooms.listPublicRooms());
+  });
+  app.post('/api/rooms', (request, response) => {
+    try {
+      const created = rooms.createRoom(request.body as CreateRoomRequestDTO);
+      response.status(201).json(created);
+    } catch (error) {
+      sendHttpError(response, error);
+    }
   });
 
   const httpServer = createServer(app);
@@ -108,6 +126,43 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
         { connectionId: state.connectionId, socket },
         parsed.message,
       );
+      try {
+        if (parsed.message.type === 'join-room') {
+          const joined = rooms.joinRoom(parsed.message);
+          state.roomId = joined.room.roomId;
+          state.playerId = joined.playerId;
+          sendJson(socket, {
+            protocolVersion: NETWORK_PROTOCOL_VERSION,
+            type: 'room-joined',
+            ...joined,
+          });
+          broadcastRoomState(joined.room.roomId, joined.room);
+          return;
+        }
+        if (parsed.message.type === 'reconnect') {
+          const joined = rooms.reconnect(parsed.message.roomId, parsed.message.reconnectToken);
+          state.roomId = joined.room.roomId;
+          state.playerId = joined.playerId;
+          sendJson(socket, {
+            protocolVersion: NETWORK_PROTOCOL_VERSION,
+            type: 'room-joined',
+            ...joined,
+          });
+          broadcastRoomState(joined.room.roomId, joined.room);
+          return;
+        }
+        if (parsed.message.type === 'set-ready') {
+          if (!state.roomId || !state.playerId) {
+            throw new RoomRegistryError('ROOM_JOIN_REQUIRED', 'Join a room before changing ready status');
+          }
+          const snapshot = rooms.setReady(state.roomId, state.playerId, parsed.message.ready);
+          broadcastRoomState(state.roomId, snapshot);
+          return;
+        }
+      } catch (error) {
+        sendRoomError(socket, error);
+        return;
+      }
     });
     socket.on('close', () => {
       connectionStates.delete(socket);
@@ -130,6 +185,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     app,
     httpServer,
     webSocketServer,
+    rooms,
     start: (port = 3000, host = '127.0.0.1') => listen(httpServer, port, host),
     close: async () => {
       clearInterval(heartbeatTimer);
@@ -144,6 +200,17 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       }
     },
   };
+
+  function broadcastRoomState(roomId: string, room = rooms.getSnapshot(roomId)): void {
+    const message: RoomStateMessage = {
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'room-state',
+      room,
+    };
+    for (const [client, clientState] of connectionStates) {
+      if (clientState.roomId === roomId) sendJson(client, message);
+    }
+  }
 }
 
 function listen(server: HttpServer, port: number, host: string): Promise<AddressInfo> {
@@ -169,6 +236,22 @@ function sendProtocolError(socket: WebSocket, code: string, message: string): vo
     message,
   };
   sendJson(socket, response);
+}
+
+function sendRoomError(socket: WebSocket, error: unknown): void {
+  if (error instanceof RoomRegistryError) {
+    sendProtocolError(socket, error.code, error.message);
+    return;
+  }
+  sendProtocolError(socket, 'INTERNAL_ERROR', 'Unexpected room error');
+}
+
+function sendHttpError(response: express.Response, error: unknown): void {
+  if (error instanceof RoomRegistryError) {
+    response.status(400).json({ code: error.code, message: error.message });
+    return;
+  }
+  response.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected room error' });
 }
 
 function sendJson(socket: WebSocket, value: object): void {

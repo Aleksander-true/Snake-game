@@ -1,6 +1,7 @@
 export const MAX_NETWORK_PARTICIPANTS = 6;
 export const MIN_NETWORK_HUMAN_SLOTS = 1;
 export const MAX_ROOM_NAME_LENGTH = 50;
+export const MAX_PLAYER_NAME_LENGTH = 30;
 
 export type RoomVisibility = 'public' | 'private';
 export type NetworkGameMode = 'classic' | 'survival';
@@ -57,6 +58,12 @@ export interface CreateRoomResponseDTO {
   playerId: string;
   reconnectToken: string;
   privateCode?: string;
+}
+
+export interface JoinRoomResponseDTO {
+  room: RoomSnapshotDTO;
+  playerId: string;
+  reconnectToken: string;
 }
 
 export interface RoomConfigValidationResult {

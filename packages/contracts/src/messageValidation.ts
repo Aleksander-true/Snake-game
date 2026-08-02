@@ -38,6 +38,7 @@ export function parseClientMessageText(text: string): ClientMessageParseResult {
     case 'join-room':
       if (
         !isNonEmptyString(value.playerName)
+        || (value.roomId === undefined && value.privateCode === undefined)
         || (value.roomId !== undefined && !isNonEmptyString(value.roomId))
         || (value.privateCode !== undefined && !isNonEmptyString(value.privateCode))
       ) {
