@@ -1,6 +1,6 @@
-import { DEFAULT_MAX_SNAKE_LENGTH, DEFAULT_VISION_VALUE_SCALE, encodeObservation, getObservationSize } from '../../src/ai/encodeObservation';
-import type { BotInput } from '../../src/engine/types';
-import defaults from '../../src/gameDefaults.json';
+import { DEFAULT_MAX_SNAKE_LENGTH, DEFAULT_VISION_VALUE_SCALE, encodeObservation, getObservationSize } from '@snake-game/core';
+import type { BotInput } from '@snake-game/core';
+import defaults from '../../packages/core/src/gameDefaults.json';
 
 describe('encodeObservation', () => {
   test('calculates observation size from vision plus two extra features', () => {

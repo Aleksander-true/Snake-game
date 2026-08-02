@@ -1,7 +1,6 @@
-import { GameConfig } from '../../engine/types';
+import { heuristicAlgorithmOptions } from '@snake-game/core';
+import type { GameConfig, TrainingLabPolicyId } from '@snake-game/core';
 import { renderMenu } from '../ui/menu';
-import { heuristicAlgorithmOptions } from '../../heuristic';
-import type { TrainingLabPolicyId } from '../../ai/nn/trainingLabPolicies';
 
 export interface MenuScreenCallbacks {
   onStart: (config: GameConfig) => void;

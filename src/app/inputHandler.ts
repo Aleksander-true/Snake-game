@@ -1,4 +1,4 @@
-import { Direction } from '../engine/types';
+import type { Direction } from '@snake-game/core';
 
 type KeyMap = Record<string, Direction>;
 

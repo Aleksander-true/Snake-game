@@ -6,8 +6,8 @@ import {
   gameSettings,
   settingsToJSON,
   applyJSONToSettings,
-  GameDefaultsJSON,
-} from '../../engine/settings';
+  type GameDefaultsJSON,
+} from '@snake-game/core';
 
 const DEV_SETTINGS_KEY = 'snake-dev-settings';
 

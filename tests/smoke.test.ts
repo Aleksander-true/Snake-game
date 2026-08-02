@@ -1,12 +1,19 @@
-import { buildBoard, createEmptyBoard, inBounds } from '../src/engine/board';
-import { isReverseDirection } from '../src/engine/collision';
-import { GameEngine } from '../src/engine/GameEngine';
-import { getTargetScore, getCumulativeTargetScore, getInitialFoodCount } from '../src/engine/formulas';
-import { EngineContext } from '../src/engine/context';
-import { RandomPort } from '../src/engine/ports';
-import { createDefaultSettings, gameSettings, resetSettings } from '../src/engine/settings';
+import {
+  buildBoard,
+  createDefaultSettings,
+  createEmptyBoard,
+  gameSettings,
+  GameEngine,
+  getCumulativeTargetScore,
+  getHeuristicAlgorithmById,
+  getInitialFoodCount,
+  getTargetScore,
+  inBounds,
+  isReverseDirection,
+  resetSettings,
+} from '@snake-game/core';
+import type { EngineContext, RandomPort } from '@snake-game/core';
 import { GameFSM } from '../src/app/gameFSM';
-import { getHeuristicAlgorithmById } from '../src/heuristic';
 
 /** Deterministic RNG for tests — always returns 0.5 / floor(0.5 * max). */
 const testRng: RandomPort = {

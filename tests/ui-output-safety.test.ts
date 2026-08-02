@@ -1,10 +1,8 @@
-import { createEmptyBoard } from '../src/engine/board';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { GameState } from '../src/engine/types';
+import { createDefaultSettings, createEmptyBoard, SnakeEntity } from '@snake-game/core';
+import type { GameState } from '@snake-game/core';
 import { renderResults } from '../src/app/ui/results';
 import { renderHUD } from '../src/app/ui/game';
 import { GameLayoutBuilder } from '../src/app/ui/game-layout';
-import { createDefaultSettings } from '../src/engine/settings';
 import { getDeadSnakeColor } from '../src/shared/color';
 import { renderGame } from '../src/renderer/canvasRenderer';
 import { saveScore } from '../src/storage/scoreStorage';

@@ -1,6 +1,5 @@
-import { GameState, Snake, Food } from '../engine/types';
-import { GameSettings } from '../engine/settings';
-import { getFoodPhase } from '../engine/systems/foodSystem';
+import { getFoodPhase } from '@snake-game/core';
+import type { Food, GameSettings, GameState, Snake } from '@snake-game/core';
 import { darkenColor, getDeadSnakeColor } from '../shared/color';
 
 const PLAYER_MARKER_DURATION_MS = 1000;

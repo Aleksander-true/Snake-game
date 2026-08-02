@@ -1,9 +1,9 @@
 import {
   wiseHeuristic,
-  HeuristicAlgorithm,
   runArenaBatch,
   runArenaSimulation,
-} from '../src/heuristic';
+} from '@snake-game/core';
+import type { HeuristicAlgorithm } from '@snake-game/core';
 
 const alwaysUpAlgorithm: HeuristicAlgorithm = {
   id: 'always-up',
@@ -48,4 +48,3 @@ describe('heuristic arena', () => {
   });
 
 });
-

@@ -5,11 +5,15 @@
  * Manages: game loop (setInterval), timer, event handling, modal display.
  * Does NOT own: DOM structure (built externally and passed in).
  */
-import { GameState, GameConfig, Direction } from '../engine/types';
-import { EngineContext } from '../engine/context';
-import { GameSettings } from '../engine/settings';
-import { GameEngine } from '../engine/GameEngine';
-import { TickResult } from '../engine/events';
+import { GameEngine } from '@snake-game/core';
+import type {
+  Direction,
+  EngineContext,
+  GameConfig,
+  GameSettings,
+  GameState,
+  TickResult,
+} from '@snake-game/core';
 import { renderGame, calculateCellSize } from '../renderer/canvasRenderer';
 import { InputHandler } from './inputHandler';
 import { GameFSM, GameFSMEvent } from './gameFSM';

@@ -1,4 +1,4 @@
-import { GameState } from '../../engine/types';
+import type { GameState } from '@snake-game/core';
 import { renderResults } from '../ui/results';
 
 export interface ResultsScreenCallbacks {

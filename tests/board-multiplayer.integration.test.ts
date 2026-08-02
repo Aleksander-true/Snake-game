@@ -1,10 +1,5 @@
-import { createEmptyBoard } from '../src/engine/board';
-import { EngineContext } from '../src/engine/context';
-import { GameEngine } from '../src/engine/GameEngine';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { RandomPort } from '../src/engine/ports';
-import { createDefaultSettings, resetSettings } from '../src/engine/settings';
-import { GameConfig, GameState } from '../src/engine/types';
+import { createDefaultSettings, createEmptyBoard, GameEngine, resetSettings, SnakeEntity } from '@snake-game/core';
+import type { EngineContext, GameConfig, GameState, RandomPort } from '@snake-game/core';
 import { InputApplicationService } from '../src/app/services/InputApplicationService';
 
 function createCtx(): EngineContext {

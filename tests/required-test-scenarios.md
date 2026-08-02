@@ -185,7 +185,7 @@
 - **Покрытие:** `tests/smoke.test.ts`, `tests/engine-implemented.test.ts`.
 
 ### ENG-28a — Канонические JSON-дефолты
-- **Что проверяем:** загрузку значений из `src/gameDefaults.json`.
+- **Что проверяем:** загрузку значений из `packages/core/src/gameDefaults.json`.
 - **Критерий успеха:** `foodCountBase = 5`, `reproductionProbabilityBase = 0.01`, `levelSizeIncrement = 2`.
 - **Статус:** `✅ Реализован`.
 - **Покрытие:** `tests/smoke.test.ts`.

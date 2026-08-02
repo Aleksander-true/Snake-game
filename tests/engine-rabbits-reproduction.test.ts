@@ -1,17 +1,16 @@
-import { createEmptyBoard } from '../src/engine/board';
-import { EngineContext } from '../src/engine/context';
-import { RabbitFoodEntity } from '../src/engine/entities/RabbitFoodEntity';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { RandomPort } from '../src/engine/ports';
-import { createDefaultSettings, resetSettings } from '../src/engine/settings';
-import { GameState } from '../src/engine/types';
 import {
   chebyshevDistance,
   countNearbyFood,
+  createDefaultSettings,
+  createEmptyBoard,
   getFoodPhase,
   isValidFoodPosition,
   processFoodLifecycle,
-} from '../src/engine/systems/rabbitsReproductionSystem';
+  RabbitFoodEntity,
+  resetSettings,
+  SnakeEntity,
+} from '@snake-game/core';
+import type { EngineContext, GameState, RandomPort } from '@snake-game/core';
 
 function createState(width = 20, height = 20): GameState {
   return {

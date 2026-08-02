@@ -1,15 +1,22 @@
-import { runArenaSimulation } from '../../src/arena';
-import { createDefaultSettings, GameSettings } from '../../src/engine/settings';
-import type { GameState, Snake, Direction, BotInput } from '../../src/engine/types';
-import { createSimpleNetwork, type SimpleNetwork } from '../../src/ai/nn/simpleNetwork';
-import { createSeededRng } from '../../src/arena/seededRng';
 import {
   buildBotInput,
   chooseNeuralDecision,
   chooseNeuralDirection,
+  createDefaultSettings,
   createNeuralArenaAlgorithm,
+  createSeededRng,
+  createSimpleNetwork,
+  runArenaSimulation,
+} from '@snake-game/core';
+import type {
+  BotInput,
+  Direction,
+  GameSettings,
+  GameState,
   NeuralArenaAlgorithmOptions,
-} from '../../src/ai/nn/neuralArenaAlgorithm';
+  SimpleNetwork,
+  Snake,
+} from '@snake-game/core';
 
 function createTestNetwork(inputSize: number): SimpleNetwork {
   return {

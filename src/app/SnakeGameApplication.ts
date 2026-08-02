@@ -1,22 +1,33 @@
 import { Router } from './router';
 import { hideModal } from './ui/modal';
-import { GameConfig, GameState, Snake } from '../engine/types';
-import { gameSettings, resetSettings } from '../engine/settings';
+import {
+  gameSettings,
+  getHeuristicAlgorithmById,
+  getTrainingLabAlgorithm,
+  isTrainingLabPolicyId,
+  resetSettings,
+  runArenaSimulation,
+} from '@snake-game/core';
+import type {
+  ArenaRunResult,
+  EngineContext,
+  GameConfig,
+  GameState,
+  HeuristicAlgorithm,
+  Snake,
+  TrainingLabPolicyId,
+} from '@snake-game/core';
 import { InputHandler } from './inputHandler';
-import { EngineContext } from '../engine/context';
 import { mathRng } from './adapters/mathRandomAdapter';
 import { loadSettingsFromStorage } from './adapters/storageAdapter';
 import { GameController } from './gameController';
 import { GameLayoutBuilder } from './ui/game-layout';
 import { MenuScreenService } from './services/MenuScreenService';
 import { ArenaLaunchConfig, TrainingLaunchConfig } from './services/MenuScreenService';
-import { runArenaSimulation } from '../arena';
-import type { ArenaRunResult } from '../arena';
 import { ResultsScreenService } from './services/ResultsScreenService';
 import { DevPanelLoader } from './services/DevPanelLoader';
-import { createArenaDemoController, ArenaDemoController, getHeuristicAlgorithmById, HeuristicAlgorithm } from '../heuristic';
-import { getTrainingLabAlgorithm, isTrainingLabPolicyId } from '../ai/nn/trainingLabPolicies';
-import type { TrainingLabPolicyId } from '../ai/nn/trainingLabPolicies';
+import { createArenaDemoController } from '../arena/ArenaDemoRunner';
+import type { ArenaDemoController } from '../arena/ArenaDemoRunner';
 
 /**
  * Application-level orchestrator.

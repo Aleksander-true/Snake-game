@@ -1,8 +1,5 @@
-import { createEmptyBoard } from '../src/engine/board';
-import { createDefaultSettings } from '../src/engine/settings';
-import { GameState } from '../src/engine/types';
-import { AppleFoodEntity } from '../src/engine/entities/AppleFoodEntity';
-import { generateVision, rotateToWorld } from '../src/ai/vision';
+import { AppleFoodEntity, createDefaultSettings, createEmptyBoard, generateVision, rotateToWorld } from '@snake-game/core';
+import type { GameState } from '@snake-game/core';
 
 function createState(width = 11, height = 11): GameState {
   return {

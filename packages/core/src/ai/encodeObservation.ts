@@ -1,4 +1,4 @@
-import {BotInput} from "engine/types";
+import { BotInput } from '../engine/types';
 import defaults from '../gameDefaults.json';
 
 

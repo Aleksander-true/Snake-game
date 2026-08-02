@@ -5,11 +5,11 @@ import {
   resetSettings,
   settingsToJSON, getLevelOverride, setLevelOverride,
   getLevelSettingsOverride, setLevelSettingOverride, clearLevelSettingOverride,
-} from '../../../engine/settings';
+  getWallClusterCount, getWallLength, getInitialFoodCount,
+} from '@snake-game/core';
 import {
   saveSettingsToStorage, loadSettingsFromStorage, clearSettingsStorage,
 } from '../../adapters/storageAdapter';
-import { getWallClusterCount, getWallLength, getInitialFoodCount } from '../../../engine/formulas';
 
 export interface DevPanelSessionConfig {
   difficultyLevel: number;

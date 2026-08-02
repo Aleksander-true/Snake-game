@@ -7,7 +7,12 @@ import {
   resolveSettingsForLevel,
   setLevelOverride,
   settingsToJSON,
-} from '../src/engine/settings';
+  createEmptyBoard,
+  getInitialFoodCount,
+  GameEngine,
+  SnakeEntity,
+} from '@snake-game/core';
+import type { EngineContext, GameState, RandomPort } from '@snake-game/core';
 import {
   clearScores,
   getMenuPreferences,
@@ -20,14 +25,7 @@ import {
 import { GameFSM } from '../src/app/gameFSM';
 import { GameLoopScheduler } from '../src/app/services/GameLoopScheduler';
 import { LevelCompletionService } from '../src/app/services/LevelCompletionService';
-import { GameState } from '../src/engine/types';
-import { createEmptyBoard } from '../src/engine/board';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
 import { renderDevPanel } from '../src/app/ui/dev-panel';
-import { getInitialFoodCount } from '../src/engine/formulas';
-import { GameEngine } from '../src/engine/GameEngine';
-import { EngineContext } from '../src/engine/context';
-import { RandomPort } from '../src/engine/ports';
 
 jest.mock('../src/app/ui/modal', () => ({
   showLevelCompleteModal: jest.fn(),

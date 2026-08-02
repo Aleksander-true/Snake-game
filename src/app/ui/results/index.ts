@@ -1,5 +1,5 @@
-import { GameState, Snake } from '../../../engine/types';
-import { getOverallWinner } from '../../../engine/systems/levelSystem';
+import { getOverallWinner } from '@snake-game/core';
+import type { GameState, Snake } from '@snake-game/core';
 import { getScores } from '../../../storage/scoreStorage';
 import { escapeHtml } from '../shared/escapeHtml';
 

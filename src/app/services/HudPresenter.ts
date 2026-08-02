@@ -1,5 +1,4 @@
-import { GameState } from '../../engine/types';
-import { GameSettings } from '../../engine/settings';
+import type { GameSettings, GameState } from '@snake-game/core';
 import { renderHUD } from '../ui/game';
 
 /**

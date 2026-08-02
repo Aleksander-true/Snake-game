@@ -1,9 +1,14 @@
-import { createEmptyBoard } from '../src/engine/board';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { AppleFoodEntity } from '../src/engine/entities/AppleFoodEntity';
-import { createDefaultSettings, resetSettings } from '../src/engine/settings';
-import { GameState } from '../src/engine/types';
-import { chooseDirectionByDifficulty, chooseWiseDirection, rankDirectionsForDebug } from '../src/heuristic';
+import {
+  AppleFoodEntity,
+  chooseDirectionByDifficulty,
+  chooseWiseDirection,
+  createDefaultSettings,
+  createEmptyBoard,
+  rankDirectionsForDebug,
+  resetSettings,
+  SnakeEntity,
+} from '@snake-game/core';
+import type { GameState } from '@snake-game/core';
 
 function createState(width = 12, height = 12): GameState {
   return {

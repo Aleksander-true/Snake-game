@@ -1,4 +1,4 @@
-import { GameConfig } from '../../../engine/types';
+import type { GameConfig } from '@snake-game/core';
 import {
   getMenuPreferences,
   MenuPreferences,

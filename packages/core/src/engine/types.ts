@@ -111,7 +111,7 @@ export interface BotInput {
   ticksWithoutFood: number;
 }
 
-/** Score record for localStorage */
+/** Serializable score record used by persistence adapters. */
 export interface ScoreRecord {
   playerName: string;
   score: number;

@@ -4,6 +4,7 @@ import { watch } from 'node:fs';
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const childProcesses = [
   startNpmScript('watch:contracts'),
+  startNpmScript('watch:core'),
   startNpmScript('watch:server'),
   startNpmScript('dev:web'),
 ];

@@ -112,7 +112,7 @@ For each of `["left", "front", "right"]`:
 | `foodSignalClose` | +100 | Food signal at distance 1 |
 | `foodSignalDecay` | 20 | Food signal decay per cell |
 | `foodSignalMin` | +5 | Minimum food signal |
-| `botProfiles.*` | See `src/gameDefaults.json` | Full-board heuristic weights by skill tier |
+| `botProfiles.*` | See `packages/core/src/gameDefaults.json` | Full-board heuristic weights by skill tier |
 
 ## Training lab (dev build)
 
@@ -120,7 +120,7 @@ In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has
 
 - The lab runs **headless** simulations: no live game loop on the canvas; results are shown as text (ticks, score, death reason). Parameters are edited on the lab screen, not in the menu.
 - The policy selector offers the deterministic `random-turns` baseline and `neural-simple-v1`, a small neural network with deterministic random weights. The neural policy is intentionally untrained at this stage.
-- Both policies implement `ArenaAlgorithm` and use `runArenaSimulation` from `src/arena/runBatch.ts`; the UI does not depend on their internal implementation.
+- Both policies implement `ArenaAlgorithm` and use `runArenaSimulation` from `packages/core/src/arena/runBatch.ts`; the UI does not depend on their internal implementation.
 - Arena injects a seeded RNG into participant algorithms. Random decisions and neural-network initialization must use that RNG, so the same configuration and seed produce the same metrics.
 - UI copy and layout live in `SnakeGameApplication.mountTrainingLabPanel` (Russian strings).
 

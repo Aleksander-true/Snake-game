@@ -1,13 +1,19 @@
-import { applyDirection } from '../engine/systems/movementSystem';
-import { EngineContext } from '../engine/context';
-import { createDefaultSettings, GameSettings } from '../engine/settings';
-import { GameConfig, GameState } from '../engine/types';
-import { GameEngine } from '../engine/GameEngine';
-import { TickResult } from '../engine/events';
+import {
+  applyDirection,
+  createDefaultSettings,
+  createSeededRng,
+  GameEngine,
+} from '@snake-game/core';
+import type {
+  ArenaParticipant,
+  EngineContext,
+  GameConfig,
+  GameSettings,
+  GameState,
+  RandomPort,
+  TickResult,
+} from '@snake-game/core';
 import { renderGame } from '../renderer/canvasRenderer';
-import { createSeededRng } from './seededRng';
-import type { ArenaParticipant } from './types';
-import { RandomPort } from '../engine/ports';
 
 export interface ArenaDemoOptions {
   canvas: HTMLCanvasElement;

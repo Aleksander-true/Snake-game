@@ -1,5 +1,4 @@
-import { GameEngine } from '../../engine/GameEngine';
-import { GameConfig, GameState } from '../../engine/types';
+import type { GameConfig, GameEngine, GameState } from '@snake-game/core';
 
 /**
  * Builds next level state and carries snake progress between levels.

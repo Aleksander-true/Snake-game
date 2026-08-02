@@ -1,7 +1,7 @@
 /**
  * Math.random() adapter — production implementation of RandomPort.
  */
-import { RandomPort } from '../../engine/ports';
+import type { RandomPort } from '@snake-game/core';
 
 export const mathRng: RandomPort = {
   next(): number {

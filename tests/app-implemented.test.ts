@@ -3,19 +3,21 @@ import { InputApplicationService } from '../src/app/services/InputApplicationSer
 import { SessionProgressionService } from '../src/app/services/SessionProgressionService';
 import { ScorePersistenceService } from '../src/app/services/ScorePersistenceService';
 import { GameController } from '../src/app/gameController';
-import { GameEngine } from '../src/engine/GameEngine';
-import { createDefaultSettings, resetSettings } from '../src/engine/settings';
-import { EngineContext } from '../src/engine/context';
-import { RandomPort } from '../src/engine/ports';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { GameConfig, GameState } from '../src/engine/types';
-import { createEmptyBoard } from '../src/engine/board';
+import {
+  createDefaultSettings,
+  createEmptyBoard,
+  GameEngine,
+  processBots,
+  resetSettings,
+  SnakeEntity,
+} from '@snake-game/core';
+import type { EngineContext, GameConfig, GameState, RandomPort } from '@snake-game/core';
 import { clearScores, getScores } from '../src/storage/scoreStorage';
-import { processBots } from '../src/ai/botController';
 import { hideModal } from '../src/app/ui/modal';
 import { renderGame } from '../src/renderer/canvasRenderer';
 
-jest.mock('../src/ai/botController', () => ({
+jest.mock('@snake-game/core', () => ({
+  ...jest.requireActual('@snake-game/core'),
   processBots: jest.fn(),
 }));
 

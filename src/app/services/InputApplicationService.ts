@@ -1,8 +1,5 @@
-import { processBots } from '../../ai/botController';
-import { GameConfig, GameState } from '../../engine/types';
-import { GameSettings } from '../../engine/settings';
-import { applyDirection } from '../../engine/systems/movementSystem';
-import { isReverseDirection } from '../../engine/collision';
+import { applyDirection, isReverseDirection, processBots } from '@snake-game/core';
+import type { GameConfig, GameSettings, GameState } from '@snake-game/core';
 import { InputSnapshot } from '../inputHandler';
 
 /**

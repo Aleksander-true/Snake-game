@@ -1,4 +1,4 @@
-import { ScoreRecord } from '../engine/types';
+import type { ScoreRecord } from '@snake-game/core';
 
 const STORAGE_KEY = 'snake-food-scores';
 const NAMES_KEY = 'snake-food-names';

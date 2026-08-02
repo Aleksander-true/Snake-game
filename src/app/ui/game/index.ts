@@ -1,6 +1,5 @@
-import { GameState, Snake } from '../../../engine/types';
-import { GameSettings } from '../../../engine/settings';
-import { getCumulativeTargetScore } from '../../../engine/formulas';
+import { getCumulativeTargetScore } from '@snake-game/core';
+import type { GameSettings, GameState, Snake } from '@snake-game/core';
 import { getDeadSnakeColor } from '../../../shared/color';
 import { escapeHtml } from '../shared/escapeHtml';
 

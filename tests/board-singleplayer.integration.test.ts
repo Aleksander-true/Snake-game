@@ -1,13 +1,14 @@
-import { GameEngine } from '../src/engine/GameEngine';
-import { EngineContext } from '../src/engine/context';
-import { RandomPort } from '../src/engine/ports';
-import { createDefaultSettings, resetSettings } from '../src/engine/settings';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { RabbitFoodEntity } from '../src/engine/entities/RabbitFoodEntity';
-import { GameConfig, GameState } from '../src/engine/types';
-import { createEmptyBoard } from '../src/engine/board';
+import {
+  createDefaultSettings,
+  createEmptyBoard,
+  GameEngine,
+  RabbitFoodEntity,
+  resetSettings,
+  SnakeEntity,
+  validateWalls,
+} from '@snake-game/core';
+import type { EngineContext, GameConfig, GameState, RandomPort } from '@snake-game/core';
 import { InputApplicationService } from '../src/app/services/InputApplicationService';
-import { validateWalls } from '../src/engine/spawning/wallsGenerator';
 
 function createCyclingRng(): RandomPort {
   let counter = 0;

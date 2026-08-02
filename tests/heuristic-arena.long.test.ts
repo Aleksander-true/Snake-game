@@ -2,7 +2,7 @@ import {
   getHeuristicAlgorithmById,
   runArenaBatch,
   wiseHeuristic,
-} from '../src/heuristic';
+} from '@snake-game/core';
 
 describe('heuristic arena (long)', () => {
   test('wise algorithm can reach 100 score without dying in at least one deterministic endurance run', () => {

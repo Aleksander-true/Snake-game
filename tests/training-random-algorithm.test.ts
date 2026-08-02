@@ -1,5 +1,4 @@
-import { runArenaSimulation } from '../src/arena';
-import { randomArenaAlgorithm } from '../src/ai/ai_algorithm';
+import { randomArenaAlgorithm, runArenaSimulation } from '@snake-game/core';
 
 describe('training lab baseline algorithm', () => {
   test('random-turns completes a headless arena run with one bot', () => {

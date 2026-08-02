@@ -1,9 +1,9 @@
-import { runArenaSimulation } from '../src/arena';
 import {
   calculateObservationInputSize,
   getTrainingLabAlgorithm,
   isTrainingLabPolicyId,
-} from '../src/ai/nn/trainingLabPolicies';
+  runArenaSimulation,
+} from '@snake-game/core';
 
 describe('training lab policies', () => {
   test('recognizes policies and calculates the neural observation size', () => {

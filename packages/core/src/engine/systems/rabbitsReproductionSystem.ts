@@ -1,9 +1,10 @@
-import { Food, Position, GameState, FoodPhase } from '../types';
+import { Food, Position, GameState } from '../types';
 import { EngineContext } from '../context';
 import { GameSettings } from '../settings';
 import { inBounds } from '../board';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
 import { RabbitFoodEntity } from '../entities/RabbitFoodEntity';
+import { getFoodPhase } from './foodSystem';
 
 export interface FoodBirth {
   parentPos: Position;
@@ -15,15 +16,6 @@ export interface FoodBirth {
  */
 export function chebyshevDistance(positionA: Position, positionB: Position): number {
   return Math.max(Math.abs(positionA.x - positionB.x), Math.abs(positionA.y - positionB.y));
-}
-
-/**
- * Determine the lifecycle phase of a food item based on its age.
- */
-export function getFoodPhase(food: Food, settings: GameSettings): FoodPhase {
-  if (food.age < settings.foodYoungAge) return 'young';
-  if (food.age < settings.foodAdultAge) return 'adult';
-  return 'old';
 }
 
 /**

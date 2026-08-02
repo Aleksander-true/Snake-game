@@ -8,8 +8,8 @@ import {
     runSimpleNetwork,
     type DenseLayer,
     type SimpleNetwork,
-  } from '../../src/ai/nn/simpleNetwork';
-import { createSeededRng } from '../../src/arena/seededRng';
+    createSeededRng,
+  } from '@snake-game/core';
   
   describe('simpleNetwork', () => {
     test('maps action index to decision', () => {

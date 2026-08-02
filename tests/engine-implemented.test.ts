@@ -1,24 +1,31 @@
-import { GameEngine } from '../src/engine/GameEngine';
-import { EngineContext } from '../src/engine/context';
-import { RandomPort } from '../src/engine/ports';
-import { createDefaultSettings, resetSettings } from '../src/engine/settings';
-import { SnakeEntity } from '../src/engine/entities/SnakeEntity';
-import { RabbitFoodEntity } from '../src/engine/entities/RabbitFoodEntity';
-import { applyDirection, getNextHeadPosition, moveSnake } from '../src/engine/systems/movementSystem';
-import { collidesWithSnake, collidesWithWall, selfCollision } from '../src/engine/collision';
-import { processHunger, resetHunger } from '../src/engine/systems/hungerSystem';
-import { spawnFood } from '../src/engine/spawning/rabbitsSpawner';
-import { generateWalls, validateWalls } from '../src/engine/spawning/wallsGenerator';
 import {
+  applyDirection,
+  checkLevelComplete,
+  collidesWithSnake,
+  collidesWithWall,
+  createDefaultSettings,
+  createEmptyBoard,
+  GameEngine,
+  generateWalls,
   getCumulativeTargetScore,
   getInitialFoodCount,
+  getLevelWinner,
+  getNextHeadPosition,
+  getOverallWinner,
   getTargetScore,
   getWallClusterCount,
   getWallLength,
-} from '../src/engine/formulas';
-import { checkLevelComplete, getLevelWinner, getOverallWinner } from '../src/engine/systems/levelSystem';
-import { GameState } from '../src/engine/types';
-import { createEmptyBoard } from '../src/engine/board';
+  moveSnake,
+  processHunger,
+  RabbitFoodEntity,
+  resetHunger,
+  resetSettings,
+  selfCollision,
+  SnakeEntity,
+  spawnFood,
+  validateWalls,
+} from '@snake-game/core';
+import type { EngineContext, GameState, RandomPort } from '@snake-game/core';
 
 const testRng: RandomPort = {
   next: () => 0.5,

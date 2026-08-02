@@ -9,5 +9,6 @@ module.exports = {
   moduleNameMapper: {
     '^(.+)\\.css$': '<rootDir>/tests/__mocks__/styleMock.js',
     '^@snake-game/contracts$': '<rootDir>/packages/contracts/src',
+    '^@snake-game/core$': '<rootDir>/packages/core/src',
   },
 };
