@@ -14,70 +14,8 @@ Build output is generated in the `dist/` directory.
 
 ## Deployment
 
-The current GitHub Pages deployment runs only the static browser game:
+Current static deployment:
 [https://aleksander-true.github.io/Snake-game/](https://aleksander-true.github.io/Snake-game/).
-GitHub Pages cannot run the Node.js WebSocket server, so the multiplayer version needs a VPS,
-container platform, or another hosting service that can keep a Node.js process running.
-
-### Текущее состояние multiplayer deployment
-
-На данный момент реализованы:
-
-- production-сборка браузерной игры в `dist/`;
-- Express/Node.js entry point в `apps/server/dist/index.js`;
-- HTTP `GET /health`;
-- WebSocket transport на `/ws`, handshake, проверка версии протокола и heartbeat.
-
-Пока не реализованы браузерный WebSocket-клиент, комнаты и авторитетный `MatchSession`.
-Поэтому сервер уже можно запустить и проверить технически, но полноценный multiplayer на опубликованном сайте
-появится после реализации этих частей.
-
-### Почему в коде встречается `http://localhost`
-
-В `createMultiplayerServer.ts` используется выражение:
-
-```ts
-const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
-```
-
-`request.url` от Node.js обычно является относительным путём, например `/ws?token=...`, а конструктору
-`URL` для разбора относительной строки нужна абсолютная базовая ссылка. `http://localhost` здесь только
-синтаксическая база для парсера. Сервер не подключается к localhost, не перенаправляет туда клиента и не
-использует этот адрес как публичный hostname.
-
-Например, запрос клиента к `wss://game.example.com/ws?token=abc` внутри Node.js может выглядеть как
-`/ws?token=abc`. После разбора получится `pathname === '/ws'`. Реальный адрес определяется доменом,
-DNS, reverse proxy и портом, на котором запущен сервер.
-
-### Рекомендуемая production-схема: один домен и один VPS
-
-```text
-Browser
-  |
-  | https://game.example.com/
-  | wss://game.example.com/ws
-  v
-Nginx :443
-  |-- /              -> static files from dist/
-  |-- /health        -> Node.js 127.0.0.1:3000
-  `-- /ws            -> Node.js 127.0.0.1:3000 (WebSocket upgrade)
-
-Node.js multiplayer server
-  `-- rooms, MatchSession and Engine (after the remaining multiplayer stages)
-```
-
-Одиночная и multiplayer-игра могут находиться на одном сайте. Пользователь загружает один и тот же
-`index.html` и JavaScript bundle. В одиночном режиме Engine работает локально в браузере. В сетевом режиме
-интерфейс открывает WebSocket к `/ws`, отправляет только команды управления и отображает авторитетные
-снимки сервера.
-
-Преимущества одного домена:
-
-- не требуется отдельный CORS для HTTP API;
-- WebSocket использует тот же hostname;
-- один TLS-сертификат;
-- нет необходимости хранить production-адрес сервера в исходном коде клиента;
-- одиночный режим остаётся доступным даже при временной недоступности multiplayer-процесса.
 
 ### Что должно быть установлено на сервере
 
@@ -102,10 +40,8 @@ Node.js multiplayer server
 - [Nginx beginner's guide](https://nginx.org/en/docs/beginners_guide.html)
 - [systemd](https://systemd.io/)
 
-Публично должны быть открыты порты `80` и `443`. Порт Node.js `3000` не следует открывать во внешний
-интернет: к нему должен обращаться только локальный Nginx. Текущий entry point запускает Node.js на
-`0.0.0.0`, поэтому доступ к `3000` необходимо закрыть firewall/security group. Перед окончательным
-production deployment планируется сделать bind-address настраиваемым и использовать `127.0.0.1` по умолчанию.
+Публично должны быть открыты порты `80` и `443`. Закройте порт Node.js `3000` для внешнего интернета через
+firewall/security group: к нему должен обращаться только локальный Nginx.
 
 ### Что загружается на сервер
 
@@ -123,7 +59,6 @@ production deployment планируется сделать bind-address нас�
 - `src/`;
 - `apps/server/`;
 - `packages/contracts/`;
-- позднее `packages/core/` и `apps/web/`;
 - ресурсы, используемые браузерной сборкой.
 
 Команды из корня репозитория:
@@ -170,9 +105,7 @@ npm ci --omit=dev --ignore-scripts
 `node_modules` не следует копировать с компьютера разработчика: зависимости могут содержать
 платформозависимые файлы, а содержимое локального каталога не гарантирует соответствие lock-файлу.
 
-Source map (`*.map`) и TypeScript declaration (`*.d.ts`) не нужны для работы браузера. Их можно оставить
-в закрытом release-архиве для диагностики, но не обязательно публиковать через Nginx. В дальнейшем web-сборка
-будет вынесена в отдельный `apps/web/dist`, чтобы production static-артефакты не смешивались с декларациями.
+Не публикуйте через Nginx файлы `*.map`, `*.d.ts` и `*.d.ts.map`. Они не нужны браузеру в production.
 
 ### Первый ручной запуск Node.js-сервера
 
@@ -264,6 +197,10 @@ server {
     root /opt/snake-game/current/dist;
     index index.html;
 
+    location ~* \.(?:map|d\.ts(?:\.map)?)$ {
+        return 404;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -297,41 +234,7 @@ sudo systemctl reload nginx
 curl https://game.example.com/health
 ```
 
-Nginx должен явно передавать заголовки `Upgrade` и `Connection`, потому что они не проксируются обычным
-HTTP reverse proxy автоматически. Сервер отправляет WebSocket ping каждые две секунды, поэтому соединение
-остаётся активным и одновременно обнаруживает потерянных клиентов.
-
-### Как браузер получает игру
-
-Во время `npm run build` Webpack:
-
-1. начинает сборку с `src/index.ts`;
-2. добавляет импортированные TypeScript- и CSS-модули в JavaScript bundle;
-3. создаёт `dist/index.html`;
-4. добавляет в HTML ссылку на bundle с content hash;
-5. копирует favicon.
-
-При открытии `https://game.example.com/` происходит следующее:
-
-```text
-Browser -> GET /                  -> Nginx returns dist/index.html
-Browser -> GET /bundle.<hash>.js  -> Nginx returns compiled application
-Browser                            -> executes the game locally
-```
-
-В одиночном режиме после загрузки страницы серверные тики не нужны: состояние игры, Engine и Canvas работают
-в браузере. `localStorage` также остаётся на устройстве пользователя.
-
-В будущем multiplayer-клиент будет выбирать WebSocket URL относительно текущей страницы:
-
-```ts
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
-```
-
-Таким образом, development-страница по HTTP использует `ws://`, а production-страница по HTTPS — `wss://`.
-Хардкодить `localhost`, IP сервера или отдельный production-домен в браузерном bundle не требуется. HTTPS-страница
-не должна подключаться через обычный `ws://`, поскольку браузер заблокирует небезопасный mixed-content запрос.
+Не удаляйте из location `/ws` заголовки `Upgrade` и `Connection`: они обязательны для WebSocket proxying.
 
 ### Обновление версии
 
@@ -344,22 +247,6 @@ const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 5. Выполнить `sudo systemctl restart snake-game`.
 6. Проверить `/health`, загрузку `/` и WebSocket handshake.
 7. При ошибке вернуть `current` на предыдущий release и снова перезапустить сервис.
-
-После добавления SQLite каталог базы данных следует хранить вне release, например `/var/lib/snake-game`, и
-включить его в резервное копирование. Иначе переключение или удаление release может удалить историю матчей.
-
-### Другие варианты размещения
-
-1. **Один VPS, Nginx + Node.js — рекомендуемый MVP.** Самая простая схема для одного домена, одиночной игры
-   и multiplayer.
-2. **Static CDN/GitHub Pages + отдельный Node.js backend.** Возможен, но клиенту нужен отдельный адрес WSS,
-   настройка разрешённых Origin и два deployment pipeline. GitHub Pages самостоятельно WebSocket-сервер не
-   запускает.
-3. **Express раздаёт и API, и static-файлы.** Технически возможно через `express.static`, но сейчас не
-   реализовано. Для MVP Nginx удобнее завершает TLS и обслуживает неизменяемые файлы.
-4. **Docker/container platform.** В контейнер включаются Node.js runtime, server build и runtime-зависимости;
-   static-файлы можно раздавать отдельным Nginx-контейнером. Dockerfile и production compose пока в проекте
-   отсутствуют.
 
 ## Game Description
 
