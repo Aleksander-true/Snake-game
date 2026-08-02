@@ -12,6 +12,10 @@ interface ProtocolMessage {
   type: string;
 }
 
+export interface HandshakeMessage extends ProtocolMessage {
+  type: 'handshake';
+}
+
 export interface JoinRoomMessage extends ProtocolMessage {
   type: 'join-room';
   roomId?: string;
@@ -43,6 +47,7 @@ export interface LeaveMatchMessage extends ProtocolMessage {
 }
 
 export type ClientMessage =
+  | HandshakeMessage
   | JoinRoomMessage
   | ReconnectMessage
   | SetReadyMessage

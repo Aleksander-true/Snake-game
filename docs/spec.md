@@ -1864,7 +1864,8 @@ continueAfterLevelEnd()
 | Архитектурный план авторитетного сервера и WebSocket-снимков | ✅ |
 | Workspace-конфигурация и пакет версионированных сетевых контрактов | ✅ |
 | Подготовка монорепозитория и общего core | ⏳ |
-| Express HTTP server и WebSocket gateway | ⏳ |
+| Express HTTP server и WebSocket gateway | ✅ |
+| Handshake версии протокола, лимит 16 КБ и heartbeat 2/5 секунд | ✅ |
 | Публичные/приватные комнаты, ready-check и статусы игроков | ⏳ |
 | Авторитетные комнаты и серверный tick loop | ⏳ |
 | Снимки каждый тик, client prediction и reconciliation | ⏳ |

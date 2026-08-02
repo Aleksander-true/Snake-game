@@ -10,13 +10,15 @@
   "scripts": {
     "dev": "webpack serve --mode development --open",
     "dev:debug": "webpack serve --mode development --env devmode --open",
-    "build": "npm run build:contracts && webpack --mode production",
+    "build": "npm run build:contracts && npm run build:server && webpack --mode production",
     "build:contracts": "tsc -p packages/contracts/tsconfig.json",
-    "build:debug": "npm run build:contracts && webpack --mode production --env noMinify",
+    "build:server": "tsc -p apps/server/tsconfig.json",
+    "build:debug": "npm run build:contracts && npm run build:server && webpack --mode production --env noMinify",
     "test": "jest --verbose --testPathIgnorePatterns=\\\\.long\\\\.test\\\\.ts$",
     "test:long": "jest --verbose --testPathPattern=\\\\.long\\\\.test\\\\.ts$",
     "test:all": "jest --verbose",
-    "lint": "tsc --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit",
+    "lint": "tsc --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && npm run build:contracts && tsc -p apps/server/tsconfig.json --noEmit",
+    "start:server": "npm run build:contracts && npm run build:server && node apps/server/dist/index.js",
     "prepare": "bash ./scripts/setup-hooks.sh"
   },
   "keywords": [

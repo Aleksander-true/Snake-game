@@ -8,5 +8,6 @@ module.exports = {
   testSequencer: '<rootDir>/tests/sequencer.js',
   moduleNameMapper: {
     '^(.+)\\.css$': '<rootDir>/tests/__mocks__/styleMock.js',
+    '^@snake-game/contracts$': '<rootDir>/packages/contracts/src',
   },
 };

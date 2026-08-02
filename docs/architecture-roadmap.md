@@ -449,10 +449,12 @@ interface ControlPeriodDTO {
 
 ### Этап M2 — multiplayer transport
 
-- Express HTTP server;
-- WebSocket gateway на `ws`;
-- handshake и версия протокола;
-- ping/pong, ошибки и reconnect token.
+- Express HTTP server и маршрут `/health` — готово;
+- WebSocket gateway на `ws` по маршруту `/ws` — готово;
+- обязательный первый handshake и проверка версии протокола — готово;
+- JSON-валидация сообщений, текстовый формат и лимит 16 КБ — готово;
+- ping/pong и закрытие соединения по heartbeat timeout — готово;
+- reconnect token — ожидает реализации комнаты на M3.
 
 ### Этап M3 — авторитетная комната
 
