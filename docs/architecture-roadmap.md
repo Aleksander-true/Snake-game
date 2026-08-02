@@ -444,7 +444,8 @@ interface ControlPeriodDTO {
 - workspace-структура — базовая npm-конфигурация готова, перенос браузерного приложения ещё не выполнен;
 - contracts — готов версионированный пакет DTO, констант протокола и валидации настроек комнаты;
 - общий core — ожидает выделения из текущего `src`;
-- независимые build/test команды — готовы для contracts, ожидают добавления core и server;
+- независимые build/test команды — готовы для contracts и server, ожидают добавления core;
+- единый локальный `npm run dev` запускает web, server, watch-компиляцию и dev proxy;
 - одинаковый детерминированный smoke-прогон в web и Node.js.
 
 ### Этап M2 — multiplayer transport

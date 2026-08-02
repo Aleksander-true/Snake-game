@@ -44,9 +44,31 @@ module.exports = (env, argv) => {
     ],
     devServer: {
       static: path.resolve(__dirname, 'dist'),
-      port: 3000,
+      port: 8080,
       hot: true,
       open: false,
+      client: {
+        webSocketURL: {
+          pathname: '/ws-hmr',
+        },
+      },
+      webSocketServer: {
+        type: 'ws',
+        options: {
+          path: '/ws-hmr',
+        },
+      },
+      proxy: [
+        {
+          context: (pathname) => pathname === '/health',
+          target: 'http://127.0.0.1:3001',
+        },
+        {
+          context: (pathname) => pathname === '/ws',
+          target: 'ws://127.0.0.1:3001',
+          ws: true,
+        },
+      ],
     },
     devtool: isProduction ? 'source-map' : 'eval-source-map',
     optimization: {

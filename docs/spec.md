@@ -1864,6 +1864,7 @@ continueAfterLevelEnd()
 |--------|--------|
 | Архитектурный план авторитетного сервера и WebSocket-снимков | ✅ |
 | Workspace-конфигурация и пакет версионированных сетевых контрактов | ✅ |
+| Единый локальный запуск web/server через `npm run dev` | ✅ |
 | Подготовка монорепозитория и общего core | ⏳ |
 | Express HTTP server и WebSocket gateway | ✅ |
 | Handshake версии протокола, лимит 16 КБ и heartbeat 2/5 секунд | ✅ |
