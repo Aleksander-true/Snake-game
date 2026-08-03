@@ -17,6 +17,7 @@
     "neighborReproductionPenalty": 0.25,
     "maxReproductionNeighbors": 4,
     "appleReproductionLimitBase": 13,
+    "reproductionLimitBase": 13,
     "countPerSnakeCoeff": 1.5,
     "countBase": 5,
     "periodicSpawnInterval": 100

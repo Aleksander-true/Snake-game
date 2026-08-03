@@ -54,7 +54,7 @@ Math.floor(1.5 × snakeCount + 5 − difficultyLevel)
 
 One adult food item is created per snake; remaining initial food is young. Food cannot overlap walls or snakes and must be more than one Chebyshev cell from other food.
 
-Adult apples and base food may reproduce after a five-tick cooldown. Their base probability is `0.01 × clockNum`, reduced by 25% for each neighbor within radius 4 and blocked at four neighbors. Each item can reproduce at most five times. Apple reproduction is also blocked while the apple count is greater than `13 + snakeCount - difficultyLevel`; equality still permits one reproduction. Adult chickens use the independent 6% per-tick rule above instead, and laying is blocked while the combined egg, chick, and adult-chicken count is greater than `10 + snakeCount - difficultyLevel`.
+Adult apples and base food may reproduce after a five-tick cooldown. Their base probability is `0.01 × clockNum`, reduced by 25% for each neighbor within radius 4 and blocked at four neighbors. Each item can reproduce at most five times. Adult chickens use the independent 6% per-tick rule above instead. All ordinary reproduction shares one population limit: when total food count reaches `13 + snakeCount - difficultyLevel`, both apple reproduction and chicken laying are blocked regardless of the existing food types.
 
 If food count drops below the number of living snakes, the engine can add one adult item at the maximin-farthest free position, no more than once per hunger interval.
 

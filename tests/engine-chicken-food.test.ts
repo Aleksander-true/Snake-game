@@ -328,7 +328,7 @@ describe('Chicken food', () => {
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
   });
 
-  test('adult chicken does not lay above the difficulty-adjusted chicken limit', () => {
+  test('adult chicken does not lay at the shared difficulty-adjusted food limit', () => {
     const next = jest.fn(() => 0);
     const ctx = createContext({ next });
     ctx.settings.maxReproductionNeighbors = 99;
@@ -342,18 +342,18 @@ describe('Chicken food', () => {
       0,
       { x: 20, y: 20 }
     );
-    const limit = ctx.settings.chickenReproductionLimitBase
+    const limit = ctx.settings.foodReproductionLimitBase
       + state.snakes.length
       - state.difficultyLevel;
     state.foods = [
       chicken,
-      ...Array.from({ length: limit }, (_, index) =>
-        ChickenFoodEntity.newborn({ x: 1 + (index % 4) * 3, y: 1 + Math.floor(index / 4) * 3 })
+      ...Array.from({ length: limit - 1 }, (_, index) =>
+        AppleFoodEntity.newborn({ x: 1 + (index % 4) * 3, y: 1 + Math.floor(index / 4) * 3 })
       ),
     ];
 
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
-    expect(state.foods).toHaveLength(limit + 1);
+    expect(state.foods).toHaveLength(limit);
     expect(next).not.toHaveBeenCalled();
   });
 

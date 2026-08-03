@@ -56,7 +56,9 @@ export interface GameSettings {
   neighborReproductionRadius: number;
   neighborReproductionPenalty: number;
   maxReproductionNeighbors: number;
+  /** Legacy compatibility setting; the shared food limit replaces it. */
   appleReproductionLimitBase: number;
+  foodReproductionLimitBase: number;
 
   /* Food — generation formula */
   foodCountPerSnakeCoeff: number;
@@ -81,6 +83,7 @@ export interface GameSettings {
   chickenEggLayingProbability: number;
   chickenAppleAgeReduction: number;
   chickenAppleReproductionReduction: number;
+  /** Legacy compatibility setting; the shared food limit replaces it. */
   chickenReproductionLimitBase: number;
   chickenMaxEggs: number;
   chickenEggScoreValue: number;
@@ -160,6 +163,7 @@ export function createDefaultSettings(): GameSettings {
     neighborReproductionPenalty: defaultJson.food.neighborReproductionPenalty,
     maxReproductionNeighbors:   defaultJson.food.maxReproductionNeighbors,
     appleReproductionLimitBase: defaultJson.food.appleReproductionLimitBase,
+    foodReproductionLimitBase: defaultJson.food.reproductionLimitBase,
     foodCountPerSnakeCoeff:     defaultJson.food.countPerSnakeCoeff,
     foodCountBase:              defaultJson.food.countBase,
     foodPeriodicSpawnInterval:  defaultJson.food.periodicSpawnInterval,
@@ -261,6 +265,7 @@ export interface GameDefaultsJSON {
     neighborReproductionPenalty: number;
     maxReproductionNeighbors: number;
     appleReproductionLimitBase: number;
+    reproductionLimitBase: number;
     countPerSnakeCoeff: number;
     countBase: number;
     periodicSpawnInterval: number;
@@ -362,6 +367,7 @@ export function settingsToJSON(): GameDefaultsJSON {
       neighborReproductionPenalty: settings.neighborReproductionPenalty,
       maxReproductionNeighbors: settings.maxReproductionNeighbors,
       appleReproductionLimitBase: settings.appleReproductionLimitBase,
+      reproductionLimitBase: settings.foodReproductionLimitBase,
       countPerSnakeCoeff: settings.foodCountPerSnakeCoeff,
       countBase: settings.foodCountBase,
       periodicSpawnInterval: settings.foodPeriodicSpawnInterval,
@@ -463,6 +469,7 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.food.neighborReproductionPenalty != null) settings.neighborReproductionPenalty = data.food.neighborReproductionPenalty;
     if (data.food.maxReproductionNeighbors != null)    settings.maxReproductionNeighbors = data.food.maxReproductionNeighbors;
     if (data.food.appleReproductionLimitBase != null)  settings.appleReproductionLimitBase = data.food.appleReproductionLimitBase;
+    if (data.food.reproductionLimitBase != null)       settings.foodReproductionLimitBase = data.food.reproductionLimitBase;
     if (data.food.countPerSnakeCoeff != null)          settings.foodCountPerSnakeCoeff = data.food.countPerSnakeCoeff;
     if (data.food.countBase != null)                   settings.foodCountBase = data.food.countBase;
     if (data.food.periodicSpawnInterval != null)       settings.foodPeriodicSpawnInterval = data.food.periodicSpawnInterval;
@@ -621,6 +628,7 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'foodMinDistance', 'reproductionMinCooldown', 'reproductionProbabilityBase',
     'maxReproductions', 'neighborReproductionRadius', 'maxReproductionNeighbors',
     'neighborReproductionPenalty', 'appleReproductionLimitBase',
+    'foodReproductionLimitBase',
     'foodCountPerSnakeCoeff', 'foodCountBase',
     'foodPeriodicSpawnInterval',
     'chickenSpawnStartLevel', 'chickenSpawnProbability', 'chickenCrowdedSpawnProbability',

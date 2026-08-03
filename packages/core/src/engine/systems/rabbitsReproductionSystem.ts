@@ -119,7 +119,7 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     if (parentFood.reproductionCount >= reproductionLimit) continue;
 
     if (parentFood.kind === 'chicken') {
-      if (isFoodKindOverReproductionLimit('chicken', state, settings)) continue;
+      if (isFoodPopulationAtReproductionLimit(state, settings)) continue;
 
       const nearbyCount = countNearbyFood(
         parentFood.pos,
@@ -140,10 +140,7 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     }
 
     if (parentFood.clockNum < settings.reproductionMinCooldown) continue;
-    if (
-      parentFood.kind === 'apple'
-      && isFoodKindOverReproductionLimit('apple', state, settings)
-    ) continue;
+    if (isFoodPopulationAtReproductionLimit(state, settings)) continue;
 
     const nearbyCount = countNearbyFood(
       parentFood.pos,
@@ -174,16 +171,14 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
   return births;
 }
 
-function isFoodKindOverReproductionLimit(
-  kind: 'apple' | 'chicken',
+function isFoodPopulationAtReproductionLimit(
   state: GameState,
   settings: GameSettings
 ): boolean {
-  const baseLimit = kind === 'apple'
-    ? settings.appleReproductionLimitBase
-    : settings.chickenReproductionLimitBase;
-  const limit = baseLimit + state.snakes.length - state.difficultyLevel;
-  return state.foods.filter(food => food.kind === kind).length > limit;
+  const limit = settings.foodReproductionLimitBase
+    + state.snakes.length
+    - state.difficultyLevel;
+  return state.foods.length >= limit;
 }
 
 /**
