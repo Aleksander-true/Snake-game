@@ -95,6 +95,8 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.foodCountBase).toBe(5);
     expect(settings.reproductionProbabilityBase).toBe(0.01);
     expect(settings.chickenSpawnProbability).toBe(0.3);
+    expect(settings.chickenCrowdedSpawnProbability).toBe(0.6);
+    expect(settings.foodPeriodicSpawnInterval).toBe(100);
     expect(settings.chickenChickRoamRadius).toBe(5);
     expect(settings.chickenAdultSafetyRadius).toBe(10);
     expect(settings.chickenMaxEggs).toBe(3);

@@ -56,6 +56,8 @@ Adult food may reproduce after a five-tick cooldown. The base probability is `0.
 
 If food count drops below the number of living snakes, the engine can add one adult item at the maximin-farthest free position, no more than once per hunger interval.
 
+Independently of that emergency replenishment, one newborn food item is guaranteed every 100 ticks when a free cell exists. Level 1 still creates only apples. From level 2, let `A` be the apple count, `S` the living-snake count, and `H = min(2 × S, 10) + 1`. Chicken probability is 30% below `H`, starts at 60% at `H`, grows linearly to 100% at 20 apples, and remains 100% above 20; apple probability is the remainder.
+
 ## Levels and Victory
 
 - Classic single-player: 10 levels.

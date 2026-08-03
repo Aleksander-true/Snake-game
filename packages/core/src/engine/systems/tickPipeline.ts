@@ -8,7 +8,7 @@ import { processHunger, resetHunger } from './hungerSystem';
 import { awardFoodPoints } from './scoringSystem';
 import { processFoodLifecycle } from './rabbitsReproductionSystem';
 import { checkLevelComplete, getMaxLevel } from './levelSystem';
-import { autoReplenishFood, getFoodReward } from './foodSystem';
+import { autoReplenishFood, getFoodReward, spawnPeriodicFood } from './foodSystem';
 import { processMovingFood } from './movingFoodSystem';
 import { createMeatDropsForSnakeDeaths } from './meatSystem';
 
@@ -163,6 +163,7 @@ function reproductionSystem(state: GameState, ctx: EngineContext, events: Domain
       childPos: birth.child.pos,
     });
   }
+  spawnPeriodicFood(state, ctx);
   autoReplenishFood(state, ctx);
 }
 

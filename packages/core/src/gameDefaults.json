@@ -17,12 +17,17 @@
     "neighborReproductionPenalty": 0.25,
     "maxReproductionNeighbors": 4,
     "countPerSnakeCoeff": 1.5,
-    "countBase": 5
+    "countBase": 5,
+    "periodicSpawnInterval": 100
   },
 
   "chicken": {
     "spawnStartLevel": 2,
     "spawnProbability": 0.3,
+    "crowdedSpawnProbability": 0.6,
+    "crowdedApplePerSnakeMultiplier": 2,
+    "crowdedAppleCount": 10,
+    "guaranteedSpawnAppleCount": 20,
     "chickRoamRadius": 5,
     "chickMoveInterval": 3,
     "adultThreatRadius": 5,

@@ -145,9 +145,14 @@ const ALL_FIELDS: FieldDef[] = [
   // Food generation
   { key: 'foodCountPerSnakeCoeff',    type: 'number' },
   { key: 'foodCountBase',             type: 'number' },
+  { key: 'foodPeriodicSpawnInterval',  type: 'number' },
   // Chicken food
   { key: 'chickenSpawnStartLevel',     type: 'number' },
   { key: 'chickenSpawnProbability',    type: 'number' },
+  { key: 'chickenCrowdedSpawnProbability', type: 'number' },
+  { key: 'chickenCrowdedApplePerSnakeMultiplier', type: 'number' },
+  { key: 'chickenCrowdedAppleCount', type: 'number' },
+  { key: 'chickenGuaranteedSpawnAppleCount', type: 'number' },
   { key: 'chickenChickRoamRadius',     type: 'number' },
   { key: 'chickenChickMoveInterval',   type: 'number' },
   { key: 'chickenAdultThreatRadius',   type: 'number' },
@@ -284,7 +289,8 @@ function buildFoodSpawnSection(currentLevel: number): string {
 function buildFoodGenerationSection(currentLevel: number): string {
   return buildSection('🍎 Генерация еды (формулы)',
     settingsRow('foodCountPerSnakeCoeff', 'Коэфф. на змейку', currentLevel, 0.1) +
-    settingsRow('foodCountBase',          'Базовое кол-во', currentLevel)
+    settingsRow('foodCountBase',          'Базовое кол-во', currentLevel) +
+    settingsRow('foodPeriodicSpawnInterval', 'Период автоспавна', currentLevel)
   );
 }
 
@@ -292,6 +298,10 @@ function buildChickenSection(currentLevel: number): string {
   return buildSection('🐔 Куриная еда',
     settingsRow('chickenSpawnStartLevel',   'Появляется с уровня', currentLevel) +
     settingsRow('chickenSpawnProbability',  'Вероятность спавна', currentLevel, 0.01) +
+    settingsRow('chickenCrowdedSpawnProbability', 'Вероятность при избытке', currentLevel, 0.01) +
+    settingsRow('chickenCrowdedApplePerSnakeMultiplier', 'Яблок на змейку', currentLevel) +
+    settingsRow('chickenCrowdedAppleCount', 'Порог яблок', currentLevel) +
+    settingsRow('chickenGuaranteedSpawnAppleCount', 'Гарантия курицы', currentLevel) +
     settingsRow('chickenChickRoamRadius',   'Радиус цыплёнка', currentLevel) +
     settingsRow('chickenChickMoveInterval', 'Ход цыплёнка (тики)', currentLevel) +
     settingsRow('chickenAdultThreatRadius', 'Радиус плотности змей', currentLevel) +

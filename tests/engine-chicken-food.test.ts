@@ -5,9 +5,11 @@ import {
   createDefaultSettings,
   createEmptyBoard,
   getFoodReward,
+  getPeriodicChickenSpawnProbability,
   processFoodLifecycle,
   processMovingFood,
   SnakeEntity,
+  spawnPeriodicFood,
   spawnFood,
 } from '@snake-game/core';
 import type { EngineContext, GameState, RandomPort } from '@snake-game/core';
@@ -53,6 +55,38 @@ describe('Chicken food', () => {
     expect(chicken.kind).toBe('chicken');
     expect(chicken.age).toBe(0);
     expect(chicken.id).toBe('food-0');
+  });
+
+  test('periodic chicken probability grows linearly with excess apples', () => {
+    const settings = createDefaultSettings();
+
+    expect(getPeriodicChickenSpawnProbability(20, 1, 1, settings)).toBe(0);
+    expect(getPeriodicChickenSpawnProbability(4, 2, 2, settings)).toBe(0.3);
+    expect(getPeriodicChickenSpawnProbability(5, 2, 2, settings)).toBe(0.6);
+    expect(getPeriodicChickenSpawnProbability(12, 2, 2, settings)).toBeCloseTo(0.7867, 4);
+    expect(getPeriodicChickenSpawnProbability(20, 2, 2, settings)).toBe(1);
+    expect(getPeriodicChickenSpawnProbability(10, 6, 2, settings)).toBe(0.3);
+    expect(getPeriodicChickenSpawnProbability(11, 6, 2, settings)).toBe(0.6);
+  });
+
+  test('periodic food is guaranteed every one hundred ticks regardless of food count', () => {
+    const ctx = createContext({ next: () => 0.99 });
+    const state = createState(2, 30, 30);
+    state.snakes = [new SnakeEntity(0, 'P1', [{ x: 15, y: 15 }], 'right', false)];
+    state.foods = Array.from({ length: 21 }, (_, index) =>
+      AppleFoodEntity.newborn({ x: index, y: 1 }, 0, `food-${index}`)
+    );
+    state.nextFoodId = 21;
+
+    state.tickCount = 99;
+    spawnPeriodicFood(state, ctx);
+    expect(state.foods).toHaveLength(21);
+
+    state.tickCount = 100;
+    spawnPeriodicFood(state, ctx);
+    expect(state.foods).toHaveLength(22);
+    expect(state.foods[21].kind).toBe('chicken');
+    expect(state.foods[21].id).toBe('food-21');
   });
 
   test('egg, chick and adult rewards come from JSON-backed settings', () => {

@@ -60,10 +60,15 @@ export interface GameSettings {
   /* Food — generation formula */
   foodCountPerSnakeCoeff: number;
   foodCountBase: number;
+  foodPeriodicSpawnInterval: number;
 
   /* Chicken food */
   chickenSpawnStartLevel: number;
   chickenSpawnProbability: number;
+  chickenCrowdedSpawnProbability: number;
+  chickenCrowdedApplePerSnakeMultiplier: number;
+  chickenCrowdedAppleCount: number;
+  chickenGuaranteedSpawnAppleCount: number;
   chickenChickRoamRadius: number;
   chickenChickMoveInterval: number;
   chickenAdultThreatRadius: number;
@@ -148,9 +153,14 @@ export function createDefaultSettings(): GameSettings {
     maxReproductionNeighbors:   defaultJson.food.maxReproductionNeighbors,
     foodCountPerSnakeCoeff:     defaultJson.food.countPerSnakeCoeff,
     foodCountBase:              defaultJson.food.countBase,
+    foodPeriodicSpawnInterval:  defaultJson.food.periodicSpawnInterval,
 
     chickenSpawnStartLevel:     defaultJson.chicken.spawnStartLevel,
     chickenSpawnProbability:    defaultJson.chicken.spawnProbability,
+    chickenCrowdedSpawnProbability: defaultJson.chicken.crowdedSpawnProbability,
+    chickenCrowdedApplePerSnakeMultiplier: defaultJson.chicken.crowdedApplePerSnakeMultiplier,
+    chickenCrowdedAppleCount: defaultJson.chicken.crowdedAppleCount,
+    chickenGuaranteedSpawnAppleCount: defaultJson.chicken.guaranteedSpawnAppleCount,
     chickenChickRoamRadius:     defaultJson.chicken.chickRoamRadius,
     chickenChickMoveInterval:   defaultJson.chicken.chickMoveInterval,
     chickenAdultThreatRadius:   defaultJson.chicken.adultThreatRadius,
@@ -237,10 +247,15 @@ export interface GameDefaultsJSON {
     maxReproductionNeighbors: number;
     countPerSnakeCoeff: number;
     countBase: number;
+    periodicSpawnInterval: number;
   };
   chicken: {
     spawnStartLevel: number;
     spawnProbability: number;
+    crowdedSpawnProbability: number;
+    crowdedApplePerSnakeMultiplier: number;
+    crowdedAppleCount: number;
+    guaranteedSpawnAppleCount: number;
     chickRoamRadius: number;
     chickMoveInterval: number;
     adultThreatRadius: number;
@@ -326,10 +341,15 @@ export function settingsToJSON(): GameDefaultsJSON {
       maxReproductionNeighbors: settings.maxReproductionNeighbors,
       countPerSnakeCoeff: settings.foodCountPerSnakeCoeff,
       countBase: settings.foodCountBase,
+      periodicSpawnInterval: settings.foodPeriodicSpawnInterval,
     },
     chicken: {
       spawnStartLevel: settings.chickenSpawnStartLevel,
       spawnProbability: settings.chickenSpawnProbability,
+      crowdedSpawnProbability: settings.chickenCrowdedSpawnProbability,
+      crowdedApplePerSnakeMultiplier: settings.chickenCrowdedApplePerSnakeMultiplier,
+      crowdedAppleCount: settings.chickenCrowdedAppleCount,
+      guaranteedSpawnAppleCount: settings.chickenGuaranteedSpawnAppleCount,
       chickRoamRadius: settings.chickenChickRoamRadius,
       chickMoveInterval: settings.chickenChickMoveInterval,
       adultThreatRadius: settings.chickenAdultThreatRadius,
@@ -415,10 +435,15 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.food.maxReproductionNeighbors != null)    settings.maxReproductionNeighbors = data.food.maxReproductionNeighbors;
     if (data.food.countPerSnakeCoeff != null)          settings.foodCountPerSnakeCoeff = data.food.countPerSnakeCoeff;
     if (data.food.countBase != null)                   settings.foodCountBase = data.food.countBase;
+    if (data.food.periodicSpawnInterval != null)       settings.foodPeriodicSpawnInterval = data.food.periodicSpawnInterval;
   }
   if (data.chicken) {
     if (data.chicken.spawnStartLevel != null)   settings.chickenSpawnStartLevel = data.chicken.spawnStartLevel;
     if (data.chicken.spawnProbability != null)  settings.chickenSpawnProbability = data.chicken.spawnProbability;
+    if (data.chicken.crowdedSpawnProbability != null) settings.chickenCrowdedSpawnProbability = data.chicken.crowdedSpawnProbability;
+    if (data.chicken.crowdedApplePerSnakeMultiplier != null) settings.chickenCrowdedApplePerSnakeMultiplier = data.chicken.crowdedApplePerSnakeMultiplier;
+    if (data.chicken.crowdedAppleCount != null) settings.chickenCrowdedAppleCount = data.chicken.crowdedAppleCount;
+    if (data.chicken.guaranteedSpawnAppleCount != null) settings.chickenGuaranteedSpawnAppleCount = data.chicken.guaranteedSpawnAppleCount;
     if (data.chicken.chickRoamRadius != null)   settings.chickenChickRoamRadius = data.chicken.chickRoamRadius;
     if (data.chicken.chickMoveInterval != null) settings.chickenChickMoveInterval = data.chicken.chickMoveInterval;
     if (data.chicken.adultThreatRadius != null) settings.chickenAdultThreatRadius = data.chicken.adultThreatRadius;
@@ -560,7 +585,10 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'foodMinDistance', 'reproductionMinCooldown', 'reproductionProbabilityBase',
     'maxReproductions', 'neighborReproductionRadius', 'maxReproductionNeighbors',
     'neighborReproductionPenalty', 'foodCountPerSnakeCoeff', 'foodCountBase',
-    'chickenSpawnStartLevel', 'chickenSpawnProbability',
+    'foodPeriodicSpawnInterval',
+    'chickenSpawnStartLevel', 'chickenSpawnProbability', 'chickenCrowdedSpawnProbability',
+    'chickenCrowdedApplePerSnakeMultiplier', 'chickenCrowdedAppleCount',
+    'chickenGuaranteedSpawnAppleCount',
     'chickenChickRoamRadius', 'chickenChickMoveInterval',
     'chickenAdultThreatRadius', 'chickenAdultMoveInterval',
     'chickenAdultSafetyRadius', 'chickenMaxEggs',

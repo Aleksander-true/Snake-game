@@ -79,6 +79,53 @@ export function autoReplenishFood(state: GameState, ctx: EngineContext): void {
   state.lastAutoFoodSpawnTick = state.tickCount;
 }
 
+/** Spawn one new food item on every configured periodic spawn tick. */
+export function spawnPeriodicFood(state: GameState, ctx: EngineContext): void {
+  const interval = ctx.settings.foodPeriodicSpawnInterval;
+  if (interval <= 0 || state.tickCount <= 0 || state.tickCount % interval !== 0) return;
+
+  const aliveSnakeCount = state.snakes.filter(snake => snake.alive).length;
+  if (aliveSnakeCount === 0) return;
+  const spawnPos = findFarthestFoodPosition(state);
+  if (!spawnPos) return;
+
+  const appleCount = state.foods.filter(food => food.kind === 'apple').length;
+  const chickenProbability = getPeriodicChickenSpawnProbability(
+    appleCount,
+    aliveSnakeCount,
+    state.level,
+    ctx.settings
+  );
+  const spawnChicken = chickenProbability >= 1
+    || (chickenProbability > 0 && ctx.rng.next() < chickenProbability);
+  const food = spawnChicken
+    ? ChickenFoodEntity.newborn(spawnPos)
+    : AppleFoodEntity.newborn(spawnPos);
+  state.foods.push(assignFoodId(state, food));
+}
+
+export function getPeriodicChickenSpawnProbability(
+  appleCount: number,
+  aliveSnakeCount: number,
+  level: number,
+  settings: GameSettings
+): number {
+  if (level < settings.chickenSpawnStartLevel) return 0;
+
+  const firstCrowdedAppleCount = Math.min(
+    aliveSnakeCount * settings.chickenCrowdedApplePerSnakeMultiplier,
+    settings.chickenCrowdedAppleCount
+  ) + 1;
+  if (appleCount < firstCrowdedAppleCount) return settings.chickenSpawnProbability;
+  if (appleCount >= settings.chickenGuaranteedSpawnAppleCount) return 1;
+
+  const interpolationRange = settings.chickenGuaranteedSpawnAppleCount - firstCrowdedAppleCount;
+  if (interpolationRange <= 0) return 1;
+  const progress = (appleCount - firstCrowdedAppleCount) / interpolationRange;
+  return settings.chickenCrowdedSpawnProbability
+    + (1 - settings.chickenCrowdedSpawnProbability) * progress;
+}
+
 function findFarthestFoodPosition(state: GameState): Position | null {
   const occupied = new Set<string>();
   for (const wall of state.walls) occupied.add(`${wall.x},${wall.y}`);
