@@ -15,13 +15,14 @@ export interface Position {
 
 /** Food lifecycle phase */
 export type FoodPhase = 'young' | 'adult' | 'old';
-export type FoodKind = 'apple' | 'rabbit';
+export type FoodKind = 'apple' | 'rabbit' | 'chicken' | 'meat';
 export type GameMode = 'classic' | 'survival';
 
 /**
  * Food shape used by engine systems.
  */
 export interface Food {
+  id: string;
   pos: Position;
   kind: FoodKind;
   age: number;             // absolute ticks since birth (never resets)
@@ -30,6 +31,9 @@ export interface Food {
   tickLifecycle(): void;
   resetReproductionClock(): void;
   incrementReproductionCount(): void;
+  originPos?: Position;
+  movementClock?: number;
+  pendingMandatoryEgg?: boolean;
 }
 
 /**
@@ -83,6 +87,7 @@ export interface GameState {
   height: number;
   snakes: Snake[];
   foods: Food[];
+  nextFoodId?: number;
   roundResults: RoundResult[];
   walls: Position[];
   level: number;

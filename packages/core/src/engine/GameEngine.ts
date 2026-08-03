@@ -36,6 +36,7 @@ export class GameEngine {
       height,
       snakes: [],
       foods: [],
+      nextFoodId: 0,
       roundResults: [],
       walls: [],
       level,

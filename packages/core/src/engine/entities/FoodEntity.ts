@@ -6,7 +6,8 @@ export abstract class FoodEntity implements Food {
     public kind: FoodKind,
     public age: number,
     public clockNum: number,
-    public reproductionCount: number
+    public reproductionCount: number,
+    public id = ''
   ) {}
 
   tickLifecycle(): void {

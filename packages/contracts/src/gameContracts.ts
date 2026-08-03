@@ -1,7 +1,7 @@
 import type { RoomLifecycleStatus } from './roomContracts';
 
 export type NetworkDirection = 'up' | 'down' | 'left' | 'right';
-export type NetworkFoodKind = 'apple' | 'rabbit';
+export type NetworkFoodKind = 'apple' | 'rabbit' | 'chicken' | 'meat';
 export type SnakeControllerType = 'human' | 'bot';
 
 export interface PositionDTO {

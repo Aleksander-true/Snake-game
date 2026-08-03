@@ -492,7 +492,7 @@ foodCount = Math.floor(foodCountPerSnakeCoeff × snakeCount + foodCountBase − 
 
 Перемещение нескольких объектов еды обрабатывается в стабильном порядке по `id`. Уже выбранная другой едой целевая клетка резервируется до конца тика. Это исключает наложение двух сущностей и сохраняет детерминизм при одинаковом seed.
 
-При реализации значения должны храниться в `gameDefaults.json`, а не в коде: `spawnStartLevel = 2`, `spawnProbability = 0.3`, `chickRoamRadius = 5`, `chickMoveInterval = 3`, `adultThreatRadius = 5`, `adultMoveInterval = 2`, а также значения очков и роста `1/2/3` по стадиям. До реализации соответствующая секция конфигурации в runtime отсутствует.
+Значения хранятся в секции `chicken` файла `gameDefaults.json`, а не в коде: `spawnStartLevel = 2`, `spawnProbability = 0.3`, `chickRoamRadius = 5`, `chickMoveInterval = 3`, `adultThreatRadius = 5`, `adultMoveInterval = 2`, а также значения очков и роста `1/2/3` по стадиям.
 
 ### 6.7 Мясо (`MeatFood`)
 
@@ -513,7 +513,7 @@ foodCount = Math.floor(foodCountPerSnakeCoeff × snakeCount + foodCountBase − 
 
 Серое тело змейки сохраняется до конца раунда по общему правилу, но мясо на его клетках отображается поверх него и имеет приоритет в derived `board[][]`. Поскольку мёртвое тело не участвует в коллизиях, другая змейка может войти в такую клетку и съесть мясо. Создание выполняется только в ответ на событие смерти текущего тика и не повторяется на следующих тиках.
 
-При реализации значения `maxAge = 50`, `scoreValue = 1` и `growthValue = 1` должны быть добавлены в секцию `meat` файла `gameDefaults.json`; до реализации эта секция в runtime отсутствует.
+Значения `maxAge = 50`, `scoreValue = 1` и `growthValue = 1` хранятся в секции `meat` файла `gameDefaults.json`.
 
 ### 6.8 Размножение еды (общее правило)
 
@@ -1425,6 +1425,25 @@ Dev-панель может изменять поля `gameSettings` в runtime.
     "countPerSnakeCoeff": 1.5,
     "countBase": 5
   },
+  "chicken": {
+    "spawnStartLevel": 2,
+    "spawnProbability": 0.3,
+    "chickRoamRadius": 5,
+    "chickMoveInterval": 3,
+    "adultThreatRadius": 5,
+    "adultMoveInterval": 2,
+    "eggScoreValue": 1,
+    "eggGrowthValue": 1,
+    "chickScoreValue": 2,
+    "chickGrowthValue": 2,
+    "adultScoreValue": 3,
+    "adultGrowthValue": 3
+  },
+  "meat": {
+    "maxAge": 50,
+    "scoreValue": 1,
+    "growthValue": 1
+  },
   "walls": {
     "clusterCoeff": 1.2,
     "clusterBase": 2,
@@ -2000,8 +2019,8 @@ continueAfterLevelEnd()
 | Быстрое доигрывание смешанной игры после смерти людей | ✅ |
 | Сбор и перенос подробной истории раундов текущей игры | ✅ |
 | Бонус живой змейке в размере её длины после завершения раунда | ⏳ |
-| Куриная еда: яйцо, цыплёнок, курица, движение и кладка яиц | ❌ |
-| Мясо после смерти курицы и неголодной смерти змейки | ❌ |
+| Куриная еда: яйцо, цыплёнок, курица, движение и кладка яиц | 🟡 Доменная модель и настройки |
+| Мясо после смерти курицы и неголодной смерти змейки | 🟡 Доменная модель и настройки |
 | Удаление runtime-алиасов настроек `rabbit*` | ✅ |
 | Удаление неиспользуемых legacy API ввода, FSM и AI | ✅ |
 

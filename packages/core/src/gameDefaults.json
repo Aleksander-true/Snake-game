@@ -20,6 +20,27 @@
     "countBase": 5
   },
 
+  "chicken": {
+    "spawnStartLevel": 2,
+    "spawnProbability": 0.3,
+    "chickRoamRadius": 5,
+    "chickMoveInterval": 3,
+    "adultThreatRadius": 5,
+    "adultMoveInterval": 2,
+    "eggScoreValue": 1,
+    "eggGrowthValue": 1,
+    "chickScoreValue": 2,
+    "chickGrowthValue": 2,
+    "adultScoreValue": 3,
+    "adultGrowthValue": 3
+  },
+
+  "meat": {
+    "maxAge": 50,
+    "scoreValue": 1,
+    "growthValue": 1
+  },
+
   "walls": {
     "clusterCoeff": 1.2,
     "clusterBase": 2,

@@ -94,6 +94,9 @@ describe('Smoke tests — project skeleton', () => {
     const settings = createDefaultSettings();
     expect(settings.foodCountBase).toBe(5);
     expect(settings.reproductionProbabilityBase).toBe(0.01);
+    expect(settings.chickenSpawnProbability).toBe(0.3);
+    expect(settings.chickenChickRoamRadius).toBe(5);
+    expect(settings.meatMaxAge).toBe(50);
     expect(settings.levelSizeIncrement).toBe(2);
   });
 
@@ -114,6 +117,7 @@ describe('Smoke tests — project skeleton', () => {
 
     state.foods = [
       {
+        id: 'food-test',
         pos: { x: 2, y: 2 },
         kind: 'apple',
         age: testCtx.settings.foodYoungAge,

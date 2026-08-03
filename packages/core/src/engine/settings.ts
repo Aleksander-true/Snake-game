@@ -61,6 +61,25 @@ export interface GameSettings {
   foodCountPerSnakeCoeff: number;
   foodCountBase: number;
 
+  /* Chicken food */
+  chickenSpawnStartLevel: number;
+  chickenSpawnProbability: number;
+  chickenChickRoamRadius: number;
+  chickenChickMoveInterval: number;
+  chickenAdultThreatRadius: number;
+  chickenAdultMoveInterval: number;
+  chickenEggScoreValue: number;
+  chickenEggGrowthValue: number;
+  chickenChickScoreValue: number;
+  chickenChickGrowthValue: number;
+  chickenAdultScoreValue: number;
+  chickenAdultGrowthValue: number;
+
+  /* Meat food */
+  meatMaxAge: number;
+  meatScoreValue: number;
+  meatGrowthValue: number;
+
   /* Walls — generation formulas */
   wallClusterCoeff: number;
   wallClusterBase: number;
@@ -126,6 +145,23 @@ export function createDefaultSettings(): GameSettings {
     maxReproductionNeighbors:   defaultJson.food.maxReproductionNeighbors,
     foodCountPerSnakeCoeff:     defaultJson.food.countPerSnakeCoeff,
     foodCountBase:              defaultJson.food.countBase,
+
+    chickenSpawnStartLevel:     defaultJson.chicken.spawnStartLevel,
+    chickenSpawnProbability:    defaultJson.chicken.spawnProbability,
+    chickenChickRoamRadius:     defaultJson.chicken.chickRoamRadius,
+    chickenChickMoveInterval:   defaultJson.chicken.chickMoveInterval,
+    chickenAdultThreatRadius:   defaultJson.chicken.adultThreatRadius,
+    chickenAdultMoveInterval:   defaultJson.chicken.adultMoveInterval,
+    chickenEggScoreValue:       defaultJson.chicken.eggScoreValue,
+    chickenEggGrowthValue:      defaultJson.chicken.eggGrowthValue,
+    chickenChickScoreValue:     defaultJson.chicken.chickScoreValue,
+    chickenChickGrowthValue:    defaultJson.chicken.chickGrowthValue,
+    chickenAdultScoreValue:     defaultJson.chicken.adultScoreValue,
+    chickenAdultGrowthValue:    defaultJson.chicken.adultGrowthValue,
+
+    meatMaxAge:                 defaultJson.meat.maxAge,
+    meatScoreValue:             defaultJson.meat.scoreValue,
+    meatGrowthValue:            defaultJson.meat.growthValue,
 
     wallClusterCoeff:             defaultJson.walls.clusterCoeff,
     wallClusterBase:              defaultJson.walls.clusterBase,
@@ -196,6 +232,25 @@ export interface GameDefaultsJSON {
     countPerSnakeCoeff: number;
     countBase: number;
   };
+  chicken: {
+    spawnStartLevel: number;
+    spawnProbability: number;
+    chickRoamRadius: number;
+    chickMoveInterval: number;
+    adultThreatRadius: number;
+    adultMoveInterval: number;
+    eggScoreValue: number;
+    eggGrowthValue: number;
+    chickScoreValue: number;
+    chickGrowthValue: number;
+    adultScoreValue: number;
+    adultGrowthValue: number;
+  };
+  meat: {
+    maxAge: number;
+    scoreValue: number;
+    growthValue: number;
+  };
   walls: {
     clusterCoeff: number;
     clusterBase: number;
@@ -263,6 +318,25 @@ export function settingsToJSON(): GameDefaultsJSON {
       countPerSnakeCoeff: settings.foodCountPerSnakeCoeff,
       countBase: settings.foodCountBase,
     },
+    chicken: {
+      spawnStartLevel: settings.chickenSpawnStartLevel,
+      spawnProbability: settings.chickenSpawnProbability,
+      chickRoamRadius: settings.chickenChickRoamRadius,
+      chickMoveInterval: settings.chickenChickMoveInterval,
+      adultThreatRadius: settings.chickenAdultThreatRadius,
+      adultMoveInterval: settings.chickenAdultMoveInterval,
+      eggScoreValue: settings.chickenEggScoreValue,
+      eggGrowthValue: settings.chickenEggGrowthValue,
+      chickScoreValue: settings.chickenChickScoreValue,
+      chickGrowthValue: settings.chickenChickGrowthValue,
+      adultScoreValue: settings.chickenAdultScoreValue,
+      adultGrowthValue: settings.chickenAdultGrowthValue,
+    },
+    meat: {
+      maxAge: settings.meatMaxAge,
+      scoreValue: settings.meatScoreValue,
+      growthValue: settings.meatGrowthValue,
+    },
     walls: {
       clusterCoeff: settings.wallClusterCoeff,
       clusterBase: settings.wallClusterBase,
@@ -329,6 +403,25 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.food.maxReproductionNeighbors != null)    settings.maxReproductionNeighbors = data.food.maxReproductionNeighbors;
     if (data.food.countPerSnakeCoeff != null)          settings.foodCountPerSnakeCoeff = data.food.countPerSnakeCoeff;
     if (data.food.countBase != null)                   settings.foodCountBase = data.food.countBase;
+  }
+  if (data.chicken) {
+    if (data.chicken.spawnStartLevel != null)   settings.chickenSpawnStartLevel = data.chicken.spawnStartLevel;
+    if (data.chicken.spawnProbability != null)  settings.chickenSpawnProbability = data.chicken.spawnProbability;
+    if (data.chicken.chickRoamRadius != null)   settings.chickenChickRoamRadius = data.chicken.chickRoamRadius;
+    if (data.chicken.chickMoveInterval != null) settings.chickenChickMoveInterval = data.chicken.chickMoveInterval;
+    if (data.chicken.adultThreatRadius != null) settings.chickenAdultThreatRadius = data.chicken.adultThreatRadius;
+    if (data.chicken.adultMoveInterval != null) settings.chickenAdultMoveInterval = data.chicken.adultMoveInterval;
+    if (data.chicken.eggScoreValue != null)     settings.chickenEggScoreValue = data.chicken.eggScoreValue;
+    if (data.chicken.eggGrowthValue != null)    settings.chickenEggGrowthValue = data.chicken.eggGrowthValue;
+    if (data.chicken.chickScoreValue != null)   settings.chickenChickScoreValue = data.chicken.chickScoreValue;
+    if (data.chicken.chickGrowthValue != null)  settings.chickenChickGrowthValue = data.chicken.chickGrowthValue;
+    if (data.chicken.adultScoreValue != null)   settings.chickenAdultScoreValue = data.chicken.adultScoreValue;
+    if (data.chicken.adultGrowthValue != null)  settings.chickenAdultGrowthValue = data.chicken.adultGrowthValue;
+  }
+  if (data.meat) {
+    if (data.meat.maxAge != null)      settings.meatMaxAge = data.meat.maxAge;
+    if (data.meat.scoreValue != null)  settings.meatScoreValue = data.meat.scoreValue;
+    if (data.meat.growthValue != null) settings.meatGrowthValue = data.meat.growthValue;
   }
   if (data.walls) {
     if (data.walls.clusterCoeff != null)  settings.wallClusterCoeff = data.walls.clusterCoeff;
@@ -452,6 +545,13 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'foodMinDistance', 'reproductionMinCooldown', 'reproductionProbabilityBase',
     'maxReproductions', 'neighborReproductionRadius', 'maxReproductionNeighbors',
     'neighborReproductionPenalty', 'foodCountPerSnakeCoeff', 'foodCountBase',
+    'chickenSpawnStartLevel', 'chickenSpawnProbability',
+    'chickenChickRoamRadius', 'chickenChickMoveInterval',
+    'chickenAdultThreatRadius', 'chickenAdultMoveInterval',
+    'chickenEggScoreValue', 'chickenEggGrowthValue',
+    'chickenChickScoreValue', 'chickenChickGrowthValue',
+    'chickenAdultScoreValue', 'chickenAdultGrowthValue',
+    'meatMaxAge', 'meatScoreValue', 'meatGrowthValue',
     'wallClusterCoeff', 'wallClusterBase', 'wallLengthCoeff', 'wallLengthBase',
     'targetScoreCoeff', 'targetScoreBase',
     'baseWidth', 'baseHeight', 'levelSizeIncrement', 'levelTimeLimit', 'tickIntervalMs',
