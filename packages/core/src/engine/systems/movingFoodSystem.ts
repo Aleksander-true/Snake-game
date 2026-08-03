@@ -48,63 +48,68 @@ function moveChick(chicken: Food, state: GameState, ctx: EngineContext): void {
 function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): void {
   const apples = state.foods.filter(food => food.kind === 'apple');
   const neighbors = getNeighborPositions(chicken.pos);
+  const livingHeads = state.snakes.filter(snake => snake.alive).map(snake => snake.head);
+  const candidates = neighbors.filter(candidate => {
+    const appleAtCandidate = apples.find(apple => samePosition(apple.pos, candidate));
+    return isMovementCellFree(candidate, state, chicken, appleAtCandidate);
+  });
+  if (candidates.length === 0) return;
 
-  if (apples.length > 0) {
+  let target: Position | null;
+  const currentSnakeDistance = livingHeads.length > 0
+    ? nearestDistance(chicken.pos, livingHeads)
+    : Number.POSITIVE_INFINITY;
+
+  if (currentSnakeDistance <= ctx.settings.chickenAdultThreatRadius) {
+    target = pickSafestCandidate(candidates, livingHeads, ctx);
+  } else if (apples.length > 0) {
+    const nonApproachingCandidates = livingHeads.length === 0
+      ? candidates
+      : candidates.filter(candidate => {
+          const candidateDistance = nearestDistance(candidate, livingHeads);
+          const requiredDistance = currentSnakeDistance < ctx.settings.chickenAdultSafetyRadius
+            ? currentSnakeDistance
+            : ctx.settings.chickenAdultSafetyRadius;
+          return candidateDistance >= requiredDistance;
+        });
+    const safeCandidates = nonApproachingCandidates.length > 0
+      ? nonApproachingCandidates
+      : getFarthestCandidates(candidates, livingHeads);
     const applePositions = apples.map(apple => apple.pos);
-    const candidates = neighbors.filter(candidate => {
-      const appleAtCandidate = apples.find(apple => samePosition(apple.pos, candidate));
-      return isMovementCellFree(candidate, state, chicken, appleAtCandidate);
-    });
-    if (candidates.length === 0) return;
-
-    const bestDistance = Math.min(...candidates.map(candidate => nearestDistance(candidate, applePositions)));
-    const target = pickRandom(
-      candidates.filter(candidate => nearestDistance(candidate, applePositions) === bestDistance),
+    const bestAppleDistance = Math.min(...safeCandidates.map(candidate =>
+      nearestDistance(candidate, applePositions)
+    ));
+    const appleDirectedCandidates = safeCandidates.filter(candidate =>
+      nearestDistance(candidate, applePositions) === bestAppleDistance
+    );
+    target = livingHeads.length > 0
+      ? pickSafestCandidate(appleDirectedCandidates, livingHeads, ctx)
+      : pickRandom(appleDirectedCandidates, ctx);
+  } else if (livingHeads.length > 0) {
+    const densities = candidates.map(candidate => ({
+      candidate,
+      snakeCount: countNearbyHeads(candidate, livingHeads, ctx.settings.chickenAdultThreatRadius),
+    }));
+    const minimumSnakeCount = Math.min(...densities.map(item => item.snakeCount));
+    target = pickSafestCandidate(
+      densities.filter(item => item.snakeCount === minimumSnakeCount).map(item => item.candidate),
+      livingHeads,
       ctx
     );
-    if (!target) return;
-
-    chicken.pos = target;
-    const eatenApple = apples.find(apple => samePosition(apple.pos, target));
-    if (!eatenApple) return;
-    state.foods.splice(state.foods.indexOf(eatenApple), 1);
-    chicken.age = ctx.settings.foodAdultAge;
-    chicken.clockNum = 0;
-    chicken.reproductionCount = 0;
-    chicken.movementClock = 0;
-    chicken.pendingMandatoryEgg = true;
-    return;
+  } else {
+    target = pickRandom(candidates, ctx);
   }
 
-  const livingHeads = state.snakes.filter(snake => snake.alive).map(snake => snake.head);
-  const freeNeighbors = neighbors.filter(candidate =>
-    isMovementCellFree(candidate, state, chicken)
-  );
-  if (freeNeighbors.length === 0) return;
-  if (livingHeads.length === 0) {
-    const target = pickRandom(freeNeighbors, ctx);
-    if (target) chicken.pos = target;
-    return;
-  }
-
-  const densities = freeNeighbors.map(candidate => ({
-    candidate,
-    snakeCount: livingHeads.filter(head =>
-      chebyshevDistance(candidate, head) <= ctx.settings.chickenAdultThreatRadius
-    ).length,
-  }));
-  const minimumSnakeCount = Math.min(...densities.map(item => item.snakeCount));
-  const leastDenseCandidates = densities
-    .filter(item => item.snakeCount === minimumSnakeCount)
-    .map(item => item.candidate);
-  const greatestNearestDistance = Math.max(...leastDenseCandidates.map(candidate =>
-    nearestDistance(candidate, livingHeads)
-  ));
-  const target = pickRandom(
-    leastDenseCandidates.filter(candidate => nearestDistance(candidate, livingHeads) === greatestNearestDistance),
-    ctx
-  );
-  if (target) chicken.pos = target;
+  if (!target) return;
+  chicken.pos = target;
+  const eatenApple = apples.find(apple => samePosition(apple.pos, target));
+  if (!eatenApple) return;
+  state.foods.splice(state.foods.indexOf(eatenApple), 1);
+  chicken.age = ctx.settings.foodAdultAge;
+  chicken.clockNum = 0;
+  chicken.reproductionCount = 0;
+  chicken.movementClock = 0;
+  chicken.pendingMandatoryEgg = true;
 }
 
 function getNeighborPositions(origin: Position): Position[] {
@@ -127,6 +132,24 @@ function isMovementCellFree(
 
 function nearestDistance(pos: Position, targets: Position[]): number {
   return Math.min(...targets.map(target => chebyshevDistance(pos, target)));
+}
+
+function countNearbyHeads(pos: Position, heads: Position[], radius: number): number {
+  return heads.filter(head => chebyshevDistance(pos, head) <= radius).length;
+}
+
+function getFarthestCandidates(candidates: Position[], heads: Position[]): Position[] {
+  if (heads.length === 0) return candidates;
+  const greatestDistance = Math.max(...candidates.map(candidate => nearestDistance(candidate, heads)));
+  return candidates.filter(candidate => nearestDistance(candidate, heads) === greatestDistance);
+}
+
+function pickSafestCandidate(
+  candidates: Position[],
+  heads: Position[],
+  ctx: EngineContext
+): Position | null {
+  return pickRandom(getFarthestCandidates(candidates, heads), ctx);
 }
 
 function pickRandom<T>(items: T[], ctx: EngineContext): T | null {

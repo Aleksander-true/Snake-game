@@ -76,6 +76,8 @@ describe('Settings, storage and app state helpers', () => {
     const json = settingsToJSON();
     expect(json.snake.hungerThreshold).toBe(99);
     expect(json.chicken.spawnProbability).toBe(0.3);
+    expect(json.chicken.adultSafetyRadius).toBe(10);
+    expect(json.chicken.maxEggs).toBe(3);
     expect(json.meat.maxAge).toBe(50);
     expect(json.levelOverrides['3']).toEqual({ wallClusters: 7, foodCount: 4 });
 
@@ -284,6 +286,8 @@ describe('Settings, storage and app state helpers', () => {
     const foodCoeffInput = container.querySelector('#dev-foodCountPerSnakeCoeff') as HTMLInputElement;
     expect(foodCoeffInput).toBeTruthy();
     expect(container.querySelector('#dev-chickenSpawnProbability')).toBeTruthy();
+    expect(container.querySelector('#dev-chickenAdultSafetyRadius')).toBeTruthy();
+    expect(container.querySelector('#dev-chickenMaxEggs')).toBeTruthy();
     expect(container.querySelector('#dev-meatMaxAge')).toBeTruthy();
     foodCoeffInput.value = '3';
 

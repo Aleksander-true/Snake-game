@@ -96,6 +96,8 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.reproductionProbabilityBase).toBe(0.01);
     expect(settings.chickenSpawnProbability).toBe(0.3);
     expect(settings.chickenChickRoamRadius).toBe(5);
+    expect(settings.chickenAdultSafetyRadius).toBe(10);
+    expect(settings.chickenMaxEggs).toBe(3);
     expect(settings.meatMaxAge).toBe(50);
     expect(settings.levelSizeIncrement).toBe(2);
   });

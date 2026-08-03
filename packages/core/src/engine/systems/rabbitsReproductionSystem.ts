@@ -128,7 +128,10 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     if (!canReproduce) continue;
 
     if (parentFood.clockNum < settings.reproductionMinCooldown) continue;
-    if (parentFood.reproductionCount >= settings.maxReproductions) continue;
+    const reproductionLimit = parentFood.kind === 'chicken'
+      ? settings.chickenMaxEggs
+      : settings.maxReproductions;
+    if (parentFood.reproductionCount >= reproductionLimit) continue;
 
     const ignoresDensity = parentFood.kind === 'chicken';
     const nearbyCount = ignoresDensity ? 0 : countNearbyFood(

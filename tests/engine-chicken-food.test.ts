@@ -141,6 +141,52 @@ describe('Chicken food', () => {
     expect(Math.max(Math.abs(chicken.pos.x - 14), Math.abs(chicken.pos.y - 10))).toBe(3);
   });
 
+  test('adult actively flees a snake within five cells even when an apple is nearby', () => {
+    const ctx = createContext();
+    const state = createState();
+    const chicken = new ChickenFoodEntity(
+      { x: 10, y: 10 },
+      ctx.settings.foodAdultAge + 1,
+      0,
+      0,
+      { x: 10, y: 10 },
+      ctx.settings.chickenAdultMoveInterval - 1,
+      false,
+      'food-0'
+    );
+    state.foods = [chicken, AppleFoodEntity.newborn({ x: 14, y: 10 }, 0, 'food-1')];
+    state.snakes = [new SnakeEntity(0, 'P1', [{ x: 13, y: 10 }], 'left', false)];
+
+    processMovingFood(state, ctx);
+
+    expect(chicken.pos.x).toBe(9);
+  });
+
+  test('inside ten cells adult does not approach a snake while pursuing an apple', () => {
+    const ctx = createContext();
+    const state = createState(2, 30, 20);
+    const chicken = new ChickenFoodEntity(
+      { x: 10, y: 10 },
+      ctx.settings.foodAdultAge + 1,
+      0,
+      0,
+      { x: 10, y: 10 },
+      ctx.settings.chickenAdultMoveInterval - 1,
+      false,
+      'food-0'
+    );
+    state.foods = [chicken, AppleFoodEntity.newborn({ x: 20, y: 10 }, 0, 'food-1')];
+    state.snakes = [new SnakeEntity(0, 'P1', [{ x: 18, y: 10 }], 'left', false)];
+
+    processMovingFood(state, ctx);
+
+    const snakeDistance = Math.max(
+      Math.abs(chicken.pos.x - state.snakes[0].head.x),
+      Math.abs(chicken.pos.y - state.snakes[0].head.y)
+    );
+    expect(snakeDistance).toBeGreaterThanOrEqual(8);
+  });
+
   test('without apples adult moves toward the lowest snake density', () => {
     const ctx = createContext();
     const state = createState();
@@ -165,7 +211,7 @@ describe('Chicken food', () => {
     expect(chicken.pos.x).toBe(11);
   });
 
-  test('normal adult chicken reproduction ignores nearby-food density', () => {
+  test('normal adult chicken reproduction ignores density and stops at three eggs', () => {
     const ctx = createContext();
     ctx.settings.reproductionProbabilityBase = 1;
     ctx.settings.reproductionMinCooldown = 1;
@@ -189,5 +235,10 @@ describe('Chicken food', () => {
     expect(births).toHaveLength(1);
     expect(births[0].child.kind).toBe('chicken');
     expect(births[0].child.age).toBe(0);
+
+    chicken.reproductionCount = ctx.settings.chickenMaxEggs;
+    chicken.clockNum = ctx.settings.reproductionMinCooldown;
+    state.foods = [chicken];
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
   });
 });

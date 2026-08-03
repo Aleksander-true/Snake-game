@@ -151,7 +151,9 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'chickenChickRoamRadius',     type: 'number' },
   { key: 'chickenChickMoveInterval',   type: 'number' },
   { key: 'chickenAdultThreatRadius',   type: 'number' },
+  { key: 'chickenAdultSafetyRadius',   type: 'number' },
   { key: 'chickenAdultMoveInterval',   type: 'number' },
+  { key: 'chickenMaxEggs',             type: 'number' },
   { key: 'chickenEggScoreValue',       type: 'number' },
   { key: 'chickenEggGrowthValue',      type: 'number' },
   { key: 'chickenChickScoreValue',     type: 'number' },
@@ -292,7 +294,9 @@ function buildChickenSection(currentLevel: number): string {
     settingsRow('chickenChickRoamRadius',   'Радиус цыплёнка', currentLevel) +
     settingsRow('chickenChickMoveInterval', 'Ход цыплёнка (тики)', currentLevel) +
     settingsRow('chickenAdultThreatRadius', 'Радиус плотности змей', currentLevel) +
+    settingsRow('chickenAdultSafetyRadius', 'Безопасная дистанция', currentLevel) +
     settingsRow('chickenAdultMoveInterval', 'Ход курицы (тики)', currentLevel) +
+    settingsRow('chickenMaxEggs',           'Макс. яиц', currentLevel) +
     settingsRow('chickenEggScoreValue',     'Очки за яйцо', currentLevel) +
     settingsRow('chickenEggGrowthValue',    'Рост за яйцо', currentLevel) +
     settingsRow('chickenChickScoreValue',   'Очки за цыплёнка', currentLevel) +
