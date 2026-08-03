@@ -18,6 +18,7 @@ export * from './engine/spawning/wallsGenerator';
 export * from './engine/systems/foodSystem';
 export * from './engine/systems/hungerSystem';
 export * from './engine/systems/levelSystem';
+export * from './engine/systems/meatSystem';
 export * from './engine/systems/movementSystem';
 export * from './engine/systems/movingFoodSystem';
 export * from './engine/systems/rabbitsReproductionSystem';

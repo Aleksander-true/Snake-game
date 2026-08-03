@@ -4,6 +4,7 @@ import { GameSettings } from '../settings';
 import { inBounds } from '../board';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
 import { ChickenFoodEntity } from '../entities/ChickenFoodEntity';
+import { MeatFoodEntity } from '../entities/MeatFoodEntity';
 import { RabbitFoodEntity } from '../entities/RabbitFoodEntity';
 import { assignFoodId, getFoodPhase } from './foodSystem';
 
@@ -88,10 +89,20 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     }
   }
 
-  state.foods = state.foods.filter(food => {
-    if (food.kind === 'meat') return food.age < settings.meatMaxAge;
-    return food.age < settings.foodMaxAge;
-  });
+  const activeFoods: Food[] = [];
+  for (const food of state.foods) {
+    if (food.kind === 'meat' && food.age >= settings.meatMaxAge) continue;
+    if (food.kind !== 'meat' && food.age >= settings.foodMaxAge) {
+      if (food.kind === 'chicken') {
+        const meat = assignFoodId(state, MeatFoodEntity.newborn({ ...food.pos }));
+        activeFoods.push(meat);
+        births.push({ parentPos: { ...food.pos }, child: meat });
+      }
+      continue;
+    }
+    activeFoods.push(food);
+  }
+  state.foods = activeFoods;
 
   const parents = [...state.foods];
   const mandatoryLayers = new Set<string>();

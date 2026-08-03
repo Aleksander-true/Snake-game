@@ -10,6 +10,7 @@ import { processFoodLifecycle } from './rabbitsReproductionSystem';
 import { checkLevelComplete, getMaxLevel } from './levelSystem';
 import { autoReplenishFood, getFoodReward } from './foodSystem';
 import { processMovingFood } from './movingFoodSystem';
+import { createMeatDropsForSnakeDeaths } from './meatSystem';
 
 /**
  * Run all tick systems in the required order.
@@ -19,6 +20,7 @@ export function runTickPipeline(state: GameState, ctx: EngineContext, events: Do
   hungerSystem(state, ctx, events);
   reproductionSystem(state, ctx, events);
   processMovingFood(state, ctx);
+  createMeatDropsForSnakeDeaths(state, events);
   boardSystem(state, ctx);
   levelCheckSystem(state, ctx, events);
 }
