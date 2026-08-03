@@ -82,6 +82,7 @@ describe('Settings, storage and app state helpers', () => {
     expect(json.chicken.maxEggs).toBe(3);
     expect(json.chicken.overcrowdingRadius).toBe(10);
     expect(json.chicken.eggLayingInterval).toBe(17);
+    expect(json.chicken.eggLayingProbability).toBe(0.06);
     expect(json.chicken.appleAgeReduction).toBe(10);
     expect(json.chicken.appleReproductionReduction).toBe(1);
     expect(json.food.appleReproductionLimitBase).toBe(13);
@@ -302,7 +303,7 @@ describe('Settings, storage and app state helpers', () => {
     expect(container.querySelector('#dev-chickenAdultSafetyRadius')).toBeTruthy();
     expect(container.querySelector('#dev-chickenMaxEggs')).toBeTruthy();
     expect(container.querySelector('#dev-chickenOvercrowdingRadius')).toBeTruthy();
-    expect(container.querySelector('#dev-chickenEggLayingInterval')).toBeTruthy();
+    expect(container.querySelector('#dev-chickenEggLayingProbability')).toBeTruthy();
     expect(container.querySelector('#dev-chickenAppleAgeReduction')).toBeTruthy();
     expect(container.querySelector('#dev-chickenAppleReproductionReduction')).toBeTruthy();
     expect(container.querySelector('#dev-chickenReproductionLimitBase')).toBeTruthy();

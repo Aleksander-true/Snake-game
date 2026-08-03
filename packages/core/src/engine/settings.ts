@@ -76,7 +76,9 @@ export interface GameSettings {
   chickenAdultSafetyRadius: number;
   chickenAdultMoveInterval: number;
   chickenOvercrowdingRadius: number;
+  /** Legacy compatibility setting; probabilistic laying does not use it. */
   chickenEggLayingInterval: number;
+  chickenEggLayingProbability: number;
   chickenAppleAgeReduction: number;
   chickenAppleReproductionReduction: number;
   chickenReproductionLimitBase: number;
@@ -175,6 +177,7 @@ export function createDefaultSettings(): GameSettings {
     chickenAdultMoveInterval:   defaultJson.chicken.adultMoveInterval,
     chickenOvercrowdingRadius:  defaultJson.chicken.overcrowdingRadius,
     chickenEggLayingInterval:   defaultJson.chicken.eggLayingInterval,
+    chickenEggLayingProbability: defaultJson.chicken.eggLayingProbability,
     chickenAppleAgeReduction:   defaultJson.chicken.appleAgeReduction,
     chickenAppleReproductionReduction: defaultJson.chicken.appleReproductionReduction,
     chickenReproductionLimitBase: defaultJson.chicken.reproductionLimitBase,
@@ -276,6 +279,7 @@ export interface GameDefaultsJSON {
     adultMoveInterval: number;
     overcrowdingRadius: number;
     eggLayingInterval: number;
+    eggLayingProbability: number;
     appleAgeReduction: number;
     appleReproductionReduction: number;
     reproductionLimitBase: number;
@@ -376,6 +380,7 @@ export function settingsToJSON(): GameDefaultsJSON {
       adultMoveInterval: settings.chickenAdultMoveInterval,
       overcrowdingRadius: settings.chickenOvercrowdingRadius,
       eggLayingInterval: settings.chickenEggLayingInterval,
+      eggLayingProbability: settings.chickenEggLayingProbability,
       appleAgeReduction: settings.chickenAppleAgeReduction,
       appleReproductionReduction: settings.chickenAppleReproductionReduction,
       reproductionLimitBase: settings.chickenReproductionLimitBase,
@@ -476,6 +481,7 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.chicken.adultMoveInterval != null) settings.chickenAdultMoveInterval = data.chicken.adultMoveInterval;
     if (data.chicken.overcrowdingRadius != null) settings.chickenOvercrowdingRadius = data.chicken.overcrowdingRadius;
     if (data.chicken.eggLayingInterval != null) settings.chickenEggLayingInterval = data.chicken.eggLayingInterval;
+    if (data.chicken.eggLayingProbability != null) settings.chickenEggLayingProbability = data.chicken.eggLayingProbability;
     if (data.chicken.appleAgeReduction != null) settings.chickenAppleAgeReduction = data.chicken.appleAgeReduction;
     if (data.chicken.appleReproductionReduction != null) settings.chickenAppleReproductionReduction = data.chicken.appleReproductionReduction;
     if (data.chicken.reproductionLimitBase != null) settings.chickenReproductionLimitBase = data.chicken.reproductionLimitBase;
@@ -623,7 +629,8 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'chickenChickRoamRadius', 'chickenChickMoveInterval',
     'chickenAdultThreatRadius', 'chickenAdultMoveInterval',
     'chickenAdultSafetyRadius', 'chickenOvercrowdingRadius',
-    'chickenEggLayingInterval', 'chickenAppleAgeReduction',
+    'chickenEggLayingInterval', 'chickenEggLayingProbability',
+    'chickenAppleAgeReduction',
     'chickenAppleReproductionReduction', 'chickenReproductionLimitBase',
     'chickenMaxEggs',
     'chickenEggScoreValue', 'chickenEggGrowthValue',

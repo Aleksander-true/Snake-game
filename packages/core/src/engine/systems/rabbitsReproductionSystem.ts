@@ -119,8 +119,6 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     if (parentFood.reproductionCount >= reproductionLimit) continue;
 
     if (parentFood.kind === 'chicken') {
-      if (parentFood.clockNum < settings.chickenEggLayingInterval) continue;
-      parentFood.resetReproductionClock();
       if (isFoodKindOverReproductionLimit('chicken', state, settings)) continue;
 
       const nearbyCount = countNearbyFood(
@@ -130,6 +128,7 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
         parentFood
       );
       if (nearbyCount >= settings.maxReproductionNeighbors) continue;
+      if (randomPort.next() >= settings.chickenEggLayingProbability) continue;
 
       const offspring = trySpawnOffspring(parentFood, state, randomPort);
       if (!offspring) continue;

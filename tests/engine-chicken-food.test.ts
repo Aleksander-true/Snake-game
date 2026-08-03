@@ -122,7 +122,7 @@ describe('Chicken food', () => {
   });
 
   test('adult apple consumption reduces age and reproduction count without mandatory egg', () => {
-    const ctx = createContext();
+    const ctx = createContext({ next: () => 1 });
     const state = createState();
     const chicken = new ChickenFoodEntity(
       { x: 10, y: 10 },
@@ -270,7 +270,7 @@ describe('Chicken food', () => {
     expect(Math.max(Math.abs(chicken.pos.x - egg.pos.x), Math.abs(chicken.pos.y - egg.pos.y))).toBe(3);
   });
 
-  test('overcrowded adult leaves the field when no edge move improves density', () => {
+  test('overcrowded adult always remains inside the field at the edge', () => {
     const ctx = createContext();
     const state = createState();
     const chicken = new ChickenFoodEntity(
@@ -287,16 +287,21 @@ describe('Chicken food', () => {
 
     processMovingFood(state, ctx);
 
-    expect(state.foods).not.toContain(chicken);
+    expect(state.foods).toContain(chicken);
+    expect(chicken.pos.x).toBeGreaterThanOrEqual(0);
+    expect(chicken.pos.x).toBeLessThan(state.width);
+    expect(chicken.pos.y).toBeGreaterThanOrEqual(0);
+    expect(chicken.pos.y).toBeLessThan(state.height);
   });
 
-  test('adult chicken lays every seventeen ticks, respects density and stops at three eggs', () => {
-    const ctx = createContext();
+  test('adult chicken lays with a uniform per-tick probability and respects other limits', () => {
+    const randomValues = [0.06, 0.059];
+    const ctx = createContext({ next: () => randomValues.shift() ?? 0 });
     const state = createState();
     const chicken = new ChickenFoodEntity(
       { x: 10, y: 10 },
-      ctx.settings.foodAdultAge - 1,
-      99,
+      ctx.settings.foodAdultAge,
+      0,
       0,
       { x: 10, y: 10 },
       0,
@@ -306,31 +311,26 @@ describe('Chicken food', () => {
     state.foods = [chicken, AppleFoodEntity.newborn({ x: 15, y: 15 }, 0, 'food-1')];
     state.nextFoodId = 2;
 
+    expect(ctx.settings.chickenEggLayingProbability).toBe(3 / 50);
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
-    expect(chicken.clockNum).toBe(0);
-    for (let tick = 1; tick < ctx.settings.chickenEggLayingInterval; tick++) {
-      expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
-    }
     const births = processFoodLifecycle(state, ctx);
 
     expect(births).toHaveLength(1);
     expect(births[0].child.kind).toBe('chicken');
     expect(births[0].child.age).toBe(0);
 
-    chicken.clockNum = ctx.settings.chickenEggLayingInterval - 1;
     ctx.settings.maxReproductionNeighbors = 1;
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
-    expect(chicken.clockNum).toBe(0);
 
     chicken.reproductionCount = ctx.settings.chickenMaxEggs;
-    chicken.clockNum = ctx.settings.chickenEggLayingInterval - 1;
     ctx.settings.maxReproductionNeighbors = 4;
     state.foods = [chicken];
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
   });
 
   test('adult chicken does not lay above the difficulty-adjusted chicken limit', () => {
-    const ctx = createContext();
+    const next = jest.fn(() => 0);
+    const ctx = createContext({ next });
     ctx.settings.maxReproductionNeighbors = 99;
     const state = createState(2, 30, 30);
     state.difficultyLevel = 2;
@@ -338,7 +338,7 @@ describe('Chicken food', () => {
     const chicken = new ChickenFoodEntity(
       { x: 20, y: 20 },
       ctx.settings.foodAdultAge,
-      ctx.settings.chickenEggLayingInterval - 1,
+      0,
       0,
       { x: 20, y: 20 }
     );
@@ -354,7 +354,7 @@ describe('Chicken food', () => {
 
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
     expect(state.foods).toHaveLength(limit + 1);
-    expect(chicken.clockNum).toBe(0);
+    expect(next).not.toHaveBeenCalled();
   });
 
 });

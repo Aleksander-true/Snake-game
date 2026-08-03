@@ -40,9 +40,9 @@ Level 1 contains only apples. Starting at level 2, each regular initial or autom
 
 Eggs do not move. A chick makes one random neighboring step every three ticks and stays within five Chebyshev cells of its egg origin. An adult chicken is not range-limited and can move every two ticks. It approaches the nearest apple while trying to remain at least 10 cells from living snakes, actively flees when a head is within 5 cells, and chooses the lowest snake density when no apples exist.
 
-An adult chicken deterministically attempts to lay an egg every 17 ticks after entering the adult-chicken stage, up to three eggs. It follows the same food-distance and neighbor-limit rules as an apple; a blocked attempt resets the clock and the next attempt occurs 17 ticks later. Eating an apple removes it, reduces chicken age by 10 but never below 100, and reduces reproduction count by one but never below zero. It neither guarantees an egg nor resets the current 17-tick clock.
+On every adult-stage tick, a chicken independently attempts to lay with probability `3 / 50 = 0.06`, uniformly across ticks, while retaining the lifetime limit of three eggs. It follows the same food-distance and neighbor-limit rules as an apple. Eating an apple removes it, reduces chicken age by 10 but never below 100, and reduces reproduction count by one but never below zero. It neither guarantees an egg nor changes the next tick's probability.
 
-An adult chicken also avoids chicken-food overcrowding. If any other egg, chick, or chicken is within 10 Chebyshev cells, it first seeks a snake-safe move that reduces that count or increases the nearest distance. When it is already on the board edge and no in-bounds move improves either measure, it leaves the board and disappears without producing meat.
+An adult chicken also avoids chicken-food overcrowding. If any other egg, chick, or chicken is within 10 Chebyshev cells, it first seeks a snake-safe move that reduces that count or increases the nearest distance. A chicken never leaves the board; when no better in-bounds move exists, it chooses the best available in-bounds move or remains still.
 
 Meat is a stationary 🍖 food worth 1 point and 1 growth segment. It exists only at age 0–49 and is never part of regular spawning. A chicken reaching age 150 becomes one meat item. A snake killed by a wall, another snake, or self-collision produces `ceil(length / 3)` meat items along its body; a snake that starves produces none. Meat is rendered over the non-colliding gray corpse and can be eaten normally.
 
@@ -54,7 +54,7 @@ Math.floor(1.5 × snakeCount + 5 − difficultyLevel)
 
 One adult food item is created per snake; remaining initial food is young. Food cannot overlap walls or snakes and must be more than one Chebyshev cell from other food.
 
-Adult apples and base food may reproduce after a five-tick cooldown. Their base probability is `0.01 × clockNum`, reduced by 25% for each neighbor within radius 4 and blocked at four neighbors. Each item can reproduce at most five times. Apple reproduction is also blocked while the apple count is greater than `13 + snakeCount - difficultyLevel`; equality still permits one reproduction. Adult chickens use the deterministic 17-tick rule above instead, and laying is blocked while the combined egg, chick, and adult-chicken count is greater than `10 + snakeCount - difficultyLevel`.
+Adult apples and base food may reproduce after a five-tick cooldown. Their base probability is `0.01 × clockNum`, reduced by 25% for each neighbor within radius 4 and blocked at four neighbors. Each item can reproduce at most five times. Apple reproduction is also blocked while the apple count is greater than `13 + snakeCount - difficultyLevel`; equality still permits one reproduction. Adult chickens use the independent 6% per-tick rule above instead, and laying is blocked while the combined egg, chick, and adult-chicken count is greater than `10 + snakeCount - difficultyLevel`.
 
 If food count drops below the number of living snakes, the engine can add one adult item at the maximin-farthest free position, no more than once per hunger interval.
 

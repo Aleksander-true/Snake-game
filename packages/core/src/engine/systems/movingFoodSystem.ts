@@ -61,12 +61,7 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
     const appleAtCandidate = apples.find(apple => samePosition(apple.pos, candidate));
     return isMovementCellFree(candidate, state, chicken, appleAtCandidate);
   });
-  if (candidates.length === 0) {
-    if (currentOvercrowding.count > 0 && isAtBoardEdge(chicken.pos, state)) {
-      removeFood(chicken, state);
-    }
-    return;
-  }
+  if (candidates.length === 0) return;
 
   let target: Position | null;
   const currentSnakeDistance = livingHeads.length > 0
@@ -94,10 +89,6 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
           && candidateDensity.nearestDistance > currentOvercrowding.nearestDistance
         );
     });
-    if (improvingCandidates.length === 0 && isAtBoardEdge(chicken.pos, state)) {
-      removeFood(chicken, state);
-      return;
-    }
     target = pickLowestChickenDensityCandidate(
       improvingCandidates.length > 0 ? improvingCandidates : safeCandidates,
       otherChickenPositions,
@@ -228,15 +219,6 @@ function pickLowestChickenDensityCandidate(
   return livingHeads.length > 0
     ? pickSafestCandidate(bestCandidates, livingHeads, ctx)
     : pickRandom(bestCandidates, ctx);
-}
-
-function isAtBoardEdge(pos: Position, state: GameState): boolean {
-  return pos.x === 0 || pos.x === state.width - 1 || pos.y === 0 || pos.y === state.height - 1;
-}
-
-function removeFood(food: Food, state: GameState): void {
-  const foodIndex = state.foods.indexOf(food);
-  if (foodIndex !== -1) state.foods.splice(foodIndex, 1);
 }
 
 function getFarthestCandidates(candidates: Position[], heads: Position[]): Position[] {

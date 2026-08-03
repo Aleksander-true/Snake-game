@@ -160,7 +160,7 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'chickenAdultSafetyRadius',   type: 'number' },
   { key: 'chickenAdultMoveInterval',   type: 'number' },
   { key: 'chickenOvercrowdingRadius',  type: 'number' },
-  { key: 'chickenEggLayingInterval',   type: 'number' },
+  { key: 'chickenEggLayingProbability', type: 'number' },
   { key: 'chickenAppleAgeReduction',   type: 'number' },
   { key: 'chickenAppleReproductionReduction', type: 'number' },
   { key: 'chickenReproductionLimitBase', type: 'number' },
@@ -315,7 +315,7 @@ function buildChickenSection(currentLevel: number): string {
     settingsRow('chickenAdultSafetyRadius', 'Безопасная дистанция', currentLevel) +
     settingsRow('chickenAdultMoveInterval', 'Ход курицы (тики)', currentLevel) +
     settingsRow('chickenOvercrowdingRadius', 'Радиус перенаселения', currentLevel) +
-    settingsRow('chickenEggLayingInterval', 'Кладка каждые (тики)', currentLevel) +
+    settingsRow('chickenEggLayingProbability', 'Вероятность кладки', currentLevel, 0.01) +
     settingsRow('chickenAppleAgeReduction', 'Яблоко: минус возраст', currentLevel) +
     settingsRow('chickenAppleReproductionReduction', 'Яблоко: минус рождений', currentLevel) +
     settingsRow('chickenReproductionLimitBase', 'База лимита куриц', currentLevel) +
