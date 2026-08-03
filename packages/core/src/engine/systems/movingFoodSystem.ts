@@ -46,13 +46,28 @@ function moveChick(chicken: Food, state: GameState, ctx: EngineContext): void {
 }
 
 function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): void {
-  const neighboringApples = state.foods.filter(food =>
-    food.kind === 'apple' && chebyshevDistance(food.pos, chicken.pos) === 1
-  );
-  const apple = pickRandom(neighboringApples, ctx);
-  if (apple) {
-    chicken.pos = { ...apple.pos };
-    state.foods.splice(state.foods.indexOf(apple), 1);
+  const apples = state.foods.filter(food => food.kind === 'apple');
+  const neighbors = getNeighborPositions(chicken.pos);
+
+  if (apples.length > 0) {
+    const applePositions = apples.map(apple => apple.pos);
+    const candidates = neighbors.filter(candidate => {
+      const appleAtCandidate = apples.find(apple => samePosition(apple.pos, candidate));
+      return isMovementCellFree(candidate, state, chicken, appleAtCandidate);
+    });
+    if (candidates.length === 0) return;
+
+    const bestDistance = Math.min(...candidates.map(candidate => nearestDistance(candidate, applePositions)));
+    const target = pickRandom(
+      candidates.filter(candidate => nearestDistance(candidate, applePositions) === bestDistance),
+      ctx
+    );
+    if (!target) return;
+
+    chicken.pos = target;
+    const eatenApple = apples.find(apple => samePosition(apple.pos, target));
+    if (!eatenApple) return;
+    state.foods.splice(state.foods.indexOf(eatenApple), 1);
     chicken.age = ctx.settings.foodAdultAge;
     chicken.clockNum = 0;
     chicken.reproductionCount = 0;
@@ -62,17 +77,33 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
   }
 
   const livingHeads = state.snakes.filter(snake => snake.alive).map(snake => snake.head);
-  if (livingHeads.length === 0) return;
-  const currentDistance = nearestDistance(chicken.pos, livingHeads);
-  if (currentDistance > ctx.settings.chickenAdultThreatRadius) return;
-
-  const freeNeighbors = getNeighborPositions(chicken.pos).filter(candidate =>
+  const freeNeighbors = neighbors.filter(candidate =>
     isMovementCellFree(candidate, state, chicken)
   );
-  const escapingNeighbors = freeNeighbors.filter(candidate =>
-    nearestDistance(candidate, livingHeads) > currentDistance
+  if (freeNeighbors.length === 0) return;
+  if (livingHeads.length === 0) {
+    const target = pickRandom(freeNeighbors, ctx);
+    if (target) chicken.pos = target;
+    return;
+  }
+
+  const densities = freeNeighbors.map(candidate => ({
+    candidate,
+    snakeCount: livingHeads.filter(head =>
+      chebyshevDistance(candidate, head) <= ctx.settings.chickenAdultThreatRadius
+    ).length,
+  }));
+  const minimumSnakeCount = Math.min(...densities.map(item => item.snakeCount));
+  const leastDenseCandidates = densities
+    .filter(item => item.snakeCount === minimumSnakeCount)
+    .map(item => item.candidate);
+  const greatestNearestDistance = Math.max(...leastDenseCandidates.map(candidate =>
+    nearestDistance(candidate, livingHeads)
+  ));
+  const target = pickRandom(
+    leastDenseCandidates.filter(candidate => nearestDistance(candidate, livingHeads) === greatestNearestDistance),
+    ctx
   );
-  const target = pickRandom(escapingNeighbors.length > 0 ? escapingNeighbors : freeNeighbors, ctx);
   if (target) chicken.pos = target;
 }
 
@@ -80,11 +111,18 @@ function getNeighborPositions(origin: Position): Position[] {
   return NEIGHBOR_OFFSETS.map(offset => ({ x: origin.x + offset.x, y: origin.y + offset.y }));
 }
 
-function isMovementCellFree(pos: Position, state: GameState, movingFood: Food): boolean {
+function isMovementCellFree(
+  pos: Position,
+  state: GameState,
+  movingFood: Food,
+  allowedFood?: Food
+): boolean {
   if (pos.x < 0 || pos.x >= state.width || pos.y < 0 || pos.y >= state.height) return false;
   if (state.walls.some(wall => samePosition(wall, pos))) return false;
   if (state.snakes.some(snake => snake.segments.some(segment => samePosition(segment, pos)))) return false;
-  return !state.foods.some(food => food !== movingFood && samePosition(food.pos, pos));
+  return !state.foods.some(food =>
+    food !== movingFood && food !== allowedFood && samePosition(food.pos, pos)
+  );
 }
 
 function nearestDistance(pos: Position, targets: Position[]): number {

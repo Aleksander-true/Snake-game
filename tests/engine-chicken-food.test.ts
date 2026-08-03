@@ -7,6 +7,7 @@ import {
   getFoodReward,
   processFoodLifecycle,
   processMovingFood,
+  SnakeEntity,
   spawnFood,
 } from '@snake-game/core';
 import type { EngineContext, GameState, RandomPort } from '@snake-game/core';
@@ -117,6 +118,51 @@ describe('Chicken food', () => {
     expect(chicken.pendingMandatoryEgg).toBe(false);
     expect(chicken.reproductionCount).toBe(1);
     expect(state.foods.filter(food => food.kind === 'chicken')).toHaveLength(2);
+  });
+
+  test('adult moves toward the nearest apple even when it is not adjacent', () => {
+    const ctx = createContext();
+    const state = createState();
+    const chicken = new ChickenFoodEntity(
+      { x: 10, y: 10 },
+      ctx.settings.foodAdultAge + 1,
+      0,
+      0,
+      { x: 10, y: 10 },
+      ctx.settings.chickenAdultMoveInterval - 1,
+      false,
+      'food-0'
+    );
+    state.foods = [chicken, AppleFoodEntity.newborn({ x: 14, y: 10 }, 0, 'food-1')];
+
+    processMovingFood(state, ctx);
+
+    expect(chicken.pos.x).toBe(11);
+    expect(Math.max(Math.abs(chicken.pos.x - 14), Math.abs(chicken.pos.y - 10))).toBe(3);
+  });
+
+  test('without apples adult moves toward the lowest snake density', () => {
+    const ctx = createContext();
+    const state = createState();
+    const chicken = new ChickenFoodEntity(
+      { x: 10, y: 10 },
+      ctx.settings.foodAdultAge + 1,
+      0,
+      0,
+      { x: 10, y: 10 },
+      ctx.settings.chickenAdultMoveInterval - 1,
+      false,
+      'food-0'
+    );
+    state.foods = [chicken];
+    state.snakes = [
+      new SnakeEntity(0, 'P1', [{ x: 5, y: 9 }], 'right', false),
+      new SnakeEntity(1, 'P2', [{ x: 5, y: 11 }], 'right', false),
+    ];
+
+    processMovingFood(state, ctx);
+
+    expect(chicken.pos.x).toBe(11);
   });
 
   test('normal adult chicken reproduction ignores nearby-food density', () => {

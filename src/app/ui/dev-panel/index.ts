@@ -291,7 +291,7 @@ function buildChickenSection(currentLevel: number): string {
     settingsRow('chickenSpawnProbability',  'Вероятность спавна', currentLevel, 0.01) +
     settingsRow('chickenChickRoamRadius',   'Радиус цыплёнка', currentLevel) +
     settingsRow('chickenChickMoveInterval', 'Ход цыплёнка (тики)', currentLevel) +
-    settingsRow('chickenAdultThreatRadius', 'Радиус страха курицы', currentLevel) +
+    settingsRow('chickenAdultThreatRadius', 'Радиус плотности змей', currentLevel) +
     settingsRow('chickenAdultMoveInterval', 'Ход курицы (тики)', currentLevel) +
     settingsRow('chickenEggScoreValue',     'Очки за яйцо', currentLevel) +
     settingsRow('chickenEggGrowthValue',    'Рост за яйцо', currentLevel) +

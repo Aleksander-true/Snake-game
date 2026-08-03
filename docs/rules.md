@@ -37,7 +37,7 @@ The standard food lifecycle ends at age 150. An adult chicken becomes meat at th
 
 Level 1 contains only apples. Starting at level 2, each regular initial or automatic food spawn has a seeded 30% chance to be chicken food. Newly spawned chicken food always starts as an egg at age 0. Its common lifecycle is rendered as egg (age 0–49, value 1), chick (50–99, value 2), and chicken (100–149, value 3).
 
-Eggs do not move. A chick makes one random neighboring step every three ticks and stays within five Chebyshev cells of its egg origin. An adult chicken is not range-limited and can move every two ticks: it prioritizes an apple within one Chebyshev cell, otherwise it moves away when a living snake is within radius 5, and otherwise stays still.
+Eggs do not move. A chick makes one random neighboring step every three ticks and stays within five Chebyshev cells of its egg origin. An adult chicken is not range-limited and can move every two ticks: it steps toward the nearest apple anywhere on the board. If no apples exist, it chooses the neighboring direction with the fewest living snake heads within radius 5, breaking ties by distance and then seeded randomness.
 
 An adult chicken lays eggs without food-density restrictions. Eating an apple removes that apple, resets the chicken to age 100 and reproduction count 0, and guarantees an egg-laying attempt on the next tick even if the normal reproduction limit or cooldown had been reached.
 
