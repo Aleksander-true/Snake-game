@@ -224,7 +224,7 @@ export class GameEngine {
       occupiedPositions,
       this.activeContext,
       50,
-      isInExpandedArea
+      { placementFilter: isInExpandedArea, allowEdgePlacement: true }
     );
     const wallKeys = new Set(state.walls.map(wall => `${wall.x},${wall.y}`));
 

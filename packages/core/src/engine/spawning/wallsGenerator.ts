@@ -2,13 +2,18 @@ import { Position } from '../types';
 import { EngineContext } from '../context';
 import { RandomPort } from '../ports';
 
+interface WallGenerationOptions {
+  placementFilter?: (position: Position) => boolean;
+  allowEdgePlacement?: boolean;
+}
+
 /**
  * Generate wall clusters via random walk with branching.
  * Validates that all free cells remain reachable (BFS).
  *
  * @param exclusionZones — positions (snake heads / body) that walls must stay away from.
  *   Walls cannot be placed within `1.5 × initialSnakeLength` cells (Chebyshev) of any zone centre.
- * @param placementFilter — optional restriction used when walls may be added only to an expanded area.
+ * @param options — optional restrictions used when adding walls to an expanded area.
  */
 export function generateWalls(
   width: number,
@@ -18,7 +23,7 @@ export function generateWalls(
   exclusionZones: Position[] = [],
   ctx: EngineContext,
   maxAttempts: number = 50,
-  placementFilter?: (position: Position) => boolean
+  options: WallGenerationOptions = {}
 ): Position[] {
   const safeRadius = Math.ceil(1.5 * ctx.settings.initialSnakeLength);
 
@@ -31,7 +36,7 @@ export function generateWalls(
       exclusionZones,
       safeRadius,
       ctx.rng,
-      placementFilter
+      options
     );
     if (validateWalls(walls, width, height)) {
       return walls;
@@ -59,15 +64,19 @@ function generateWallClusters(
   exclusionZones: Position[],
   safeRadius: number,
   randomPort: RandomPort,
-  placementFilter?: (position: Position) => boolean,
+  options: WallGenerationOptions,
 ): Position[] {
+  const { placementFilter, allowEdgePlacement = false } = options;
   const walls: Position[] = [];
   const wallSet = new Set<string>();
+  const isInsidePlacementBounds = (position: Position): boolean => allowEdgePlacement
+    ? position.x >= 0 && position.x < width && position.y >= 0 && position.y < height
+    : position.x > 0 && position.x < width - 1 && position.y > 0 && position.y < height - 1;
 
   const addWall = (position: Position): boolean => {
     const positionKey = `${position.x},${position.y}`;
     if (wallSet.has(positionKey)) return false;
-    if (position.x <= 0 || position.x >= width - 1 || position.y <= 0 || position.y >= height - 1) return false;
+    if (!isInsidePlacementBounds(position)) return false;
     if (placementFilter && !placementFilter(position)) return false;
     if (insideExclusionZone(position, exclusionZones, safeRadius)) return false;
     walls.push(position);
@@ -79,10 +88,15 @@ function generateWallClusters(
     let current: Position;
     if (placementFilter) {
       const allowedStarts: Position[] = [];
-      for (let y = 2; y < height - 2; y++) {
-        for (let x = 2; x < width - 2; x++) {
+      const startInset = allowEdgePlacement ? 0 : 2;
+      for (let y = startInset; y < height - startInset; y++) {
+        for (let x = startInset; x < width - startInset; x++) {
           const candidate = { x, y };
-          if (placementFilter(candidate) && !insideExclusionZone(candidate, exclusionZones, safeRadius)) {
+          if (
+            isInsidePlacementBounds(candidate)
+            && placementFilter(candidate)
+            && !insideExclusionZone(candidate, exclusionZones, safeRadius)
+          ) {
             allowedStarts.push(candidate);
           }
         }
@@ -109,7 +123,7 @@ function generateWallClusters(
 
       // Filter valid directions (inside board AND outside exclusion zones)
       const validDirections = dirs.filter(directionCandidate =>
-        directionCandidate.x > 0 && directionCandidate.x < width - 1 && directionCandidate.y > 0 && directionCandidate.y < height - 1
+        isInsidePlacementBounds(directionCandidate)
         && (!placementFilter || placementFilter(directionCandidate))
         && !insideExclusionZone(directionCandidate, exclusionZones, safeRadius)
       );

@@ -63,7 +63,7 @@ Independently of that emergency replenishment, one newborn food item is guarante
 - Classic single-player: 10 levels.
 - Survival single-player: 100 levels with automatic, pause-free transitions.
 - Multiplayer and mixed matches: 10 levels.
-- Classic and multiplayer levels rebuild their entities. Survival transitions preserve the snake, food lifecycle, meat, walls, counters, and ticks; the active boundary expands around them through level 10 and only the newly opened border may receive additional connected walls.
+- Classic and multiplayer levels rebuild their entities. Survival transitions preserve the snake, food lifecycle, meat, walls, counters, and ticks; the active boundary expands around them through level 10. New connected wall clusters are added to the newly opened edge cells only when those cells are unoccupied and outside the safety radius around snakes and food.
 - Single-player target: `Math.floor(5 × level + 20)`, accumulated across levels.
 - Multiplayer level ends when at most one snake remains or the 180-second timer expires.
 - At the end of a round, every surviving snake receives a one-time score bonus equal to its current length. Dead snakes receive no survival bonus; all survivors receive it when the timer ends with several snakes alive.

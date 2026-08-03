@@ -338,6 +338,15 @@ describe('App implemented behavior', () => {
       expect(next.foods[0]).toBe(previousFood);
       expect(next.foods[0].pos).toEqual({ x: previousFoodPosition.x + 1, y: previousFoodPosition.y + 1 });
       expect(next.walls).toContainEqual({ x: 2, y: 2 });
+      const addedWalls = next.walls.filter(wall => wall.x !== 2 || wall.y !== 2);
+      expect(addedWalls.length).toBeGreaterThan(0);
+      for (const wall of addedWalls) {
+        expect(wall.x === 0 || wall.x === next.width - 1 || wall.y === 0 || wall.y === next.height - 1).toBe(true);
+        expect(next.foods.some(food => food.pos.x === wall.x && food.pos.y === wall.y)).toBe(false);
+        expect(next.snakes[0].segments.every(segment =>
+          Math.max(Math.abs(segment.x - wall.x), Math.abs(segment.y - wall.y)) > 8
+        )).toBe(true);
+      }
       expect(next.snakes[0].score).toBe(31);
       expect(next.snakes[0].levelsWon).toBe(1);
       expect(next.levelComplete).toBe(false);
