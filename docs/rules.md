@@ -33,7 +33,15 @@ The base mode uses apples with three lifecycle phases:
 | Adult | 50–99 | 2 | 2 |
 | Old | 100–149 | 1 | 1 |
 
-Food is removed at age 150. `RabbitFood` remains an extension type, but is not the default gameplay food.
+The standard food lifecycle ends at age 150. An adult chicken becomes meat at that boundary instead of disappearing, while meat has its own age limit of 50. `RabbitFood` remains an extension type, but is not the default gameplay food.
+
+Level 1 contains only apples. Starting at level 2, each regular initial or automatic food spawn has a seeded 30% chance to be chicken food. Newly spawned chicken food always starts as an egg at age 0. Its common lifecycle is rendered as egg (age 0–49, value 1), chick (50–99, value 2), and chicken (100–149, value 3).
+
+Eggs do not move. A chick makes one random neighboring step every three ticks and stays within five Chebyshev cells of its egg origin. An adult chicken is not range-limited and can move every two ticks: it prioritizes an apple within one Chebyshev cell, otherwise it moves away when a living snake is within radius 5, and otherwise stays still.
+
+An adult chicken lays eggs without food-density restrictions. Eating an apple removes that apple, resets the chicken to age 100 and reproduction count 0, and guarantees an egg-laying attempt on the next tick even if the normal reproduction limit or cooldown had been reached.
+
+Meat is a stationary 🍖 food worth 1 point and 1 growth segment. It exists only at age 0–49 and is never part of regular spawning. A chicken reaching age 150 becomes one meat item. A snake killed by a wall, another snake, or self-collision produces `ceil(length / 3)` meat items along its body; a snake that starves produces none. Meat is rendered over the non-colliding gray corpse and can be eaten normally.
 
 Initial food count is:
 
