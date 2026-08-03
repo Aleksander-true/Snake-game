@@ -21,6 +21,7 @@
 - All snake moves are resolved simultaneously. A head-on collision kills every participating snake, while entering a tail cell vacated during the same tick is allowed.
 - A snake dies after hitting a boundary, wall, its own body, another snake, or starving below length 2.
 - Every 15 ticks without food removes one tail segment. Eating resets hunger.
+- Bots can make seeded input mistakes after calculating an optimal move. The error chance decreases from about 14.3% for `rookie` to 1% for `wise`; an error either selects a random different direction (including a forbidden reversal) or delays the correct command by exactly one tick.
 
 ## Food
 

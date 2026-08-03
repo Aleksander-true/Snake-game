@@ -95,6 +95,14 @@ For each of `["left", "front", "right"]`:
    - Difficulty 1–3 uses `rookie`, 4–6 `basic`, 7–8 `solid`, and 9–10 `wise`
    - Profiles configure trap, area, escape, food, fear, long-snake, and intentional-mistake weights
 
+### Intentional Input Errors
+
+After calculating the optimal action, a production bot performs a seeded error roll on every decision. The probability is `1 / mistakePeriod`: `rookie = 1/7`, `basic = 1/11`, `solid = 1/19`, and `wise = 1/100`.
+
+On an error, the bot equally chooses one of two outcomes. It either replaces the calculated absolute direction with a random one of the other three directions (including an unsafe or forbidden reversal), or delays the correct command by exactly one tick. A delayed command is applied on the next tick without calculating another decision or rolling another error, and is cleared after application or death. Erroneous actions are not filtered for safety and may cause a collision. Fast-forward and server matches keep the same RNG stream. Training runs must explicitly record whether errors are enabled so pure algorithm quality and robustness can be evaluated separately.
+
+The current heuristic only has a partial deterministic mistake mechanism. It must be replaced with the seeded probabilistic behavior described above.
+
 ### Step 2: Select Best Move
 - Choose the move with the highest combined score
 - Tie-breaking: prefer `"front"` > `"left"` > `"right"`
