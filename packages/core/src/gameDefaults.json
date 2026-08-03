@@ -34,6 +34,7 @@
     "adultSafetyRadius": 10,
     "adultMoveInterval": 2,
     "overcrowdingRadius": 10,
+    "eggLayingInterval": 17,
     "maxEggs": 3,
     "eggScoreValue": 1,
     "eggGrowthValue": 1,

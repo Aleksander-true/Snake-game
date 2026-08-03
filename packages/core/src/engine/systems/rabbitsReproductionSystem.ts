@@ -86,6 +86,7 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
       && (food.age === settings.foodYoungAge || food.age === settings.foodAdultAge)
     ) {
       food.movementClock = 0;
+      if (food.age === settings.foodAdultAge) food.resetReproductionClock();
     }
   }
 
@@ -134,11 +135,33 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     const canReproduce = parentFood.kind === 'chicken' ? phase === 'old' : phase === 'adult';
     if (!canReproduce) continue;
 
-    if (parentFood.clockNum < settings.reproductionMinCooldown) continue;
     const reproductionLimit = parentFood.kind === 'chicken'
       ? settings.chickenMaxEggs
       : settings.maxReproductions;
     if (parentFood.reproductionCount >= reproductionLimit) continue;
+
+    if (parentFood.kind === 'chicken') {
+      if (parentFood.clockNum < settings.chickenEggLayingInterval) continue;
+      parentFood.resetReproductionClock();
+
+      const nearbyCount = countNearbyFood(
+        parentFood.pos,
+        state.foods,
+        settings.neighborReproductionRadius,
+        parentFood
+      );
+      if (nearbyCount >= settings.maxReproductionNeighbors) continue;
+
+      const offspring = trySpawnOffspring(parentFood, state, randomPort);
+      if (!offspring) continue;
+      assignFoodId(state, offspring);
+      state.foods.push(offspring);
+      births.push({ parentPos: { ...parentFood.pos }, child: offspring });
+      parentFood.incrementReproductionCount();
+      continue;
+    }
+
+    if (parentFood.clockNum < settings.reproductionMinCooldown) continue;
 
     const nearbyCount = countNearbyFood(
       parentFood.pos,

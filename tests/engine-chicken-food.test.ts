@@ -287,15 +287,13 @@ describe('Chicken food', () => {
     expect(state.foods).not.toContain(chicken);
   });
 
-  test('normal adult chicken reproduction respects density and stops at three eggs', () => {
+  test('adult chicken lays every seventeen ticks, respects density and stops at three eggs', () => {
     const ctx = createContext();
-    ctx.settings.reproductionProbabilityBase = 1;
-    ctx.settings.reproductionMinCooldown = 1;
     const state = createState();
     const chicken = new ChickenFoodEntity(
       { x: 10, y: 10 },
-      ctx.settings.foodAdultAge,
-      1,
+      ctx.settings.foodAdultAge - 1,
+      99,
       0,
       { x: 10, y: 10 },
       0,
@@ -305,18 +303,24 @@ describe('Chicken food', () => {
     state.foods = [chicken, AppleFoodEntity.newborn({ x: 15, y: 15 }, 0, 'food-1')];
     state.nextFoodId = 2;
 
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+    expect(chicken.clockNum).toBe(0);
+    for (let tick = 1; tick < ctx.settings.chickenEggLayingInterval; tick++) {
+      expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+    }
     const births = processFoodLifecycle(state, ctx);
 
     expect(births).toHaveLength(1);
     expect(births[0].child.kind).toBe('chicken');
     expect(births[0].child.age).toBe(0);
 
-    chicken.clockNum = ctx.settings.reproductionMinCooldown;
+    chicken.clockNum = ctx.settings.chickenEggLayingInterval - 1;
     ctx.settings.maxReproductionNeighbors = 1;
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+    expect(chicken.clockNum).toBe(0);
 
     chicken.reproductionCount = ctx.settings.chickenMaxEggs;
-    chicken.clockNum = ctx.settings.reproductionMinCooldown;
+    chicken.clockNum = ctx.settings.chickenEggLayingInterval - 1;
     ctx.settings.maxReproductionNeighbors = 4;
     state.foods = [chicken];
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);

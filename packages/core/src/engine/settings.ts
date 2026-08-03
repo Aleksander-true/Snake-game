@@ -75,6 +75,7 @@ export interface GameSettings {
   chickenAdultSafetyRadius: number;
   chickenAdultMoveInterval: number;
   chickenOvercrowdingRadius: number;
+  chickenEggLayingInterval: number;
   chickenMaxEggs: number;
   chickenEggScoreValue: number;
   chickenEggGrowthValue: number;
@@ -168,6 +169,7 @@ export function createDefaultSettings(): GameSettings {
     chickenAdultSafetyRadius:   defaultJson.chicken.adultSafetyRadius,
     chickenAdultMoveInterval:   defaultJson.chicken.adultMoveInterval,
     chickenOvercrowdingRadius:  defaultJson.chicken.overcrowdingRadius,
+    chickenEggLayingInterval:   defaultJson.chicken.eggLayingInterval,
     chickenMaxEggs:             defaultJson.chicken.maxEggs,
     chickenEggScoreValue:       defaultJson.chicken.eggScoreValue,
     chickenEggGrowthValue:      defaultJson.chicken.eggGrowthValue,
@@ -264,6 +266,7 @@ export interface GameDefaultsJSON {
     adultSafetyRadius: number;
     adultMoveInterval: number;
     overcrowdingRadius: number;
+    eggLayingInterval: number;
     maxEggs: number;
     eggScoreValue: number;
     eggGrowthValue: number;
@@ -359,6 +362,7 @@ export function settingsToJSON(): GameDefaultsJSON {
       adultSafetyRadius: settings.chickenAdultSafetyRadius,
       adultMoveInterval: settings.chickenAdultMoveInterval,
       overcrowdingRadius: settings.chickenOvercrowdingRadius,
+      eggLayingInterval: settings.chickenEggLayingInterval,
       maxEggs: settings.chickenMaxEggs,
       eggScoreValue: settings.chickenEggScoreValue,
       eggGrowthValue: settings.chickenEggGrowthValue,
@@ -454,6 +458,7 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.chicken.adultSafetyRadius != null) settings.chickenAdultSafetyRadius = data.chicken.adultSafetyRadius;
     if (data.chicken.adultMoveInterval != null) settings.chickenAdultMoveInterval = data.chicken.adultMoveInterval;
     if (data.chicken.overcrowdingRadius != null) settings.chickenOvercrowdingRadius = data.chicken.overcrowdingRadius;
+    if (data.chicken.eggLayingInterval != null) settings.chickenEggLayingInterval = data.chicken.eggLayingInterval;
     if (data.chicken.maxEggs != null)           settings.chickenMaxEggs = data.chicken.maxEggs;
     if (data.chicken.eggScoreValue != null)     settings.chickenEggScoreValue = data.chicken.eggScoreValue;
     if (data.chicken.eggGrowthValue != null)    settings.chickenEggGrowthValue = data.chicken.eggGrowthValue;
@@ -596,7 +601,8 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'chickenGuaranteedSpawnAppleCount',
     'chickenChickRoamRadius', 'chickenChickMoveInterval',
     'chickenAdultThreatRadius', 'chickenAdultMoveInterval',
-    'chickenAdultSafetyRadius', 'chickenOvercrowdingRadius', 'chickenMaxEggs',
+    'chickenAdultSafetyRadius', 'chickenOvercrowdingRadius',
+    'chickenEggLayingInterval', 'chickenMaxEggs',
     'chickenEggScoreValue', 'chickenEggGrowthValue',
     'chickenChickScoreValue', 'chickenChickGrowthValue',
     'chickenAdultScoreValue', 'chickenAdultGrowthValue',

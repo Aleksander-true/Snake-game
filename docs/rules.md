@@ -40,7 +40,7 @@ Level 1 contains only apples. Starting at level 2, each regular initial or autom
 
 Eggs do not move. A chick makes one random neighboring step every three ticks and stays within five Chebyshev cells of its egg origin. An adult chicken is not range-limited and can move every two ticks. It approaches the nearest apple while trying to remain at least 10 cells from living snakes, actively flees when a head is within 5 cells, and chooses the lowest snake density when no apples exist.
 
-An adult chicken lays at most three eggs and follows the same food-distance, neighbor-limit, and density-penalty rules as an apple. Eating an apple removes that apple, resets the chicken to age 100 and reproduction count 0, and guarantees an egg-laying attempt on the next tick; that egg is the first in a new three-egg limit but still obeys density constraints.
+An adult chicken deterministically attempts to lay an egg every 17 ticks after entering the adult-chicken stage, up to three eggs. It follows the same food-distance and neighbor-limit rules as an apple; a blocked attempt resets the clock and the next attempt occurs 17 ticks later. Eating an apple removes that apple, resets the chicken to age 100 and reproduction count 0, and guarantees an egg-laying attempt on the next tick; that egg is the first in a new three-egg limit but still obeys density constraints and restarts the 17-tick clock after success.
 
 An adult chicken also avoids chicken-food overcrowding. If any other egg, chick, or chicken is within 10 Chebyshev cells, it first seeks a snake-safe move that reduces that count or increases the nearest distance. When it is already on the board edge and no in-bounds move improves either measure, it leaves the board and disappears without producing meat.
 
@@ -54,7 +54,7 @@ Math.floor(1.5 × snakeCount + 5 − difficultyLevel)
 
 One adult food item is created per snake; remaining initial food is young. Food cannot overlap walls or snakes and must be more than one Chebyshev cell from other food.
 
-Adult food may reproduce after a five-tick cooldown. The base probability is `0.01 × clockNum`, reduced by 25% for each neighbor within radius 4 and blocked at four neighbors. Each item can reproduce at most five times.
+Adult apples and base food may reproduce after a five-tick cooldown. Their base probability is `0.01 × clockNum`, reduced by 25% for each neighbor within radius 4 and blocked at four neighbors. Each item can reproduce at most five times. Adult chickens use the deterministic 17-tick rule above instead.
 
 If food count drops below the number of living snakes, the engine can add one adult item at the maximin-farthest free position, no more than once per hunger interval.
 
