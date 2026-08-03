@@ -245,11 +245,52 @@ describe('Chicken food', () => {
     expect(chicken.pos.x).toBe(11);
   });
 
-  test('normal adult chicken reproduction ignores density and stops at three eggs', () => {
+  test('adult moves away from nearby chicken food within ten cells', () => {
+    const ctx = createContext();
+    const state = createState();
+    const chicken = new ChickenFoodEntity(
+      { x: 10, y: 10 },
+      ctx.settings.foodAdultAge + 1,
+      0,
+      0,
+      { x: 10, y: 10 },
+      ctx.settings.chickenAdultMoveInterval - 1,
+      false,
+      'food-0'
+    );
+    const egg = ChickenFoodEntity.newborn({ x: 8, y: 10 }, 'food-1');
+    state.foods = [chicken, egg];
+
+    processMovingFood(state, ctx);
+
+    expect(chicken.pos.x).toBe(11);
+    expect(Math.max(Math.abs(chicken.pos.x - egg.pos.x), Math.abs(chicken.pos.y - egg.pos.y))).toBe(3);
+  });
+
+  test('overcrowded adult leaves the field when no edge move improves density', () => {
+    const ctx = createContext();
+    const state = createState();
+    const chicken = new ChickenFoodEntity(
+      { x: 0, y: 10 },
+      ctx.settings.foodAdultAge + 1,
+      0,
+      0,
+      { x: 0, y: 10 },
+      ctx.settings.chickenAdultMoveInterval - 1,
+      false,
+      'food-0'
+    );
+    state.foods = [chicken, ChickenFoodEntity.newborn({ x: 10, y: 10 }, 'food-1')];
+
+    processMovingFood(state, ctx);
+
+    expect(state.foods).not.toContain(chicken);
+  });
+
+  test('normal adult chicken reproduction respects density and stops at three eggs', () => {
     const ctx = createContext();
     ctx.settings.reproductionProbabilityBase = 1;
     ctx.settings.reproductionMinCooldown = 1;
-    ctx.settings.maxReproductionNeighbors = 0;
     const state = createState();
     const chicken = new ChickenFoodEntity(
       { x: 10, y: 10 },
@@ -270,9 +311,34 @@ describe('Chicken food', () => {
     expect(births[0].child.kind).toBe('chicken');
     expect(births[0].child.age).toBe(0);
 
+    chicken.clockNum = ctx.settings.reproductionMinCooldown;
+    ctx.settings.maxReproductionNeighbors = 1;
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+
     chicken.reproductionCount = ctx.settings.chickenMaxEggs;
     chicken.clockNum = ctx.settings.reproductionMinCooldown;
+    ctx.settings.maxReproductionNeighbors = 4;
     state.foods = [chicken];
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+  });
+
+  test('mandatory egg remains pending when apple density rules leave no valid cell', () => {
+    const ctx = createContext();
+    ctx.settings.maxReproductionNeighbors = 1;
+    const state = createState();
+    const chicken = new ChickenFoodEntity(
+      { x: 0, y: 0 },
+      ctx.settings.foodAdultAge,
+      0,
+      0,
+      { x: 0, y: 0 },
+      0,
+      true,
+      'food-0'
+    );
+    state.foods = [chicken, AppleFoodEntity.newborn({ x: 1, y: 1 }, 0, 'food-1')];
+
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+    expect(chicken.pendingMandatoryEgg).toBe(true);
   });
 });

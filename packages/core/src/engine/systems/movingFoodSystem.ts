@@ -47,13 +47,26 @@ function moveChick(chicken: Food, state: GameState, ctx: EngineContext): void {
 
 function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): void {
   const apples = state.foods.filter(food => food.kind === 'apple');
+  const otherChickenPositions = state.foods
+    .filter(food => food.kind === 'chicken' && food !== chicken)
+    .map(food => food.pos);
   const neighbors = getNeighborPositions(chicken.pos);
   const livingHeads = state.snakes.filter(snake => snake.alive).map(snake => snake.head);
+  const currentOvercrowding = getDensity(
+    chicken.pos,
+    otherChickenPositions,
+    ctx.settings.chickenOvercrowdingRadius
+  );
   const candidates = neighbors.filter(candidate => {
     const appleAtCandidate = apples.find(apple => samePosition(apple.pos, candidate));
     return isMovementCellFree(candidate, state, chicken, appleAtCandidate);
   });
-  if (candidates.length === 0) return;
+  if (candidates.length === 0) {
+    if (currentOvercrowding.count > 0 && isAtBoardEdge(chicken.pos, state)) {
+      removeFood(chicken, state);
+    }
+    return;
+  }
 
   let target: Position | null;
   const currentSnakeDistance = livingHeads.length > 0
@@ -62,19 +75,42 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
 
   if (currentSnakeDistance <= ctx.settings.chickenAdultThreatRadius) {
     target = pickSafestCandidate(candidates, livingHeads, ctx);
+  } else if (currentOvercrowding.count > 0) {
+    const safeCandidates = getSnakeSafeCandidates(
+      candidates,
+      livingHeads,
+      currentSnakeDistance,
+      ctx.settings.chickenAdultSafetyRadius
+    );
+    const improvingCandidates = safeCandidates.filter(candidate => {
+      const candidateDensity = getDensity(
+        candidate,
+        otherChickenPositions,
+        ctx.settings.chickenOvercrowdingRadius
+      );
+      return candidateDensity.count < currentOvercrowding.count
+        || (
+          candidateDensity.count === currentOvercrowding.count
+          && candidateDensity.nearestDistance > currentOvercrowding.nearestDistance
+        );
+    });
+    if (improvingCandidates.length === 0 && isAtBoardEdge(chicken.pos, state)) {
+      removeFood(chicken, state);
+      return;
+    }
+    target = pickLowestChickenDensityCandidate(
+      improvingCandidates.length > 0 ? improvingCandidates : safeCandidates,
+      otherChickenPositions,
+      livingHeads,
+      ctx
+    );
   } else if (apples.length > 0) {
-    const nonApproachingCandidates = livingHeads.length === 0
-      ? candidates
-      : candidates.filter(candidate => {
-          const candidateDistance = nearestDistance(candidate, livingHeads);
-          const requiredDistance = currentSnakeDistance < ctx.settings.chickenAdultSafetyRadius
-            ? currentSnakeDistance
-            : ctx.settings.chickenAdultSafetyRadius;
-          return candidateDistance >= requiredDistance;
-        });
-    const safeCandidates = nonApproachingCandidates.length > 0
-      ? nonApproachingCandidates
-      : getFarthestCandidates(candidates, livingHeads);
+    const safeCandidates = getSnakeSafeCandidates(
+      candidates,
+      livingHeads,
+      currentSnakeDistance,
+      ctx.settings.chickenAdultSafetyRadius
+    );
     const applePositions = apples.map(apple => apple.pos);
     const bestAppleDistance = Math.min(...safeCandidates.map(candidate =>
       nearestDistance(candidate, applePositions)
@@ -136,6 +172,66 @@ function nearestDistance(pos: Position, targets: Position[]): number {
 
 function countNearbyHeads(pos: Position, heads: Position[], radius: number): number {
   return heads.filter(head => chebyshevDistance(pos, head) <= radius).length;
+}
+
+function getSnakeSafeCandidates(
+  candidates: Position[],
+  livingHeads: Position[],
+  currentSnakeDistance: number,
+  safetyRadius: number
+): Position[] {
+  if (livingHeads.length === 0) return candidates;
+  const requiredDistance = currentSnakeDistance < safetyRadius
+    ? currentSnakeDistance
+    : safetyRadius;
+  const nonApproachingCandidates = candidates.filter(candidate =>
+    nearestDistance(candidate, livingHeads) >= requiredDistance
+  );
+  return nonApproachingCandidates.length > 0
+    ? nonApproachingCandidates
+    : getFarthestCandidates(candidates, livingHeads);
+}
+
+function getDensity(
+  pos: Position,
+  otherChickenPositions: Position[],
+  radius: number
+): { count: number; nearestDistance: number } {
+  const distances = otherChickenPositions.map(other => chebyshevDistance(pos, other));
+  return {
+    count: distances.filter(distance => distance <= radius).length,
+    nearestDistance: distances.length > 0 ? Math.min(...distances) : Number.POSITIVE_INFINITY,
+  };
+}
+
+function pickLowestChickenDensityCandidate(
+  candidates: Position[],
+  otherChickenPositions: Position[],
+  livingHeads: Position[],
+  ctx: EngineContext
+): Position | null {
+  const densities = candidates.map(candidate => ({
+    candidate,
+    ...getDensity(candidate, otherChickenPositions, ctx.settings.chickenOvercrowdingRadius),
+  }));
+  const minimumCount = Math.min(...densities.map(item => item.count));
+  const leastCrowded = densities.filter(item => item.count === minimumCount);
+  const greatestNearestDistance = Math.max(...leastCrowded.map(item => item.nearestDistance));
+  const bestCandidates = leastCrowded
+    .filter(item => item.nearestDistance === greatestNearestDistance)
+    .map(item => item.candidate);
+  return livingHeads.length > 0
+    ? pickSafestCandidate(bestCandidates, livingHeads, ctx)
+    : pickRandom(bestCandidates, ctx);
+}
+
+function isAtBoardEdge(pos: Position, state: GameState): boolean {
+  return pos.x === 0 || pos.x === state.width - 1 || pos.y === 0 || pos.y === state.height - 1;
+}
+
+function removeFood(food: Food, state: GameState): void {
+  const foodIndex = state.foods.indexOf(food);
+  if (foodIndex !== -1) state.foods.splice(foodIndex, 1);
 }
 
 function getFarthestCandidates(candidates: Position[], heads: Position[]): Position[] {

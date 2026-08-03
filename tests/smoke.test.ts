@@ -99,6 +99,7 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.foodPeriodicSpawnInterval).toBe(100);
     expect(settings.chickenChickRoamRadius).toBe(5);
     expect(settings.chickenAdultSafetyRadius).toBe(10);
+    expect(settings.chickenOvercrowdingRadius).toBe(10);
     expect(settings.chickenMaxEggs).toBe(3);
     expect(settings.meatMaxAge).toBe(50);
     expect(settings.levelSizeIncrement).toBe(2);

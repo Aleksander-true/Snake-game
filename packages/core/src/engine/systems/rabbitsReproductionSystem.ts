@@ -109,7 +109,14 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
 
   for (const parentFood of parents) {
     if (parentFood.kind !== 'chicken' || !parentFood.pendingMandatoryEgg) continue;
-    const offspring = trySpawnOffspring(parentFood, state, randomPort, false);
+    const nearbyCount = countNearbyFood(
+      parentFood.pos,
+      state.foods,
+      settings.neighborReproductionRadius,
+      parentFood
+    );
+    if (nearbyCount >= settings.maxReproductionNeighbors) continue;
+    const offspring = trySpawnOffspring(parentFood, state, randomPort);
     if (!offspring) continue;
 
     assignFoodId(state, offspring);
@@ -133,22 +140,19 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
       : settings.maxReproductions;
     if (parentFood.reproductionCount >= reproductionLimit) continue;
 
-    const ignoresDensity = parentFood.kind === 'chicken';
-    const nearbyCount = ignoresDensity ? 0 : countNearbyFood(
+    const nearbyCount = countNearbyFood(
       parentFood.pos,
       state.foods,
       settings.neighborReproductionRadius,
       parentFood
     );
-    if (!ignoresDensity && nearbyCount >= settings.maxReproductionNeighbors) continue;
+    if (nearbyCount >= settings.maxReproductionNeighbors) continue;
 
     let probability = settings.reproductionProbabilityBase * parentFood.clockNum;
-    if (!ignoresDensity) {
-      probability *= (1 - settings.neighborReproductionPenalty * nearbyCount);
-    }
+    probability *= (1 - settings.neighborReproductionPenalty * nearbyCount);
 
     if (randomPort.next() < probability) {
-      const offspring = trySpawnOffspring(parentFood, state, randomPort, !ignoresDensity);
+      const offspring = trySpawnOffspring(parentFood, state, randomPort);
       if (offspring) {
         assignFoodId(state, offspring);
         state.foods.push(offspring);
@@ -171,8 +175,7 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
 function trySpawnOffspring(
   parent: Food,
   state: GameState,
-  rng: { next(): number; nextInt(max: number): number },
-  enforceFoodDistance: boolean
+  rng: { next(): number; nextInt(max: number): number }
 ): Food | null {
   const candidatePositions: Position[] = [];
 
@@ -194,10 +197,7 @@ function trySpawnOffspring(
   }
 
   for (const candidatePosition of candidatePositions) {
-    const positionIsValid = enforceFoodDistance
-      ? isValidFoodPosition(candidatePosition, state)
-      : isFreeFoodCell(candidatePosition, state);
-    if (positionIsValid) {
+    if (isValidFoodPosition(candidatePosition, state)) {
       if (parent.kind === 'apple') {
         return AppleFoodEntity.newborn(candidatePosition);
       }

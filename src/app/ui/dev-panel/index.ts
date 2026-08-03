@@ -158,6 +158,7 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'chickenAdultThreatRadius',   type: 'number' },
   { key: 'chickenAdultSafetyRadius',   type: 'number' },
   { key: 'chickenAdultMoveInterval',   type: 'number' },
+  { key: 'chickenOvercrowdingRadius',  type: 'number' },
   { key: 'chickenMaxEggs',             type: 'number' },
   { key: 'chickenEggScoreValue',       type: 'number' },
   { key: 'chickenEggGrowthValue',      type: 'number' },
@@ -307,6 +308,7 @@ function buildChickenSection(currentLevel: number): string {
     settingsRow('chickenAdultThreatRadius', 'Радиус плотности змей', currentLevel) +
     settingsRow('chickenAdultSafetyRadius', 'Безопасная дистанция', currentLevel) +
     settingsRow('chickenAdultMoveInterval', 'Ход курицы (тики)', currentLevel) +
+    settingsRow('chickenOvercrowdingRadius', 'Радиус перенаселения', currentLevel) +
     settingsRow('chickenMaxEggs',           'Макс. яиц', currentLevel) +
     settingsRow('chickenEggScoreValue',     'Очки за яйцо', currentLevel) +
     settingsRow('chickenEggGrowthValue',    'Рост за яйцо', currentLevel) +
