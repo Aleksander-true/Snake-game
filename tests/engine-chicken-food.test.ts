@@ -329,4 +329,32 @@ describe('Chicken food', () => {
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
   });
 
+  test('adult chicken does not lay above the difficulty-adjusted chicken limit', () => {
+    const ctx = createContext();
+    ctx.settings.maxReproductionNeighbors = 99;
+    const state = createState(2, 30, 30);
+    state.difficultyLevel = 2;
+    state.snakes = [new SnakeEntity(0, 'P1', [{ x: 25, y: 25 }], 'left', false)];
+    const chicken = new ChickenFoodEntity(
+      { x: 20, y: 20 },
+      ctx.settings.foodAdultAge,
+      ctx.settings.chickenEggLayingInterval - 1,
+      0,
+      { x: 20, y: 20 }
+    );
+    const limit = ctx.settings.chickenReproductionLimitBase
+      + state.snakes.length
+      - state.difficultyLevel;
+    state.foods = [
+      chicken,
+      ...Array.from({ length: limit }, (_, index) =>
+        ChickenFoodEntity.newborn({ x: 1 + (index % 4) * 3, y: 1 + Math.floor(index / 4) * 3 })
+      ),
+    ];
+
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+    expect(state.foods).toHaveLength(limit + 1);
+    expect(chicken.clockNum).toBe(0);
+  });
+
 });

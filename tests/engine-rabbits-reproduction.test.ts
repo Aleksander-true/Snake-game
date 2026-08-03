@@ -1,4 +1,5 @@
 import {
+  AppleFoodEntity,
   chebyshevDistance,
   countNearbyFood,
   createDefaultSettings,
@@ -156,5 +157,44 @@ describe('Food lifecycle and reproduction', () => {
     expect(births).toHaveLength(0);
     expect(state.foods).toHaveLength(1);
     expect(state.foods[0].reproductionCount).toBe(settings.maxReproductions);
+  });
+
+  test('apple reproduction stops only after the difficulty-adjusted population limit is exceeded', () => {
+    const settings = createDefaultSettings();
+    settings.reproductionProbabilityBase = 1;
+    settings.reproductionMinCooldown = 1;
+    settings.maxReproductionNeighbors = 99;
+    const ctx: EngineContext = {
+      settings,
+      rng: { next: () => 0, nextInt: () => 0 },
+    };
+    const state = createState(30, 30);
+    state.difficultyLevel = 3;
+    state.snakes = [
+      new SnakeEntity(0, 'P1', [{ x: 25, y: 25 }], 'left', false),
+      new SnakeEntity(1, 'P2', [{ x: 27, y: 27 }], 'left', false),
+    ];
+    const parent = new AppleFoodEntity(
+      { x: 20, y: 20 },
+      settings.foodYoungAge,
+      settings.reproductionMinCooldown,
+      0
+    );
+    const limit = settings.appleReproductionLimitBase
+      + state.snakes.length
+      - state.difficultyLevel;
+    state.foods = [
+      parent,
+      ...Array.from({ length: limit - 1 }, (_, index) =>
+        AppleFoodEntity.newborn({ x: 1 + (index % 4) * 3, y: 1 + Math.floor(index / 4) * 3 })
+      ),
+    ];
+
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(1);
+    expect(state.foods).toHaveLength(limit + 1);
+
+    parent.clockNum = settings.reproductionMinCooldown;
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+    expect(state.foods).toHaveLength(limit + 1);
   });
 });

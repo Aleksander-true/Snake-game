@@ -56,6 +56,7 @@ export interface GameSettings {
   neighborReproductionRadius: number;
   neighborReproductionPenalty: number;
   maxReproductionNeighbors: number;
+  appleReproductionLimitBase: number;
 
   /* Food — generation formula */
   foodCountPerSnakeCoeff: number;
@@ -78,6 +79,7 @@ export interface GameSettings {
   chickenEggLayingInterval: number;
   chickenAppleAgeReduction: number;
   chickenAppleReproductionReduction: number;
+  chickenReproductionLimitBase: number;
   chickenMaxEggs: number;
   chickenEggScoreValue: number;
   chickenEggGrowthValue: number;
@@ -155,6 +157,7 @@ export function createDefaultSettings(): GameSettings {
     neighborReproductionRadius: defaultJson.food.neighborReproductionRadius,
     neighborReproductionPenalty: defaultJson.food.neighborReproductionPenalty,
     maxReproductionNeighbors:   defaultJson.food.maxReproductionNeighbors,
+    appleReproductionLimitBase: defaultJson.food.appleReproductionLimitBase,
     foodCountPerSnakeCoeff:     defaultJson.food.countPerSnakeCoeff,
     foodCountBase:              defaultJson.food.countBase,
     foodPeriodicSpawnInterval:  defaultJson.food.periodicSpawnInterval,
@@ -174,6 +177,7 @@ export function createDefaultSettings(): GameSettings {
     chickenEggLayingInterval:   defaultJson.chicken.eggLayingInterval,
     chickenAppleAgeReduction:   defaultJson.chicken.appleAgeReduction,
     chickenAppleReproductionReduction: defaultJson.chicken.appleReproductionReduction,
+    chickenReproductionLimitBase: defaultJson.chicken.reproductionLimitBase,
     chickenMaxEggs:             defaultJson.chicken.maxEggs,
     chickenEggScoreValue:       defaultJson.chicken.eggScoreValue,
     chickenEggGrowthValue:      defaultJson.chicken.eggGrowthValue,
@@ -253,6 +257,7 @@ export interface GameDefaultsJSON {
     neighborReproductionRadius: number;
     neighborReproductionPenalty: number;
     maxReproductionNeighbors: number;
+    appleReproductionLimitBase: number;
     countPerSnakeCoeff: number;
     countBase: number;
     periodicSpawnInterval: number;
@@ -273,6 +278,7 @@ export interface GameDefaultsJSON {
     eggLayingInterval: number;
     appleAgeReduction: number;
     appleReproductionReduction: number;
+    reproductionLimitBase: number;
     maxEggs: number;
     eggScoreValue: number;
     eggGrowthValue: number;
@@ -351,6 +357,7 @@ export function settingsToJSON(): GameDefaultsJSON {
       neighborReproductionRadius: settings.neighborReproductionRadius,
       neighborReproductionPenalty: settings.neighborReproductionPenalty,
       maxReproductionNeighbors: settings.maxReproductionNeighbors,
+      appleReproductionLimitBase: settings.appleReproductionLimitBase,
       countPerSnakeCoeff: settings.foodCountPerSnakeCoeff,
       countBase: settings.foodCountBase,
       periodicSpawnInterval: settings.foodPeriodicSpawnInterval,
@@ -371,6 +378,7 @@ export function settingsToJSON(): GameDefaultsJSON {
       eggLayingInterval: settings.chickenEggLayingInterval,
       appleAgeReduction: settings.chickenAppleAgeReduction,
       appleReproductionReduction: settings.chickenAppleReproductionReduction,
+      reproductionLimitBase: settings.chickenReproductionLimitBase,
       maxEggs: settings.chickenMaxEggs,
       eggScoreValue: settings.chickenEggScoreValue,
       eggGrowthValue: settings.chickenEggGrowthValue,
@@ -449,6 +457,7 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.food.neighborReproductionRadius != null)  settings.neighborReproductionRadius = data.food.neighborReproductionRadius;
     if (data.food.neighborReproductionPenalty != null) settings.neighborReproductionPenalty = data.food.neighborReproductionPenalty;
     if (data.food.maxReproductionNeighbors != null)    settings.maxReproductionNeighbors = data.food.maxReproductionNeighbors;
+    if (data.food.appleReproductionLimitBase != null)  settings.appleReproductionLimitBase = data.food.appleReproductionLimitBase;
     if (data.food.countPerSnakeCoeff != null)          settings.foodCountPerSnakeCoeff = data.food.countPerSnakeCoeff;
     if (data.food.countBase != null)                   settings.foodCountBase = data.food.countBase;
     if (data.food.periodicSpawnInterval != null)       settings.foodPeriodicSpawnInterval = data.food.periodicSpawnInterval;
@@ -469,6 +478,7 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.chicken.eggLayingInterval != null) settings.chickenEggLayingInterval = data.chicken.eggLayingInterval;
     if (data.chicken.appleAgeReduction != null) settings.chickenAppleAgeReduction = data.chicken.appleAgeReduction;
     if (data.chicken.appleReproductionReduction != null) settings.chickenAppleReproductionReduction = data.chicken.appleReproductionReduction;
+    if (data.chicken.reproductionLimitBase != null) settings.chickenReproductionLimitBase = data.chicken.reproductionLimitBase;
     if (data.chicken.maxEggs != null)           settings.chickenMaxEggs = data.chicken.maxEggs;
     if (data.chicken.eggScoreValue != null)     settings.chickenEggScoreValue = data.chicken.eggScoreValue;
     if (data.chicken.eggGrowthValue != null)    settings.chickenEggGrowthValue = data.chicken.eggGrowthValue;
@@ -604,7 +614,8 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'foodYoungAge', 'foodAdultAge', 'foodMaxAge',
     'foodMinDistance', 'reproductionMinCooldown', 'reproductionProbabilityBase',
     'maxReproductions', 'neighborReproductionRadius', 'maxReproductionNeighbors',
-    'neighborReproductionPenalty', 'foodCountPerSnakeCoeff', 'foodCountBase',
+    'neighborReproductionPenalty', 'appleReproductionLimitBase',
+    'foodCountPerSnakeCoeff', 'foodCountBase',
     'foodPeriodicSpawnInterval',
     'chickenSpawnStartLevel', 'chickenSpawnProbability', 'chickenCrowdedSpawnProbability',
     'chickenCrowdedApplePerSnakeMultiplier', 'chickenCrowdedAppleCount',
@@ -613,7 +624,8 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'chickenAdultThreatRadius', 'chickenAdultMoveInterval',
     'chickenAdultSafetyRadius', 'chickenOvercrowdingRadius',
     'chickenEggLayingInterval', 'chickenAppleAgeReduction',
-    'chickenAppleReproductionReduction', 'chickenMaxEggs',
+    'chickenAppleReproductionReduction', 'chickenReproductionLimitBase',
+    'chickenMaxEggs',
     'chickenEggScoreValue', 'chickenEggGrowthValue',
     'chickenChickScoreValue', 'chickenChickGrowthValue',
     'chickenAdultScoreValue', 'chickenAdultGrowthValue',

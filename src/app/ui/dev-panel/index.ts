@@ -142,6 +142,7 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'neighborReproductionRadius',  type: 'number' },
   { key: 'maxReproductionNeighbors',    type: 'number' },
   { key: 'neighborReproductionPenalty', type: 'number' },
+  { key: 'appleReproductionLimitBase',  type: 'number' },
   // Food generation
   { key: 'foodCountPerSnakeCoeff',    type: 'number' },
   { key: 'foodCountBase',             type: 'number' },
@@ -162,6 +163,7 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'chickenEggLayingInterval',   type: 'number' },
   { key: 'chickenAppleAgeReduction',   type: 'number' },
   { key: 'chickenAppleReproductionReduction', type: 'number' },
+  { key: 'chickenReproductionLimitBase', type: 'number' },
   { key: 'chickenMaxEggs',             type: 'number' },
   { key: 'chickenEggScoreValue',       type: 'number' },
   { key: 'chickenEggGrowthValue',      type: 'number' },
@@ -286,7 +288,8 @@ function buildFoodSpawnSection(currentLevel: number): string {
     settingsRow('maxReproductions',            'Макс. потомство', currentLevel)      +
     settingsRow('neighborReproductionRadius',  'Радиус соседей', currentLevel)       +
     settingsRow('maxReproductionNeighbors',    'Макс. соседей', currentLevel)        +
-    settingsRow('neighborReproductionPenalty', 'Штраф за соседа', currentLevel, 0.05)
+    settingsRow('neighborReproductionPenalty', 'Штраф за соседа', currentLevel, 0.05) +
+    settingsRow('appleReproductionLimitBase',  'База лимита яблок', currentLevel)
   );
 }
 
@@ -315,6 +318,7 @@ function buildChickenSection(currentLevel: number): string {
     settingsRow('chickenEggLayingInterval', 'Кладка каждые (тики)', currentLevel) +
     settingsRow('chickenAppleAgeReduction', 'Яблоко: минус возраст', currentLevel) +
     settingsRow('chickenAppleReproductionReduction', 'Яблоко: минус рождений', currentLevel) +
+    settingsRow('chickenReproductionLimitBase', 'База лимита куриц', currentLevel) +
     settingsRow('chickenMaxEggs',           'Макс. яиц', currentLevel) +
     settingsRow('chickenEggScoreValue',     'Очки за яйцо', currentLevel) +
     settingsRow('chickenEggGrowthValue',    'Рост за яйцо', currentLevel) +

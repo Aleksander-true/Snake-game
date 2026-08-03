@@ -103,6 +103,8 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.chickenEggLayingInterval).toBe(17);
     expect(settings.chickenAppleAgeReduction).toBe(10);
     expect(settings.chickenAppleReproductionReduction).toBe(1);
+    expect(settings.appleReproductionLimitBase).toBe(13);
+    expect(settings.chickenReproductionLimitBase).toBe(10);
     expect(settings.chickenMaxEggs).toBe(3);
     expect(settings.meatMaxAge).toBe(50);
     expect(settings.levelSizeIncrement).toBe(2);

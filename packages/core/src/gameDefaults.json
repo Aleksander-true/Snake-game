@@ -16,6 +16,7 @@
     "neighborReproductionRadius": 4,
     "neighborReproductionPenalty": 0.25,
     "maxReproductionNeighbors": 4,
+    "appleReproductionLimitBase": 13,
     "countPerSnakeCoeff": 1.5,
     "countBase": 5,
     "periodicSpawnInterval": 100
@@ -37,6 +38,7 @@
     "eggLayingInterval": 17,
     "appleAgeReduction": 10,
     "appleReproductionReduction": 1,
+    "reproductionLimitBase": 10,
     "maxEggs": 3,
     "eggScoreValue": 1,
     "eggGrowthValue": 1,
