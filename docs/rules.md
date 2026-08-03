@@ -2,7 +2,7 @@
 
 ## Overview
 
-"Hungry Snakes" is a browser Snake game for 0–2 human players and 0–4 bots, with 1–6 snakes in a match. The canonical detailed specification is `docs/spec.md`; runtime defaults come from `src/gameDefaults.json`.
+"Hungry Snakes" is a browser Snake game for 0–2 human players and 0–4 bots, with 1–6 snakes in a match. The canonical detailed specification is `docs/spec.md`; runtime defaults come from `packages/core/src/gameDefaults.json`.
 
 ## Board
 
@@ -54,6 +54,7 @@ If food count drops below the number of living snakes, the engine can add one ad
 - Each new level rebuilds the board, walls, food, and snake starting positions while preserving cumulative score and level wins.
 - Single-player target: `Math.floor(5 × level + 20)`, accumulated across levels.
 - Multiplayer level ends when at most one snake remains or the 180-second timer expires.
+- At the end of a round, every surviving snake receives a one-time score bonus equal to its current length. Dead snakes receive no survival bonus; all survivors receive it when the timer ends with several snakes alive.
 - Overall winner: most level wins, then highest score; an exact tie is a draw.
 
 ## Controls
