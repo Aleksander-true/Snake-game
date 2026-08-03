@@ -91,9 +91,9 @@ describe('Board integration - multiplayer and edge cases', () => {
     expect(snake.deathReason).toBe('Съела саму себя');
     expect(result.events.some(event => event.type === 'SNAKE_DIED' && event.reason === 'Съела саму себя')).toBe(true);
 
-    for (const seg of snake.segments) {
-      expect(state.board[seg.y][seg.x]).toBe('1');
-    }
+    expect(state.foods.filter(food => food.kind === 'meat')).toHaveLength(2);
+    expect(state.board.flat().filter(cell => cell === '&x1')).toHaveLength(2);
+    expect(state.board.flat().filter(cell => cell === '1')).toHaveLength(3);
   });
 
   test('collision with another snake kills mover and keeps board consistent', () => {
@@ -110,9 +110,8 @@ describe('Board integration - multiplayer and edge cases', () => {
     expect(blocker.alive).toBe(true);
     expect(result.events.some(event => event.type === 'SNAKE_DIED' && event.snakeId === mover.id)).toBe(true);
 
-    for (const seg of mover.segments) {
-      expect(state.board[seg.y][seg.x]).toBe('1');
-    }
+    expect(state.foods.filter(food => food.kind === 'meat')).toHaveLength(1);
+    expect(mover.segments.map(seg => state.board[seg.y][seg.x]).sort()).toEqual(['&x1', '1', '1'].sort());
     for (const seg of blocker.segments) {
       expect(state.board[seg.y][seg.x]).toBe('2');
     }

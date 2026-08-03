@@ -1,5 +1,6 @@
 import {
   ChickenFoodEntity,
+  buildBoard,
   createDefaultSettings,
   createEmptyBoard,
   createMeatDropsForSnakeDeaths,
@@ -82,6 +83,9 @@ describe('Meat food', () => {
 
     expect(drops).toHaveLength(3);
     expect(new Set(drops.map(food => `${food.pos.x},${food.pos.y}`)).size).toBe(3);
+
+    state.board = buildBoard(state, createDefaultSettings());
+    expect(state.board[drops[0].pos.y][drops[0].pos.x]).toBe('&x1');
   });
 
   test('starvation never creates meat', () => {

@@ -97,11 +97,10 @@ export function renderGame(
     ctx.fillRect(wall.x * cellSize, wall.y * cellSize, cellSize, cellSize);
   }
 
-  // Draw food
-  drawFoods(ctx, state.foods, cellSize, settings);
-
-  // Draw snakes (alive and dead)
-  drawSnakes(ctx, state.snakes, cellSize, settings);
+  drawFoods(ctx, state.foods.filter(food => food.kind !== 'meat'), cellSize, settings);
+  drawSnakes(ctx, state.snakes, cellSize, settings, false);
+  drawFoods(ctx, state.foods.filter(food => food.kind === 'meat'), cellSize, settings);
+  drawSnakes(ctx, state.snakes, cellSize, settings, true);
 
   if (
     options.playerMarkerElapsedMs !== undefined
@@ -119,7 +118,7 @@ export function renderGame(
   }
 }
 
-/* ====== Rabbits ====== */
+/* ====== Food ====== */
 
 function drawFoods(
   ctx: CanvasRenderingContext2D,
@@ -132,10 +131,20 @@ function drawFoods(
     const foodCenterX = food.pos.x * cellSize + cellSize / 2;
     const foodCenterY = food.pos.y * cellSize + cellSize / 2;
 
-    if (food.kind === 'apple') {
-      const icon = phase === 'young' ? '🍏' : '🍎';
+    if (food.kind === 'apple' || food.kind === 'chicken' || food.kind === 'meat') {
+      let icon: string;
+      let iconScale = 1;
+      if (food.kind === 'apple') {
+        icon = phase === 'young' ? '🍏' : '🍎';
+        iconScale = phase === 'young' ? 0.72 : 1;
+      } else if (food.kind === 'chicken') {
+        icon = phase === 'young' ? '🥚' : phase === 'adult' ? '🐤' : '🐔';
+        iconScale = phase === 'young' ? 0.78 : 0.92;
+      } else {
+        icon = '🍖';
+        iconScale = 0.9;
+      }
       const baseIconSize = Math.max(8, Math.floor(cellSize));
-      const iconScale = phase === 'young' ? 0.72 : 1;
 
       ctx.save();
       ctx.translate(foodCenterX, foodCenterY + 1);
@@ -145,7 +154,7 @@ function drawFoods(
       ctx.textBaseline = 'middle';
 
       // Old apples use filter-based toning: darker and less saturated.
-      if (phase === 'old') {
+      if (food.kind === 'apple' && phase === 'old') {
         ctx.filter = 'grayscale(.1) sepia(.5) saturate(0.8) brightness(0.8)';
       } else {
         ctx.filter = 'none';
@@ -186,10 +195,12 @@ function drawSnakes(
   ctx: CanvasRenderingContext2D,
   snakes: Snake[],
   cellSize: number,
-  settings: GameSettings
+  settings: GameSettings,
+  drawAlive: boolean
 ): void {
   for (let snakeIndex = 0; snakeIndex < snakes.length; snakeIndex++) {
     const snake = snakes[snakeIndex];
+    if (snake.alive !== drawAlive) continue;
     const baseColor = settings.snakeColors[snake.id % settings.snakeColors.length];
 
     if (!snake.alive) {

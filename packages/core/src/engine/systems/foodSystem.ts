@@ -1,4 +1,3 @@
-import { inBounds } from '../board';
 import { EngineContext } from '../context';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
 import { ChickenFoodEntity } from '../entities/ChickenFoodEntity';
@@ -98,7 +97,6 @@ function findFarthestFoodPosition(state: GameState): Position | null {
   for (let y = 0; y < state.height; y++) {
     for (let x = 0; x < state.width; x++) {
       const pos = { x, y };
-      if (!inBounds(pos, state.width, state.height)) continue;
       if (occupied.has(`${x},${y}`)) continue;
 
       const distances = snakeHeads.map(head => Math.max(Math.abs(head.x - x), Math.abs(head.y - y)));

@@ -129,22 +129,39 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'hungerThreshold',             type: 'number' },
   { key: 'initialSnakeLength',          type: 'number' },
   { key: 'minSnakeLength',              type: 'number' },
-  // Rabbit lifecycle
+  // Food lifecycle
   { key: 'foodYoungAge',              type: 'number' },
   { key: 'foodAdultAge',              type: 'number' },
   { key: 'foodMaxAge',                type: 'number' },
-  // Rabbit spawning
+  // Food spawning
   { key: 'foodMinDistance',            type: 'number' },
-  // Rabbit reproduction
+  // Food reproduction
   { key: 'reproductionMinCooldown',     type: 'number' },
   { key: 'reproductionProbabilityBase', type: 'number' },
   { key: 'maxReproductions',            type: 'number' },
   { key: 'neighborReproductionRadius',  type: 'number' },
   { key: 'maxReproductionNeighbors',    type: 'number' },
   { key: 'neighborReproductionPenalty', type: 'number' },
-  // Rabbit generation
+  // Food generation
   { key: 'foodCountPerSnakeCoeff',    type: 'number' },
   { key: 'foodCountBase',             type: 'number' },
+  // Chicken food
+  { key: 'chickenSpawnStartLevel',     type: 'number' },
+  { key: 'chickenSpawnProbability',    type: 'number' },
+  { key: 'chickenChickRoamRadius',     type: 'number' },
+  { key: 'chickenChickMoveInterval',   type: 'number' },
+  { key: 'chickenAdultThreatRadius',   type: 'number' },
+  { key: 'chickenAdultMoveInterval',   type: 'number' },
+  { key: 'chickenEggScoreValue',       type: 'number' },
+  { key: 'chickenEggGrowthValue',      type: 'number' },
+  { key: 'chickenChickScoreValue',     type: 'number' },
+  { key: 'chickenChickGrowthValue',    type: 'number' },
+  { key: 'chickenAdultScoreValue',     type: 'number' },
+  { key: 'chickenAdultGrowthValue',    type: 'number' },
+  // Meat food
+  { key: 'meatMaxAge',                 type: 'number' },
+  { key: 'meatScoreValue',             type: 'number' },
+  { key: 'meatGrowthValue',            type: 'number' },
   // Walls
   { key: 'wallClusterCoeff',            type: 'number' },
   { key: 'wallClusterBase',             type: 'number' },
@@ -241,7 +258,7 @@ function buildSnakeSection(currentLevel: number): string {
   );
 }
 
-function buildRabbitLifecycleSection(currentLevel: number): string {
+function buildFoodLifecycleSection(currentLevel: number): string {
   return buildSection('🍎 Жизненный цикл еды',
     settingsRow('foodYoungAge', 'Молодость до (тик)', currentLevel) +
     settingsRow('foodAdultAge', 'Взрослый до (тик)', currentLevel) +
@@ -249,7 +266,7 @@ function buildRabbitLifecycleSection(currentLevel: number): string {
   );
 }
 
-function buildRabbitSpawnSection(currentLevel: number): string {
+function buildFoodSpawnSection(currentLevel: number): string {
   return buildSection('🍎 Спавн и размножение еды',
     settingsRow('foodMinDistance',            'Мин. дистанция', currentLevel)      +
     settingsRow('reproductionMinCooldown',     'Кулдаун размнож.', currentLevel)     +
@@ -261,10 +278,35 @@ function buildRabbitSpawnSection(currentLevel: number): string {
   );
 }
 
-function buildRabbitGenSection(currentLevel: number): string {
+function buildFoodGenerationSection(currentLevel: number): string {
   return buildSection('🍎 Генерация еды (формулы)',
     settingsRow('foodCountPerSnakeCoeff', 'Коэфф. на змейку', currentLevel, 0.1) +
     settingsRow('foodCountBase',          'Базовое кол-во', currentLevel)
+  );
+}
+
+function buildChickenSection(currentLevel: number): string {
+  return buildSection('🐔 Куриная еда',
+    settingsRow('chickenSpawnStartLevel',   'Появляется с уровня', currentLevel) +
+    settingsRow('chickenSpawnProbability',  'Вероятность спавна', currentLevel, 0.01) +
+    settingsRow('chickenChickRoamRadius',   'Радиус цыплёнка', currentLevel) +
+    settingsRow('chickenChickMoveInterval', 'Ход цыплёнка (тики)', currentLevel) +
+    settingsRow('chickenAdultThreatRadius', 'Радиус страха курицы', currentLevel) +
+    settingsRow('chickenAdultMoveInterval', 'Ход курицы (тики)', currentLevel) +
+    settingsRow('chickenEggScoreValue',     'Очки за яйцо', currentLevel) +
+    settingsRow('chickenEggGrowthValue',    'Рост за яйцо', currentLevel) +
+    settingsRow('chickenChickScoreValue',   'Очки за цыплёнка', currentLevel) +
+    settingsRow('chickenChickGrowthValue',  'Рост за цыплёнка', currentLevel) +
+    settingsRow('chickenAdultScoreValue',   'Очки за курицу', currentLevel) +
+    settingsRow('chickenAdultGrowthValue',  'Рост за курицу', currentLevel)
+  );
+}
+
+function buildMeatSection(currentLevel: number): string {
+  return buildSection('🍖 Мясо',
+    settingsRow('meatMaxAge',     'Живёт до тика', currentLevel) +
+    settingsRow('meatScoreValue', 'Очки', currentLevel) +
+    settingsRow('meatGrowthValue', 'Рост', currentLevel)
   );
 }
 
@@ -382,9 +424,11 @@ export function renderDevPanel(
         ${buildLevelSection(currentLevel)}
         ${buildLevelOverridesSection(currentLevel, sessionConfig)}
         ${buildSnakeSection(currentLevel)}
-        ${buildRabbitLifecycleSection(currentLevel)}
-        ${buildRabbitSpawnSection(currentLevel)}
-        ${buildRabbitGenSection(currentLevel)}
+        ${buildFoodLifecycleSection(currentLevel)}
+        ${buildFoodSpawnSection(currentLevel)}
+        ${buildFoodGenerationSection(currentLevel)}
+        ${buildChickenSection(currentLevel)}
+        ${buildMeatSection(currentLevel)}
         ${buildWallsSection(currentLevel)}
         ${buildScoringSection(currentLevel)}
         ${buildBoardSection(currentLevel)}

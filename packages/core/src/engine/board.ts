@@ -1,5 +1,6 @@
 import { GameSettings } from './settings';
 import { CellContent, Food, GameState, Position } from './types';
+import { getFoodReward } from './systems/foodSystem';
 
 /**
  * Creates an empty board of given dimensions.
@@ -38,6 +39,7 @@ export function buildBoard(state: GameState, settings: GameSettings): CellConten
   for (const snake of state.snakes) {
     for (const seg of snake.segments) {
       if (inBounds(seg, state.width, state.height)) {
+        if (!snake.alive && board[seg.y][seg.x].startsWith('&x')) continue;
         board[seg.y][seg.x] = String(snake.id + 1);
       }
     }
@@ -54,8 +56,5 @@ export function inBounds(pos: Position, width: number, height: number): boolean 
 }
 
 function getFoodScoreValue(food: Food, settings: GameSettings): number {
-  if (food.kind !== 'apple') return 1;
-  if (food.age >= settings.foodAdultAge && food.age < settings.foodMaxAge) return 1;
-  if (food.age >= settings.foodYoungAge && food.age < settings.foodAdultAge) return 2;
-  return 1;
+  return getFoodReward(food, settings).points;
 }

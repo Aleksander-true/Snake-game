@@ -186,7 +186,8 @@ describe('Board integration - single player mode', () => {
 
     expect(snake.alive).toBe(false);
     expect(snake.deathReason).toBe('Врезалась в стену');
-    expect(state.board[3][5]).toBe('1');
+    expect(state.foods.filter(food => food.kind === 'meat')).toHaveLength(1);
+    expect(state.board[3][5]).toBe('&x1');
     expect(state.board[3][4]).toBe('1');
     expect(state.board[3][3]).toBe('1');
   });

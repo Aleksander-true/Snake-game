@@ -1,4 +1,10 @@
-import { createDefaultSettings, createEmptyBoard, SnakeEntity } from '@snake-game/core';
+import {
+  ChickenFoodEntity,
+  createDefaultSettings,
+  createEmptyBoard,
+  MeatFoodEntity,
+  SnakeEntity,
+} from '@snake-game/core';
 import type { GameState } from '@snake-game/core';
 import { renderResults } from '../src/app/ui/results';
 import { renderHUD } from '../src/app/ui/game';
@@ -79,6 +85,17 @@ describe('UI output safety', () => {
     markerTexts.length = 0;
     renderGame(ctx, state, 10, settings, { playerMarkerElapsedMs: 1000 });
     expect(markerTexts).toEqual([]);
+
+    const egg = ChickenFoodEntity.newborn({ x: 1, y: 1 }, 'food-0');
+    const chick = ChickenFoodEntity.newborn({ x: 2, y: 1 }, 'food-1');
+    chick.age = settings.foodYoungAge;
+    const chicken = ChickenFoodEntity.newborn({ x: 3, y: 1 }, 'food-2');
+    chicken.age = settings.foodAdultAge;
+    state.foods = [egg, chick, chicken, MeatFoodEntity.newborn({ x: 4, y: 1 }, 'food-3')];
+    markerTexts.length = 0;
+
+    renderGame(ctx, state, 10, settings, { playerMarkerElapsedMs: 1000 });
+    expect(markerTexts.map(item => item.text)).toEqual(['🥚', '🐤', '🐔', '🍖']);
   });
 
   test('results render compact final ranking and safe player names', () => {

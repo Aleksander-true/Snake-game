@@ -1,5 +1,6 @@
 import {
   AppleFoodEntity,
+  buildBoard,
   ChickenFoodEntity,
   createDefaultSettings,
   createEmptyBoard,
@@ -62,6 +63,11 @@ describe('Chicken food', () => {
     expect(getFoodReward(chicken, settings)).toEqual({ points: 2, growth: 2 });
     chicken.age = settings.foodAdultAge;
     expect(getFoodReward(chicken, settings)).toEqual({ points: 3, growth: 3 });
+
+    const state = createState();
+    state.foods = [chicken];
+    state.board = buildBoard(state, settings);
+    expect(state.board[chicken.pos.y][chicken.pos.x]).toBe('&x3');
   });
 
   test('chick moves every three opportunities and remains near its egg origin', () => {
