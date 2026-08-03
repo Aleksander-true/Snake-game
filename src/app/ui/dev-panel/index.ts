@@ -160,6 +160,8 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'chickenAdultMoveInterval',   type: 'number' },
   { key: 'chickenOvercrowdingRadius',  type: 'number' },
   { key: 'chickenEggLayingInterval',   type: 'number' },
+  { key: 'chickenAppleAgeReduction',   type: 'number' },
+  { key: 'chickenAppleReproductionReduction', type: 'number' },
   { key: 'chickenMaxEggs',             type: 'number' },
   { key: 'chickenEggScoreValue',       type: 'number' },
   { key: 'chickenEggGrowthValue',      type: 'number' },
@@ -311,6 +313,8 @@ function buildChickenSection(currentLevel: number): string {
     settingsRow('chickenAdultMoveInterval', 'Ход курицы (тики)', currentLevel) +
     settingsRow('chickenOvercrowdingRadius', 'Радиус перенаселения', currentLevel) +
     settingsRow('chickenEggLayingInterval', 'Кладка каждые (тики)', currentLevel) +
+    settingsRow('chickenAppleAgeReduction', 'Яблоко: минус возраст', currentLevel) +
+    settingsRow('chickenAppleReproductionReduction', 'Яблоко: минус рождений', currentLevel) +
     settingsRow('chickenMaxEggs',           'Макс. яиц', currentLevel) +
     settingsRow('chickenEggScoreValue',     'Очки за яйцо', currentLevel) +
     settingsRow('chickenEggGrowthValue',    'Рост за яйцо', currentLevel) +

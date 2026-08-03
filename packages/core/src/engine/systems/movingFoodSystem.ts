@@ -141,11 +141,16 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
   const eatenApple = apples.find(apple => samePosition(apple.pos, target));
   if (!eatenApple) return;
   state.foods.splice(state.foods.indexOf(eatenApple), 1);
-  chicken.age = ctx.settings.foodAdultAge;
-  chicken.clockNum = 0;
-  chicken.reproductionCount = 0;
+  chicken.age = Math.max(
+    ctx.settings.foodAdultAge,
+    chicken.age - ctx.settings.chickenAppleAgeReduction
+  );
+  chicken.reproductionCount = Math.max(
+    0,
+    chicken.reproductionCount - ctx.settings.chickenAppleReproductionReduction
+  );
   chicken.movementClock = 0;
-  chicken.pendingMandatoryEgg = true;
+  chicken.pendingMandatoryEgg = false;
 }
 
 function getNeighborPositions(origin: Position): Position[] {

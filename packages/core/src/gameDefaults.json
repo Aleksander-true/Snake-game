@@ -35,6 +35,8 @@
     "adultMoveInterval": 2,
     "overcrowdingRadius": 10,
     "eggLayingInterval": 17,
+    "appleAgeReduction": 10,
+    "appleReproductionReduction": 1,
     "maxEggs": 3,
     "eggScoreValue": 1,
     "eggGrowthValue": 1,

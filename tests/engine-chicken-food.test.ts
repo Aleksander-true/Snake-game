@@ -121,15 +121,14 @@ describe('Chicken food', () => {
     expect(Math.max(Math.abs(chicken.pos.x - 10), Math.abs(chicken.pos.y - 10))).toBeLessThanOrEqual(5);
   });
 
-  test('adult eats an adjacent apple and lays a mandatory egg on the next lifecycle tick', () => {
+  test('adult apple consumption reduces age and reproduction count without mandatory egg', () => {
     const ctx = createContext();
-    ctx.settings.maxReproductions = 0;
     const state = createState();
     const chicken = new ChickenFoodEntity(
       { x: 10, y: 10 },
-      ctx.settings.foodAdultAge + 1,
+      ctx.settings.foodAdultAge + 25,
       10,
-      5,
+      2,
       { x: 2, y: 2 },
       ctx.settings.chickenAdultMoveInterval - 1,
       false,
@@ -142,16 +141,20 @@ describe('Chicken food', () => {
     processMovingFood(state, ctx);
 
     expect(chicken.pos).toEqual({ x: 9, y: 9 });
+    expect(chicken.age).toBe(ctx.settings.foodAdultAge + 15);
+    expect(chicken.clockNum).toBe(10);
+    expect(chicken.reproductionCount).toBe(1);
+    expect(chicken.pendingMandatoryEgg).toBe(false);
+    expect(state.foods).not.toContain(apple);
+    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
+
+    chicken.age = ctx.settings.foodAdultAge;
+    chicken.reproductionCount = 0;
+    chicken.movementClock = ctx.settings.chickenAdultMoveInterval - 1;
+    state.foods.push(AppleFoodEntity.newborn({ x: 8, y: 8 }, 0, 'food-2'));
+    processMovingFood(state, ctx);
     expect(chicken.age).toBe(ctx.settings.foodAdultAge);
     expect(chicken.reproductionCount).toBe(0);
-    expect(chicken.pendingMandatoryEgg).toBe(true);
-    expect(state.foods).not.toContain(apple);
-
-    processFoodLifecycle(state, ctx);
-
-    expect(chicken.pendingMandatoryEgg).toBe(false);
-    expect(chicken.reproductionCount).toBe(1);
-    expect(state.foods.filter(food => food.kind === 'chicken')).toHaveLength(2);
   });
 
   test('adult moves toward the nearest apple even when it is not adjacent', () => {
@@ -326,23 +329,4 @@ describe('Chicken food', () => {
     expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
   });
 
-  test('mandatory egg remains pending when apple density rules leave no valid cell', () => {
-    const ctx = createContext();
-    ctx.settings.maxReproductionNeighbors = 1;
-    const state = createState();
-    const chicken = new ChickenFoodEntity(
-      { x: 0, y: 0 },
-      ctx.settings.foodAdultAge,
-      0,
-      0,
-      { x: 0, y: 0 },
-      0,
-      true,
-      'food-0'
-    );
-    state.foods = [chicken, AppleFoodEntity.newborn({ x: 1, y: 1 }, 0, 'food-1')];
-
-    expect(processFoodLifecycle(state, ctx)).toHaveLength(0);
-    expect(chicken.pendingMandatoryEgg).toBe(true);
-  });
 });

@@ -106,31 +106,9 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
   state.foods = activeFoods;
 
   const parents = [...state.foods];
-  const mandatoryLayers = new Set<string>();
 
   for (const parentFood of parents) {
-    if (parentFood.kind !== 'chicken' || !parentFood.pendingMandatoryEgg) continue;
-    const nearbyCount = countNearbyFood(
-      parentFood.pos,
-      state.foods,
-      settings.neighborReproductionRadius,
-      parentFood
-    );
-    if (nearbyCount >= settings.maxReproductionNeighbors) continue;
-    const offspring = trySpawnOffspring(parentFood, state, randomPort);
-    if (!offspring) continue;
-
-    assignFoodId(state, offspring);
-    state.foods.push(offspring);
-    births.push({ parentPos: { ...parentFood.pos }, child: offspring });
-    parentFood.pendingMandatoryEgg = false;
-    parentFood.resetReproductionClock();
-    parentFood.incrementReproductionCount();
-    mandatoryLayers.add(parentFood.id);
-  }
-
-  for (const parentFood of parents) {
-    if (parentFood.kind === 'meat' || mandatoryLayers.has(parentFood.id)) continue;
+    if (parentFood.kind === 'meat') continue;
     const phase = getFoodPhase(parentFood, settings);
     const canReproduce = parentFood.kind === 'chicken' ? phase === 'old' : phase === 'adult';
     if (!canReproduce) continue;
