@@ -35,7 +35,8 @@ export class MatchSession {
   readonly matchId = randomUUID();
 
   private readonly engine: GameEngine;
-  private readonly state: GameState;
+  private state: GameState;
+  private room: RoomSnapshotDTO;
   private readonly participantsById: Map<string, RoomParticipantDTO>;
   private readonly pendingInputs = new Map<string, DirectionCommandMessage>();
   private readonly acknowledgedInputs: Record<string, number> = {};
@@ -43,11 +44,14 @@ export class MatchSession {
   private readonly now: () => number;
   private timer: ReturnType<typeof setInterval> | null = null;
   private levelSecondAccumulatorMs = 0;
+  private roundStartScores = new Map<number, number>();
+  private foodsEatenThisRound = new Map<number, number>();
 
   constructor(private readonly options: MatchSessionOptions) {
     if (options.room.status !== 'playing') {
       throw new MatchSessionError('ROOM_NOT_PLAYING', 'Match requires a room in playing state');
     }
+    this.room = options.room;
     const participants = [...options.room.participants].sort((left, right) => left.slotIndex - right.slotIndex);
     this.participantsById = new Map(participants.map((participant) => [participant.playerId, participant]));
     const settings = createDefaultSettings();
@@ -57,16 +61,22 @@ export class MatchSession {
       settings,
       rng: createSeededRng(options.seed ?? hashSeed(options.room.roomId)),
     });
-    const gameConfig = {
-      playerCount: participants.length,
-      botCount: options.room.config.bots.length,
-      playerNames: participants.map((participant) => participant.name),
-      difficultyLevel: options.room.config.difficultyLevel,
-      gameMode: options.room.config.gameMode,
-    };
-    this.state = this.engine.createGameState(gameConfig, 1);
+    const gameConfig = this.createGameConfig();
+    this.state = this.engine.createGameState(gameConfig, this.room.currentRound);
     this.engine.initLevel(this.state, gameConfig);
+    this.resetRoundTracking();
     for (const participant of participants) this.acknowledgedInputs[participant.playerId] = -1;
+  }
+
+  private createGameConfig() {
+    const participants = [...this.room.participants].sort((left, right) => left.slotIndex - right.slotIndex);
+    return {
+      playerCount: participants.length,
+      botCount: this.room.config.bots.length,
+      playerNames: participants.map((participant) => participant.name),
+      difficultyLevel: this.room.config.difficultyLevel,
+      gameMode: this.room.config.gameMode,
+    };
   }
 
   start(): void {
@@ -80,6 +90,31 @@ export class MatchSession {
     if (!this.timer) return;
     clearInterval(this.timer);
     this.timer = null;
+  }
+
+  startNextRound(room: RoomSnapshotDTO): void {
+    if (this.createSnapshot().status !== 'round-complete') {
+      throw new MatchSessionError('ROUND_NOT_COMPLETE', 'Current round has not completed');
+    }
+    if (room.status !== 'playing' || room.currentRound !== this.state.level + 1) {
+      throw new MatchSessionError('INVALID_NEXT_ROUND', 'Room does not describe the next playing round');
+    }
+    const previousState = this.state;
+    this.room = room;
+    this.state = this.engine.createGameState(this.createGameConfig(), room.currentRound);
+    this.engine.initLevel(this.state, this.createGameConfig());
+    for (let snakeIndex = 0; snakeIndex < this.state.snakes.length; snakeIndex++) {
+      const previousSnake = previousState.snakes[snakeIndex];
+      const nextSnake = this.state.snakes[snakeIndex];
+      if (!previousSnake || !nextSnake) continue;
+      nextSnake.score = previousSnake.score;
+      nextSnake.levelsWon = previousSnake.levelsWon;
+    }
+    this.state.roundResults = [...previousState.roundResults];
+    this.pendingInputs.clear();
+    this.levelSecondAccumulatorMs = 0;
+    this.resetRoundTracking();
+    this.start();
   }
 
   enqueueDirection(playerId: string, command: DirectionCommandMessage): void {
@@ -105,13 +140,22 @@ export class MatchSession {
     }
     this.pendingInputs.clear();
 
-    this.engine.processTick(this.state);
+    const tickResult = this.engine.processTick(this.state);
+    for (const event of tickResult.events) {
+      if (event.type === 'FOOD_EATEN') {
+        this.foodsEatenThisRound.set(event.snakeId, (this.foodsEatenThisRound.get(event.snakeId) ?? 0) + 1);
+      }
+    }
     this.levelSecondAccumulatorMs += this.tickIntervalMs;
     while (this.levelSecondAccumulatorMs >= 1000) {
       this.engine.elapseLevelSecond(this.state);
       this.levelSecondAccumulatorMs -= 1000;
     }
 
+    if (this.state.levelComplete) {
+      const completionEvent = tickResult.events.find((event) => event.type === 'LEVEL_COMPLETED');
+      this.recordRoundResult(completionEvent?.type === 'LEVEL_COMPLETED' ? completionEvent.winnerId ?? null : null);
+    }
     const snapshot = this.createSnapshot();
     this.options.onSnapshot(snapshot);
     if (snapshot.status !== 'playing') {
@@ -168,7 +212,7 @@ export class MatchSession {
         connected: true,
       };
     }
-    const participant = this.options.room.participants.find((item) => item.slotIndex === snakeId);
+    const participant = this.room.participants.find((item) => item.slotIndex === snakeId);
     if (!participant) throw new MatchSessionError('PLAYER_NOT_FOUND', `No player owns snake ${snakeId}`);
     return {
       type: 'human',
@@ -176,6 +220,29 @@ export class MatchSession {
       displayName: participant.name,
       connected: participant.status === 'connected' || participant.status === 'ready',
     };
+  }
+
+  private resetRoundTracking(): void {
+    this.roundStartScores = new Map(this.state.snakes.map((snake) => [snake.id, snake.score]));
+    this.foodsEatenThisRound = new Map(this.state.snakes.map((snake) => [snake.id, 0]));
+  }
+
+  private recordRoundResult(winnerId: number | null): void {
+    if (this.state.roundResults.some((result) => result.level === this.state.level)) return;
+    this.state.roundResults.push({
+      level: this.state.level,
+      winnerId,
+      snakes: this.state.snakes.map((snake) => ({
+        snakeId: snake.id,
+        name: snake.name,
+        isBot: snake.isBot,
+        foodsEaten: this.foodsEatenThisRound.get(snake.id) ?? 0,
+        scoreGained: snake.score - (this.roundStartScores.get(snake.id) ?? 0),
+        totalScore: snake.score,
+        alive: snake.alive,
+        deathReason: snake.deathReason,
+      })),
+    });
   }
 }
 

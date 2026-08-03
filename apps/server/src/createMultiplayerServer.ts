@@ -160,8 +160,15 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
           }
           const snapshot = rooms.setReady(state.roomId, state.playerId, parsed.message.ready);
           broadcastRoomState(state.roomId, snapshot);
-          if (rooms.isReadyToStart(state.roomId) && !matchSessions.has(state.roomId)) {
-            startRoomMatch(state.roomId);
+          if (rooms.isReadyToStart(state.roomId)) {
+            const session = matchSessions.get(state.roomId);
+            if (session) {
+              const room = rooms.startRound(state.roomId);
+              broadcastRoomState(state.roomId, room);
+              session.startNextRound(room);
+            } else {
+              startRoomMatch(state.roomId);
+            }
           }
           return;
         }
@@ -230,7 +237,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   }
 
   function startRoomMatch(roomId: string): void {
-    const room = rooms.startMatch(roomId);
+    const room = rooms.startRound(roomId);
     broadcastRoomState(roomId, room);
     const session = new MatchSession({
       room,
@@ -245,7 +252,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
         }
       },
       onComplete: (snapshot) => {
-        matchSessions.delete(roomId);
+        if (snapshot.status === 'game-complete') matchSessions.delete(roomId);
         broadcastRoomState(roomId, rooms.completeRound(roomId, snapshot.status === 'game-complete'));
       },
     });

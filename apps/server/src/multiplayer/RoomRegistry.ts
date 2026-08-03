@@ -114,8 +114,8 @@ export class RoomRegistry {
 
   setReady(roomId: string, playerId: string, ready: boolean): RoomSnapshotDTO {
     const room = this.requireRoom(roomId);
-    if (room.status !== 'waiting') {
-      throw new RoomRegistryError('ROOM_ALREADY_STARTED', 'Ready status cannot be changed after start');
+    if (room.status !== 'waiting' && room.status !== 'round-complete') {
+      throw new RoomRegistryError('ROOM_NOT_AWAITING_READY', 'Room is not waiting for ready status');
     }
     const participant = room.participants.find((item) => item.playerId === playerId);
     if (!participant) {
@@ -131,23 +131,27 @@ export class RoomRegistry {
 
   isReadyToStart(roomId: string): boolean {
     const room = this.requireRoom(roomId);
-    return room.participants.length === room.config.humanSlots
+    return (room.status === 'waiting' || room.status === 'round-complete')
+      && room.participants.length === room.config.humanSlots
       && room.participants.every((participant) => participant.status === 'ready');
   }
 
-  startMatch(roomId: string): RoomSnapshotDTO {
+  startRound(roomId: string): RoomSnapshotDTO {
     const room = this.requireRoom(roomId);
     if (!this.isReadyToStart(roomId)) {
       throw new RoomRegistryError('ROOM_NOT_READY', 'All human slots must be filled and ready');
     }
     room.status = 'playing';
-    room.currentRound = 1;
+    room.currentRound++;
     return toSnapshot(room);
   }
 
   completeRound(roomId: string, gameComplete: boolean): RoomSnapshotDTO {
     const room = this.requireRoom(roomId);
     room.status = gameComplete ? 'game-complete' : 'round-complete';
+    if (!gameComplete) {
+      for (const participant of room.participants) participant.status = 'connected';
+    }
     return toSnapshot(room);
   }
 

@@ -6,9 +6,11 @@ import {
   type CreateRoomResponseDTO,
   type PublicRoomSummaryDTO,
   type RoomConfigDTO,
+  type RoomSnapshotDTO,
   type ServerMessage,
 } from '@snake-game/contracts';
 import { createMultiplayerServer, type MultiplayerServer } from '../apps/server/src/createMultiplayerServer';
+import { MatchSession } from '../apps/server/src/multiplayer/MatchSession';
 
 const baseConfig = {
   name: 'Тестовая комната',
@@ -136,6 +138,43 @@ describe('multiplayer room lobby', () => {
     expect(acknowledgedState.snapshot.snakes[0].direction).toBe('down');
     socket.close();
   });
+
+  test('carries progress into the next round and completes the series after round 10', () => {
+    const firstRoom = createPlayingRoomSnapshot(1);
+    const emittedSnapshots: Array<Extract<ServerMessage, { type: 'game-state' }>['snapshot']> = [];
+    const session = new MatchSession({
+      room: firstRoom,
+      seed: 17,
+      now: () => 1000,
+      onSnapshot: (snapshot) => emittedSnapshots.push(snapshot),
+    });
+    const firstFinal = processUntilComplete(session);
+    expect(firstFinal.status).toBe('round-complete');
+
+    session.startNextRound({
+      ...firstRoom,
+      status: 'playing',
+      currentRound: 2,
+    });
+    session.stop();
+    const secondInitial = emittedSnapshots[emittedSnapshots.length - 1];
+    expect(secondInitial).toMatchObject({
+      level: 2,
+      tick: 0,
+      snakes: firstFinal.snakes.map((snake) => ({
+        score: snake.score,
+        levelsWon: snake.levelsWon,
+      })),
+    });
+
+    const finalSession = new MatchSession({
+      room: createPlayingRoomSnapshot(10),
+      seed: 17,
+      now: () => 1000,
+      onSnapshot: () => undefined,
+    });
+    expect(processUntilComplete(finalSession).status).toBe('game-complete');
+  });
 });
 
 async function createRoom(baseUrl: string, config: RoomConfigDTO): Promise<CreateRoomResponseDTO> {
@@ -181,4 +220,29 @@ function readUntilType<T extends ServerMessage['type']>(
     socket.on('message', onMessage);
     socket.once('error', reject);
   });
+}
+
+function createPlayingRoomSnapshot(currentRound: number): RoomSnapshotDTO {
+  return {
+    roomId: `room-${currentRound}`,
+    config: {
+      ...baseConfig,
+      humanSlots: 2,
+      bots: [],
+    },
+    status: 'playing',
+    currentRound,
+    participants: [
+      { playerId: 'player-1', name: 'Первый', slotIndex: 0, isCreator: true, status: 'ready' },
+      { playerId: 'player-2', name: 'Второй', slotIndex: 1, isCreator: false, status: 'ready' },
+    ],
+  };
+}
+
+function processUntilComplete(session: MatchSession) {
+  for (let tick = 0; tick < 1000; tick++) {
+    const snapshot = session.processTick();
+    if (snapshot.status !== 'playing') return snapshot;
+  }
+  throw new Error('Match round did not complete within the test tick limit');
 }
