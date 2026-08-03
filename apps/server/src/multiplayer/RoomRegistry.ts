@@ -135,6 +135,22 @@ export class RoomRegistry {
       && room.participants.every((participant) => participant.status === 'ready');
   }
 
+  startMatch(roomId: string): RoomSnapshotDTO {
+    const room = this.requireRoom(roomId);
+    if (!this.isReadyToStart(roomId)) {
+      throw new RoomRegistryError('ROOM_NOT_READY', 'All human slots must be filled and ready');
+    }
+    room.status = 'playing';
+    room.currentRound = 1;
+    return toSnapshot(room);
+  }
+
+  completeRound(roomId: string, gameComplete: boolean): RoomSnapshotDTO {
+    const room = this.requireRoom(roomId);
+    room.status = gameComplete ? 'game-complete' : 'round-complete';
+    return toSnapshot(room);
+  }
+
   private findRoom(roomId?: string, privateCode?: string): StoredRoom {
     if (roomId) {
       const room = this.requireRoom(roomId);

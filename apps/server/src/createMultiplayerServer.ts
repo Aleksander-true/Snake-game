@@ -11,10 +11,12 @@ import {
   parseClientMessageText,
   type CreateRoomRequestDTO,
   type ClientMessage,
+  type GameStateMessage,
   type ProtocolErrorMessage,
   type RoomStateMessage,
 } from '@snake-game/contracts';
 import { RoomRegistry, RoomRegistryError } from './multiplayer/RoomRegistry';
+import { MatchSession, MatchSessionError } from './multiplayer/MatchSession';
 
 export interface ClientConnection {
   connectionId: string;
@@ -70,6 +72,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     maxPayload: MAX_INCOMING_WEBSOCKET_MESSAGE_BYTES,
   });
   const connectionStates = new Map<WebSocket, ConnectionState>();
+  const matchSessions = new Map<string, MatchSession>();
 
   httpServer.on('upgrade', (request, socket, head) => {
     const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
@@ -157,6 +160,18 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
           }
           const snapshot = rooms.setReady(state.roomId, state.playerId, parsed.message.ready);
           broadcastRoomState(state.roomId, snapshot);
+          if (rooms.isReadyToStart(state.roomId) && !matchSessions.has(state.roomId)) {
+            startRoomMatch(state.roomId);
+          }
+          return;
+        }
+        if (parsed.message.type === 'direction') {
+          if (!state.roomId || !state.playerId) {
+            throw new RoomRegistryError('ROOM_JOIN_REQUIRED', 'Join a room before sending direction commands');
+          }
+          const session = matchSessions.get(state.roomId);
+          if (!session) throw new MatchSessionError('MATCH_NOT_FOUND', 'No active match exists for this room');
+          session.enqueueDirection(state.playerId, parsed.message);
           return;
         }
       } catch (error) {
@@ -189,6 +204,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     start: (port = 3000, host = '127.0.0.1') => listen(httpServer, port, host),
     close: async () => {
       clearInterval(heartbeatTimer);
+      for (const session of matchSessions.values()) session.stop();
+      matchSessions.clear();
       for (const socket of webSocketServer.clients) {
         socket.terminate();
       }
@@ -210,6 +227,30 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     for (const [client, clientState] of connectionStates) {
       if (clientState.roomId === roomId) sendJson(client, message);
     }
+  }
+
+  function startRoomMatch(roomId: string): void {
+    const room = rooms.startMatch(roomId);
+    broadcastRoomState(roomId, room);
+    const session = new MatchSession({
+      room,
+      onSnapshot: (snapshot) => {
+        const message: GameStateMessage = {
+          protocolVersion: NETWORK_PROTOCOL_VERSION,
+          type: 'game-state',
+          snapshot,
+        };
+        for (const [client, clientState] of connectionStates) {
+          if (clientState.roomId === roomId) sendJson(client, message);
+        }
+      },
+      onComplete: (snapshot) => {
+        matchSessions.delete(roomId);
+        broadcastRoomState(roomId, rooms.completeRound(roomId, snapshot.status === 'game-complete'));
+      },
+    });
+    matchSessions.set(roomId, session);
+    session.start();
   }
 }
 
@@ -239,7 +280,7 @@ function sendProtocolError(socket: WebSocket, code: string, message: string): vo
 }
 
 function sendRoomError(socket: WebSocket, error: unknown): void {
-  if (error instanceof RoomRegistryError) {
+  if (error instanceof RoomRegistryError || error instanceof MatchSessionError) {
     sendProtocolError(socket, error.code, error.message);
     return;
   }

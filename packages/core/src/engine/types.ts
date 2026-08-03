@@ -97,8 +97,8 @@ export interface GameState {
 
 /** Configuration passed from menu */
 export interface GameConfig {
-  playerCount: number;      // 0..2
-  botCount: number;         // 0..4
+  playerCount: number;      // caller validates mode-specific limits; total snakes must not exceed 6
+  botCount: number;         // caller validates mode-specific limits; total snakes must not exceed 6
   playerNames: string[];    // [player1Name, player2Name]
   difficultyLevel: number;  // 1..10
   gameMode?: GameMode;
