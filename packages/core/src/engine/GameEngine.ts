@@ -2,7 +2,7 @@ import { GameConfig, GameState, Direction, Snake } from './types';
 import { createEmptyBoard, buildBoard } from './board';
 import { EngineContext } from './context';
 import { getLevelOverride, GameSettings, resolveSettingsForLevel } from './settings';
-import { generateWalls } from './spawning/wallsGenerator';
+import { generateWalls, validateWalls } from './spawning/wallsGenerator';
 import { spawnFood } from './spawning/rabbitsSpawner';
 import { runTickPipeline } from './systems/tickPipeline';
 import { DomainEvent, TickResult } from './events';
@@ -27,8 +27,11 @@ export class GameEngine {
   createGameState(config: GameConfig, level: number): GameState {
     this.activateLevelSettings(level);
     const settings = this.activeContext.settings;
-    const width = settings.baseWidth + (level - 1) * settings.levelSizeIncrement;
-    const height = settings.baseHeight + (level - 1) * settings.levelSizeIncrement;
+    const boardLevel = config.gameMode === 'survival'
+      ? Math.min(level, settings.survivalMaxBoardLevel)
+      : level;
+    const width = settings.baseWidth + (boardLevel - 1) * settings.levelSizeIncrement;
+    const height = settings.baseHeight + (boardLevel - 1) * settings.levelSizeIncrement;
 
     return {
       board: createEmptyBoard(width, height),
@@ -118,6 +121,68 @@ export class GameEngine {
     state.gameOver = false;
   }
 
+  /** Expand a survival board while preserving every existing game entity. */
+  expandSurvivalLevel(state: GameState): GameState {
+    const previousSettings = this.activeContext.settings;
+    const previousOverride = getLevelOverride(state.level, previousSettings);
+    const previousClusterCount = previousOverride.wallClusters
+      ?? getWallClusterCount(state.level, previousSettings);
+    const nextLevel = state.level + 1;
+
+    this.activateLevelSettings(nextLevel);
+    const settings = this.activeContext.settings;
+    const boardLevel = Math.min(nextLevel, settings.survivalMaxBoardLevel);
+    const targetWidth = Math.max(
+      state.width,
+      settings.baseWidth + (boardLevel - 1) * settings.levelSizeIncrement
+    );
+    const targetHeight = Math.max(
+      state.height,
+      settings.baseHeight + (boardLevel - 1) * settings.levelSizeIncrement
+    );
+    const offsetX = Math.floor((targetWidth - state.width) / 2);
+    const offsetY = Math.floor((targetHeight - state.height) / 2);
+    const oldBounds = {
+      x: offsetX,
+      y: offsetY,
+      width: state.width,
+      height: state.height,
+    };
+
+    if (offsetX > 0 || offsetY > 0) {
+      for (const snake of state.snakes) {
+        for (const segment of snake.segments) this.shiftPosition(segment, offsetX, offsetY);
+      }
+      for (const food of state.foods) {
+        this.shiftPosition(food.pos, offsetX, offsetY);
+        if (food.originPos) this.shiftPosition(food.originPos, offsetX, offsetY);
+      }
+      for (const wall of state.walls) this.shiftPosition(wall, offsetX, offsetY);
+
+      const nextOverride = getLevelOverride(nextLevel, settings);
+      const nextClusterCount = nextOverride.wallClusters
+        ?? getWallClusterCount(nextLevel, settings);
+      const additionalClusterCount = Math.max(0, nextClusterCount - previousClusterCount);
+      const wallLength = nextOverride.wallLength ?? getWallLength(state.difficultyLevel, settings);
+      this.addWallsToExpandedArea(
+        state,
+        targetWidth,
+        targetHeight,
+        oldBounds,
+        additionalClusterCount,
+        wallLength
+      );
+    }
+
+    state.level = nextLevel;
+    state.width = targetWidth;
+    state.height = targetHeight;
+    state.board = buildBoard(state, settings);
+    state.levelComplete = false;
+    state.gameOver = false;
+    return state;
+  }
+
   processTick(state: GameState): TickResult {
     const events: DomainEvent[] = [];
 
@@ -131,6 +196,51 @@ export class GameEngine {
   elapseLevelSecond(state: GameState): void {
     if (state.gameOver || state.levelComplete || state.snakes.length <= 1) return;
     state.levelTimeLeft = Math.max(0, state.levelTimeLeft - 1);
+  }
+
+  private addWallsToExpandedArea(
+    state: GameState,
+    width: number,
+    height: number,
+    oldBounds: { x: number; y: number; width: number; height: number },
+    clusterCount: number,
+    wallLength: number
+  ): void {
+    if (clusterCount === 0) return;
+    const occupiedPositions = [
+      ...state.snakes.flatMap(snake => snake.segments),
+      ...state.foods.map(food => food.pos),
+    ];
+    const isInExpandedArea = (position: { x: number; y: number }): boolean =>
+      position.x < oldBounds.x
+      || position.x >= oldBounds.x + oldBounds.width
+      || position.y < oldBounds.y
+      || position.y >= oldBounds.y + oldBounds.height;
+    const candidates = generateWalls(
+      width,
+      height,
+      clusterCount,
+      wallLength,
+      occupiedPositions,
+      this.activeContext,
+      50,
+      isInExpandedArea
+    );
+    const wallKeys = new Set(state.walls.map(wall => `${wall.x},${wall.y}`));
+
+    for (const candidate of candidates) {
+      const key = `${candidate.x},${candidate.y}`;
+      if (wallKeys.has(key)) continue;
+      const proposedWalls = [...state.walls, candidate];
+      if (!validateWalls(proposedWalls, width, height)) continue;
+      state.walls.push(candidate);
+      wallKeys.add(key);
+    }
+  }
+
+  private shiftPosition(position: { x: number; y: number }, offsetX: number, offsetY: number): void {
+    position.x += offsetX;
+    position.y += offsetY;
   }
 
   createSnake(

@@ -79,6 +79,7 @@ describe('Settings, storage and app state helpers', () => {
     expect(json.chicken.adultSafetyRadius).toBe(10);
     expect(json.chicken.maxEggs).toBe(3);
     expect(json.meat.maxAge).toBe(50);
+    expect(json.board.survivalMaxBoardLevel).toBe(10);
     expect(json.levelOverrides['3']).toEqual({ wallClusters: 7, foodCount: 4 });
 
     resetSettings();
@@ -88,6 +89,7 @@ describe('Settings, storage and app state helpers', () => {
         baseWidth: gameSettings.baseWidth,
         baseHeight: gameSettings.baseHeight,
         levelSizeIncrement: gameSettings.levelSizeIncrement,
+        survivalMaxBoardLevel: gameSettings.survivalMaxBoardLevel,
         levelTimeLimit: 222,
         tickIntervalMs: gameSettings.tickIntervalMs,
       },
@@ -289,6 +291,7 @@ describe('Settings, storage and app state helpers', () => {
     expect(container.querySelector('#dev-chickenAdultSafetyRadius')).toBeTruthy();
     expect(container.querySelector('#dev-chickenMaxEggs')).toBeTruthy();
     expect(container.querySelector('#dev-meatMaxAge')).toBeTruthy();
+    expect(container.querySelector('#dev-survivalMaxBoardLevel')).toBeTruthy();
     foodCoeffInput.value = '3';
 
     const applyButton = container.querySelector('#dev-apply') as HTMLButtonElement;

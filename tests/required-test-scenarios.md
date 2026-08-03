@@ -228,7 +228,7 @@
 
 ### ENG-28a — Канонические JSON-дефолты
 - **Что проверяем:** загрузку значений из `packages/core/src/gameDefaults.json`.
-- **Критерий успеха:** `foodCountBase = 5`, `reproductionProbabilityBase = 0.01`, `levelSizeIncrement = 2`.
+- **Критерий успеха:** `foodCountBase = 5`, `reproductionProbabilityBase = 0.01`, `levelSizeIncrement = 2`, `survivalMaxBoardLevel = 10`.
 - **Статус:** `✅ Реализован`.
 - **Покрытие:** `tests/smoke.test.ts`.
 
@@ -350,7 +350,7 @@
 
 ### APP-05 — Переход на следующий уровень
 - **Что проверяем:** `SessionProgressionService.advanceToNextLevel`.
-- **Критерий успеха:** `level+1`, новые сущности и размер поля, сброс тика/таймера, перенос `score` и `levelsWon`, включая автоматический переход survival.
+- **Критерий успеха:** для классики и мультиплеера — `level+1`, новые сущности и размер поля, сброс тика/таймера, перенос `score` и `levelsWon`; для survival — та же ссылка на state и сущности, сохранение длины, еды, стен и счётчиков, симметричное расширение до уровня 10 без сброса тика и неизменный размер поля после уровня 10.
 - **Статус:** `✅ Реализован`.
 - **Покрытие:** `tests/app-implemented.test.ts`.
 

@@ -4,6 +4,7 @@ import { SessionProgressionService } from '../src/app/services/SessionProgressio
 import { ScorePersistenceService } from '../src/app/services/ScorePersistenceService';
 import { GameController } from '../src/app/gameController';
 import {
+  AppleFoodEntity,
   createDefaultSettings,
   createEmptyBoard,
   GameEngine,
@@ -299,7 +300,7 @@ describe('App implemented behavior', () => {
       expect(next.levelComplete).toBe(false);
     });
 
-    test('reinitializes survival level while preserving cumulative progress', () => {
+    test('expands survival level while preserving the live board state', () => {
       const ctx = createCtx();
       const engine = new GameEngine(ctx);
       const progression = new SessionProgressionService();
@@ -312,23 +313,43 @@ describe('App implemented behavior', () => {
       };
       const current = engine.createGameState(config, 1);
       engine.initLevel(current, config);
+      current.foods = [AppleFoodEntity.newborn({ x: 10, y: 10 }, 0, 'food-0')];
       const previousSnake = current.snakes[0];
+      const previousSegments = previousSnake.segments.map(segment => ({ ...segment }));
+      const previousFood = current.foods[0];
+      const previousFoodPosition = { ...previousFood.pos };
       previousSnake.score = 31;
       previousSnake.levelsWon = 1;
       current.tickCount = 25;
+      current.walls = [{ x: 1, y: 1 }];
 
       const next = progression.advanceToNextLevel(current, config, engine);
 
-      expect(next).not.toBe(current);
+      expect(next).toBe(current);
       expect(next.level).toBe(2);
       expect(next.width).toBe(ctx.settings.baseWidth + ctx.settings.levelSizeIncrement);
       expect(next.height).toBe(ctx.settings.baseHeight + ctx.settings.levelSizeIncrement);
-      expect(next.tickCount).toBe(0);
+      expect(next.tickCount).toBe(25);
       expect(next.levelTimeLeft).toBe(ctx.settings.levelTimeLimit);
-      expect(next.snakes[0]).not.toBe(previousSnake);
-      expect(next.snakes[0].segments).toHaveLength(ctx.settings.initialSnakeLength);
+      expect(next.snakes[0]).toBe(previousSnake);
+      expect(next.snakes[0].segments).toEqual(
+        previousSegments.map(segment => ({ x: segment.x + 1, y: segment.y + 1 }))
+      );
+      expect(next.foods[0]).toBe(previousFood);
+      expect(next.foods[0].pos).toEqual({ x: previousFoodPosition.x + 1, y: previousFoodPosition.y + 1 });
+      expect(next.walls).toContainEqual({ x: 2, y: 2 });
       expect(next.snakes[0].score).toBe(31);
       expect(next.snakes[0].levelsWon).toBe(1);
+      expect(next.levelComplete).toBe(false);
+
+      const maximumBoard = engine.createGameState(config, ctx.settings.survivalMaxBoardLevel);
+      engine.initLevel(maximumBoard, config);
+      const maximumWidth = maximumBoard.width;
+      const maximumHead = { ...maximumBoard.snakes[0].head };
+      progression.advanceToNextLevel(maximumBoard, config, engine);
+      expect(maximumBoard.level).toBe(ctx.settings.survivalMaxBoardLevel + 1);
+      expect(maximumBoard.width).toBe(maximumWidth);
+      expect(maximumBoard.snakes[0].head).toEqual(maximumHead);
     });
   });
 
@@ -429,6 +450,33 @@ describe('App implemented behavior', () => {
       const renderCalls = (renderGame as jest.Mock).mock.calls;
       const lastRenderCall = renderCalls[renderCalls.length - 1];
       expect(lastRenderCall[4].playerMarkerElapsedMs).toBeGreaterThanOrEqual(1000);
+
+      controller.stop();
+      jest.useRealTimers();
+    });
+
+    test('allocates the survival canvas for the maximum board from the start', () => {
+      jest.useFakeTimers();
+      const ctx = createCtx();
+      const controller = new GameController(ctx, new InputHandler(), {
+        onShowResults: jest.fn(),
+        onGoToMenu: jest.fn(),
+      }, false);
+      const canvas = document.createElement('canvas');
+      canvas.getContext = jest.fn().mockReturnValue({});
+
+      controller.startGame({
+        playerCount: 1,
+        botCount: 0,
+        playerNames: ['Игрок 1'],
+        difficultyLevel: 1,
+        gameMode: 'survival',
+      }, canvas);
+
+      const maximumCells = ctx.settings.baseWidth
+        + (ctx.settings.survivalMaxBoardLevel - 1) * ctx.settings.levelSizeIncrement;
+      expect(canvas.width).toBe(maximumCells * 10);
+      expect(canvas.height).toBe(maximumCells * 10);
 
       controller.stop();
       jest.useRealTimers();

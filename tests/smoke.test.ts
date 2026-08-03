@@ -100,6 +100,7 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.chickenMaxEggs).toBe(3);
     expect(settings.meatMaxAge).toBe(50);
     expect(settings.levelSizeIncrement).toBe(2);
+    expect(settings.survivalMaxBoardLevel).toBe(10);
   });
 
   test('GameFSM handles basic transitions and invalid transition safely', () => {

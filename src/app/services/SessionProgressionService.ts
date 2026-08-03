@@ -5,6 +5,10 @@ import type { GameConfig, GameEngine, GameState } from '@snake-game/core';
  */
 export class SessionProgressionService {
   advanceToNextLevel(currentState: GameState, config: GameConfig, gameEngine: GameEngine): GameState {
+    if (currentState.gameMode === 'survival' && currentState.snakes.length === 1) {
+      return gameEngine.expandSurvivalLevel(currentState);
+    }
+
     const nextLevel = currentState.level + 1;
     const previousSnakes = currentState.snakes;
 

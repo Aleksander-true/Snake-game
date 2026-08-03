@@ -176,6 +176,7 @@ const ALL_FIELDS: FieldDef[] = [
   { key: 'baseWidth',                   type: 'number' },
   { key: 'baseHeight',                  type: 'number' },
   { key: 'levelSizeIncrement',          type: 'number' },
+  { key: 'survivalMaxBoardLevel',       type: 'number' },
   { key: 'levelTimeLimit',              type: 'number' },
   { key: 'tickIntervalMs',              type: 'number' },
   // AI
@@ -335,6 +336,7 @@ function buildBoardSection(currentLevel: number): string {
     settingsRow('baseWidth',          'Ширина', currentLevel)            +
     settingsRow('baseHeight',         'Высота', currentLevel)            +
     settingsRow('levelSizeIncrement', 'Рост за уровень', currentLevel)   +
+    settingsRow('survivalMaxBoardLevel', 'Макс. поле выживания', currentLevel) +
     settingsRow('levelTimeLimit',     'Время уровня (с)', currentLevel)  +
     settingsRow('tickIntervalMs',     'Интервал тика (мс)', currentLevel)
   );

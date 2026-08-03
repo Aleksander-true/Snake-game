@@ -70,10 +70,20 @@ export function renderGame(
   const { width, height } = state;
   const canvasWidth = width * cellSize;
   const canvasHeight = height * cellSize;
+  const survivalMaxWidth = settings.baseWidth
+    + (settings.survivalMaxBoardLevel - 1) * settings.levelSizeIncrement;
+  const survivalMaxHeight = settings.baseHeight
+    + (settings.survivalMaxBoardLevel - 1) * settings.levelSizeIncrement;
+  const viewportWidth = state.gameMode === 'survival' ? survivalMaxWidth * cellSize : canvasWidth;
+  const viewportHeight = state.gameMode === 'survival' ? survivalMaxHeight * cellSize : canvasHeight;
+  const offsetX = (viewportWidth - canvasWidth) / 2;
+  const offsetY = (viewportHeight - canvasHeight) / 2;
 
   // Clear
   ctx.fillStyle = settings.colorBg;
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  ctx.fillRect(0, 0, viewportWidth, viewportHeight);
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
 
   // Draw grid lines
   ctx.strokeStyle = settings.colorGrid;
@@ -116,6 +126,7 @@ export function renderGame(
       options.playerMarkerElapsedMs
     );
   }
+  ctx.restore();
 }
 
 /* ====== Food ====== */

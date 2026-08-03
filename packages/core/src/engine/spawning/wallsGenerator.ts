@@ -8,6 +8,7 @@ import { RandomPort } from '../ports';
  *
  * @param exclusionZones — positions (snake heads / body) that walls must stay away from.
  *   Walls cannot be placed within `1.5 × initialSnakeLength` cells (Chebyshev) of any zone centre.
+ * @param placementFilter — optional restriction used when walls may be added only to an expanded area.
  */
 export function generateWalls(
   width: number,
@@ -16,12 +17,22 @@ export function generateWalls(
   wallLength: number,
   exclusionZones: Position[] = [],
   ctx: EngineContext,
-  maxAttempts: number = 50
+  maxAttempts: number = 50,
+  placementFilter?: (position: Position) => boolean
 ): Position[] {
   const safeRadius = Math.ceil(1.5 * ctx.settings.initialSnakeLength);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const walls = generateWallClusters(width, height, clusterCount, wallLength, exclusionZones, safeRadius, ctx.rng);
+    const walls = generateWallClusters(
+      width,
+      height,
+      clusterCount,
+      wallLength,
+      exclusionZones,
+      safeRadius,
+      ctx.rng,
+      placementFilter
+    );
     if (validateWalls(walls, width, height)) {
       return walls;
     }
@@ -48,6 +59,7 @@ function generateWallClusters(
   exclusionZones: Position[],
   safeRadius: number,
   randomPort: RandomPort,
+  placementFilter?: (position: Position) => boolean,
 ): Position[] {
   const walls: Position[] = [];
   const wallSet = new Set<string>();
@@ -56,6 +68,7 @@ function generateWallClusters(
     const positionKey = `${position.x},${position.y}`;
     if (wallSet.has(positionKey)) return false;
     if (position.x <= 0 || position.x >= width - 1 || position.y <= 0 || position.y >= height - 1) return false;
+    if (placementFilter && !placementFilter(position)) return false;
     if (insideExclusionZone(position, exclusionZones, safeRadius)) return false;
     walls.push(position);
     wallSet.add(positionKey);
@@ -63,10 +76,25 @@ function generateWallClusters(
   };
 
   for (let clusterIndex = 0; clusterIndex < clusterCount; clusterIndex++) {
-    // Random starting position (not on edges)
-    const startX = 2 + randomPort.nextInt(width - 4);
-    const startY = 2 + randomPort.nextInt(height - 4);
-    let current: Position = { x: startX, y: startY };
+    let current: Position;
+    if (placementFilter) {
+      const allowedStarts: Position[] = [];
+      for (let y = 2; y < height - 2; y++) {
+        for (let x = 2; x < width - 2; x++) {
+          const candidate = { x, y };
+          if (placementFilter(candidate) && !insideExclusionZone(candidate, exclusionZones, safeRadius)) {
+            allowedStarts.push(candidate);
+          }
+        }
+      }
+      if (allowedStarts.length === 0) continue;
+      current = allowedStarts[randomPort.nextInt(allowedStarts.length)];
+    } else {
+      current = {
+        x: 2 + randomPort.nextInt(width - 4),
+        y: 2 + randomPort.nextInt(height - 4),
+      };
+    }
 
     // If start falls in exclusion zone, skip this cluster
     if (!addWall(current)) continue;
@@ -82,6 +110,7 @@ function generateWallClusters(
       // Filter valid directions (inside board AND outside exclusion zones)
       const validDirections = dirs.filter(directionCandidate =>
         directionCandidate.x > 0 && directionCandidate.x < width - 1 && directionCandidate.y > 0 && directionCandidate.y < height - 1
+        && (!placementFilter || placementFilter(directionCandidate))
         && !insideExclusionZone(directionCandidate, exclusionZones, safeRadius)
       );
 

@@ -8,6 +8,7 @@
 
 - The base board is 40×40 cells.
 - Each level adds 2 cells to width and height.
+- In survival, the active board grows symmetrically through level 10 to 58×58, then keeps that size through level 100. The canvas reserves the maximum size from the start.
 - Boundaries and generated walls are lethal.
 - Walls are generated before food and validated with BFS so all free cells remain connected.
 - Derived `board[][]` markers are: space for empty cells, `&xN` for food value, `*` for walls, and `1`–`6` for snake ids.
@@ -60,7 +61,7 @@ If food count drops below the number of living snakes, the engine can add one ad
 - Classic single-player: 10 levels.
 - Survival single-player: 100 levels with automatic, pause-free transitions.
 - Multiplayer and mixed matches: 10 levels.
-- Each new level rebuilds the board, walls, food, and snake starting positions while preserving cumulative score and level wins.
+- Classic and multiplayer levels rebuild their entities. Survival transitions preserve the snake, food lifecycle, meat, walls, counters, and ticks; the active boundary expands around them through level 10 and only the newly opened border may receive additional connected walls.
 - Single-player target: `Math.floor(5 × level + 20)`, accumulated across levels.
 - Multiplayer level ends when at most one snake remains or the 180-second timer expires.
 - At the end of a round, every surviving snake receives a one-time score bonus equal to its current length. Dead snakes receive no survival bonus; all survivors receive it when the timer ends with several snakes alive.

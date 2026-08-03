@@ -275,6 +275,15 @@ export class GameController {
       switch (event.type) {
         case 'LEVEL_COMPLETED':
           this.recordRoundResult(event.winnerId ?? null);
+          if (
+            this.state?.gameMode === 'survival'
+            && this.state.snakes.length === 1
+            && this.state.snakes[0].alive
+            && !this.state.gameOver
+          ) {
+            this.advanceToNextLevel();
+            return;
+          }
           this.handleLevelComplete();
           return; // stop processing further events this tick
         case 'GAME_OVER':
@@ -312,11 +321,12 @@ export class GameController {
   private advanceToNextLevel(): void {
     if (!this.state || !this.config || !this.canvas) return;
 
+    const continuousSurvival = this.state.gameMode === 'survival' && this.state.snakes.length === 1;
     this.state = this.sessionProgressionService.advanceToNextLevel(this.state, this.config, this.gameEngine);
-    this.roundStartedAt = performance.now();
+    if (!continuousSurvival) this.roundStartedAt = performance.now();
     this.resetRoundTracking();
 
-    this.resizeCanvas();
+    if (!continuousSurvival) this.resizeCanvas();
     this.updateHUD();
     this.renderFrame();
     this.startGameLoop();
@@ -456,14 +466,21 @@ export class GameController {
 
   private resizeCanvas(): void {
     if (!this.state || !this.canvas) return;
+    const settings = this.getSettings();
     const devPanelWidth = this.devModeActive ? 300 : 0;
     const sidePanelsWidth = 140 * 2 + 32;
     const maxW = Math.min(window.innerWidth - sidePanelsWidth - devPanelWidth - 40, 900);
     const maxH = Math.min(window.innerHeight - 120, 700);
-    const cellSize = calculateCellSize(this.state.width, this.state.height, maxW, maxH);
+    const survivalMaxWidth = settings.baseWidth
+      + (settings.survivalMaxBoardLevel - 1) * settings.levelSizeIncrement;
+    const survivalMaxHeight = settings.baseHeight
+      + (settings.survivalMaxBoardLevel - 1) * settings.levelSizeIncrement;
+    const canvasWidthInCells = this.state.gameMode === 'survival' ? survivalMaxWidth : this.state.width;
+    const canvasHeightInCells = this.state.gameMode === 'survival' ? survivalMaxHeight : this.state.height;
+    const cellSize = calculateCellSize(canvasWidthInCells, canvasHeightInCells, maxW, maxH);
 
-    this.canvas.width = this.state.width * cellSize;
-    this.canvas.height = this.state.height * cellSize;
+    this.canvas.width = canvasWidthInCells * cellSize;
+    this.canvas.height = canvasHeightInCells * cellSize;
     (this.canvas as any).__cellSize = cellSize;
   }
 

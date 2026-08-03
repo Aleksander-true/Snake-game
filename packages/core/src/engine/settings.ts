@@ -96,6 +96,7 @@ export interface GameSettings {
   baseWidth: number;
   baseHeight: number;
   levelSizeIncrement: number;
+  survivalMaxBoardLevel: number;
   levelTimeLimit: number;
   tickIntervalMs: number;
 
@@ -178,6 +179,7 @@ export function createDefaultSettings(): GameSettings {
     baseWidth:                    defaultJson.board.baseWidth,
     baseHeight:                   defaultJson.board.baseHeight,
     levelSizeIncrement:           defaultJson.board.levelSizeIncrement,
+    survivalMaxBoardLevel:        defaultJson.board.survivalMaxBoardLevel,
     levelTimeLimit:               defaultJson.board.levelTimeLimit,
     tickIntervalMs:               defaultJson.board.tickIntervalMs,
 
@@ -271,6 +273,7 @@ export interface GameDefaultsJSON {
     baseWidth: number;
     baseHeight: number;
     levelSizeIncrement: number;
+    survivalMaxBoardLevel: number;
     levelTimeLimit: number;
     tickIntervalMs: number;
   };
@@ -359,6 +362,7 @@ export function settingsToJSON(): GameDefaultsJSON {
       baseWidth: settings.baseWidth,
       baseHeight: settings.baseHeight,
       levelSizeIncrement: settings.levelSizeIncrement,
+      survivalMaxBoardLevel: settings.survivalMaxBoardLevel,
       levelTimeLimit: settings.levelTimeLimit,
       tickIntervalMs: settings.tickIntervalMs,
     },
@@ -447,6 +451,7 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.board.baseWidth != null)          settings.baseWidth = data.board.baseWidth;
     if (data.board.baseHeight != null)         settings.baseHeight = data.board.baseHeight;
     if (data.board.levelSizeIncrement != null)  settings.levelSizeIncrement = data.board.levelSizeIncrement;
+    if (data.board.survivalMaxBoardLevel != null) settings.survivalMaxBoardLevel = data.board.survivalMaxBoardLevel;
     if (data.board.levelTimeLimit != null)      settings.levelTimeLimit = data.board.levelTimeLimit;
     if (data.board.tickIntervalMs != null)      settings.tickIntervalMs = data.board.tickIntervalMs;
   }
@@ -565,7 +570,8 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'meatMaxAge', 'meatScoreValue', 'meatGrowthValue',
     'wallClusterCoeff', 'wallClusterBase', 'wallLengthCoeff', 'wallLengthBase',
     'targetScoreCoeff', 'targetScoreBase',
-    'baseWidth', 'baseHeight', 'levelSizeIncrement', 'levelTimeLimit', 'tickIntervalMs',
+    'baseWidth', 'baseHeight', 'levelSizeIncrement', 'survivalMaxBoardLevel',
+    'levelTimeLimit', 'tickIntervalMs',
     'visionSize', 'obstacleSignalClose', 'obstacleSignalDecay', 'foodSignalClose',
     'foodSignalDecay', 'foodSignalMin',
     'colorBg', 'colorGrid', 'colorWall', 'colorFoodAdult', 'colorFoodYoung', 'colorFoodOld', 'colorHeadStroke',

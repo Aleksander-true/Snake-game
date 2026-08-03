@@ -59,6 +59,7 @@
     "baseWidth": 40,
     "baseHeight": 40,
     "levelSizeIncrement": 2,
+    "survivalMaxBoardLevel": 10,
     "levelTimeLimit": 180,
     "tickIntervalMs": 150
   },
