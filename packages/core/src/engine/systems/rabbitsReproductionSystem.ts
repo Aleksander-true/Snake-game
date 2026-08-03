@@ -3,8 +3,9 @@ import { EngineContext } from '../context';
 import { GameSettings } from '../settings';
 import { inBounds } from '../board';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
+import { ChickenFoodEntity } from '../entities/ChickenFoodEntity';
 import { RabbitFoodEntity } from '../entities/RabbitFoodEntity';
-import { getFoodPhase } from './foodSystem';
+import { assignFoodId, getFoodPhase } from './foodSystem';
 
 export interface FoodBirth {
   parentPos: Position;
@@ -58,6 +59,14 @@ export function isValidFoodPosition(
   return true;
 }
 
+/** Check exact cell occupancy without applying food-density restrictions. */
+export function isFreeFoodCell(pos: Position, state: GameState): boolean {
+  if (!inBounds(pos, state.width, state.height)) return false;
+  if (state.walls.some(wall => wall.x === pos.x && wall.y === pos.y)) return false;
+  if (state.snakes.some(snake => snake.segments.some(segment => samePosition(segment, pos)))) return false;
+  return !state.foods.some(food => samePosition(food.pos, pos));
+}
+
 /**
  * Process food aging, reproduction, and expiration for one tick.
  * - Increments age and clockNum
@@ -71,29 +80,64 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
 
   for (const food of state.foods) {
     food.tickLifecycle();
+    if (
+      food.kind === 'chicken'
+      && (food.age === settings.foodYoungAge || food.age === settings.foodAdultAge)
+    ) {
+      food.movementClock = 0;
+    }
   }
 
-  // Reproduction (adults only, for all food kinds; rules are the same for apples and rabbits)
-  for (const parentFood of state.foods) {
+  state.foods = state.foods.filter(food => {
+    if (food.kind === 'meat') return food.age < settings.meatMaxAge;
+    return food.age < settings.foodMaxAge;
+  });
+
+  const parents = [...state.foods];
+  const mandatoryLayers = new Set<string>();
+
+  for (const parentFood of parents) {
+    if (parentFood.kind !== 'chicken' || !parentFood.pendingMandatoryEgg) continue;
+    const offspring = trySpawnOffspring(parentFood, state, randomPort, false);
+    if (!offspring) continue;
+
+    assignFoodId(state, offspring);
+    state.foods.push(offspring);
+    births.push({ parentPos: { ...parentFood.pos }, child: offspring });
+    parentFood.pendingMandatoryEgg = false;
+    parentFood.resetReproductionClock();
+    parentFood.incrementReproductionCount();
+    mandatoryLayers.add(parentFood.id);
+  }
+
+  for (const parentFood of parents) {
+    if (parentFood.kind === 'meat' || mandatoryLayers.has(parentFood.id)) continue;
     const phase = getFoodPhase(parentFood, settings);
-    if (phase !== 'adult') continue;
+    const canReproduce = parentFood.kind === 'chicken' ? phase === 'old' : phase === 'adult';
+    if (!canReproduce) continue;
 
     if (parentFood.clockNum < settings.reproductionMinCooldown) continue;
     if (parentFood.reproductionCount >= settings.maxReproductions) continue;
 
-    // Count neighbors in the configured radius
-    const nearbyCount = countNearbyFood(
-      parentFood.pos, state.foods,
-      settings.neighborReproductionRadius, parentFood
+    const ignoresDensity = parentFood.kind === 'chicken';
+    const nearbyCount = ignoresDensity ? 0 : countNearbyFood(
+      parentFood.pos,
+      state.foods,
+      settings.neighborReproductionRadius,
+      parentFood
     );
-    if (nearbyCount >= settings.maxReproductionNeighbors) continue;
+    if (!ignoresDensity && nearbyCount >= settings.maxReproductionNeighbors) continue;
 
     let probability = settings.reproductionProbabilityBase * parentFood.clockNum;
-    probability *= (1 - settings.neighborReproductionPenalty * nearbyCount);
+    if (!ignoresDensity) {
+      probability *= (1 - settings.neighborReproductionPenalty * nearbyCount);
+    }
 
     if (randomPort.next() < probability) {
-      const offspring = trySpawnOffspring(parentFood, state, randomPort);
+      const offspring = trySpawnOffspring(parentFood, state, randomPort, !ignoresDensity);
       if (offspring) {
+        assignFoodId(state, offspring);
+        state.foods.push(offspring);
         births.push({
           parentPos: { ...parentFood.pos },
           child: offspring,
@@ -104,19 +148,18 @@ export function processFoodLifecycle(state: GameState, ctx: EngineContext): Food
     }
   }
 
-  // Add newborn food
-  state.foods.push(...births.map(birth => birth.child));
-
-  // Remove expired food (keeps lifecycle bounded in dense levels)
-  state.foods = state.foods.filter(food => food.age < settings.foodMaxAge);
-
   return births;
 }
 
 /**
  * Try to find a valid position for offspring near the parent.
  */
-function trySpawnOffspring(parent: Food, state: GameState, rng: { next(): number; nextInt(max: number): number }): Food | null {
+function trySpawnOffspring(
+  parent: Food,
+  state: GameState,
+  rng: { next(): number; nextInt(max: number): number },
+  enforceFoodDistance: boolean
+): Food | null {
   const candidatePositions: Position[] = [];
 
   // All positions at distance 1 and 2 (Chebyshev)
@@ -137,13 +180,23 @@ function trySpawnOffspring(parent: Food, state: GameState, rng: { next(): number
   }
 
   for (const candidatePosition of candidatePositions) {
-    if (isValidFoodPosition(candidatePosition, state)) {
+    const positionIsValid = enforceFoodDistance
+      ? isValidFoodPosition(candidatePosition, state)
+      : isFreeFoodCell(candidatePosition, state);
+    if (positionIsValid) {
       if (parent.kind === 'apple') {
         return AppleFoodEntity.newborn(candidatePosition);
+      }
+      if (parent.kind === 'chicken') {
+        return ChickenFoodEntity.newborn(candidatePosition);
       }
       return RabbitFoodEntity.newborn(candidatePosition);
     }
   }
 
   return null;
+}
+
+function samePosition(left: Position, right: Position): boolean {
+  return left.x === right.x && left.y === right.y;
 }

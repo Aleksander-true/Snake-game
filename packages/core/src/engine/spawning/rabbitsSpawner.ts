@@ -1,7 +1,7 @@
 import { Position, Food, GameState } from '../types';
 import { EngineContext } from '../context';
 import { chebyshevDistance } from '../systems/rabbitsReproductionSystem';
-import { createLevelFood } from '../systems/foodSystem';
+import { assignFoodId, createLevelFood } from '../systems/foodSystem';
 
 /**
  * Spawn initial food for a level.
@@ -29,6 +29,7 @@ export function spawnFood(
   }
 
   let attempts = 0;
+  let adultApplesCreated = 0;
   const maxAttempts = count * 100;
 
   while (foods.length < count && attempts < maxAttempts) {
@@ -45,11 +46,14 @@ export function spawnFood(
     const tooClose = foods.some(food => chebyshevDistance(candidatePosition, food.pos) <= 1);
     if (tooClose) continue;
 
-    const adultQuota = state.snakes.length;
-    const phase = foods.length < adultQuota ? 'adult' : 'young';
-    const food = createLevelFood(state.level, candidatePosition, ctx.settings, phase);
+    const phase = adultApplesCreated < state.snakes.length ? 'adult' : 'young';
+    const food = assignFoodId(
+      state,
+      createLevelFood(state.level, candidatePosition, ctx.settings, phase, ctx.rng)
+    );
 
     foods.push(food);
+    if (food.kind === 'apple' && phase === 'adult') adultApplesCreated++;
     occupiedSet.add(positionKey);
   }
 

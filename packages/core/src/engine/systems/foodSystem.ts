@@ -1,6 +1,8 @@
 import { inBounds } from '../board';
 import { EngineContext } from '../context';
 import { AppleFoodEntity } from '../entities/AppleFoodEntity';
+import { ChickenFoodEntity } from '../entities/ChickenFoodEntity';
+import { RandomPort } from '../ports';
 import { GameSettings } from '../settings';
 import { Food, FoodPhase, GameState, Position } from '../types';
 
@@ -12,17 +14,50 @@ export function getFoodPhase(food: Food, settings: GameSettings): FoodPhase {
 
 export function getFoodReward(food: Food, settings: GameSettings): { points: number; growth: number } {
   const phase = getFoodPhase(food, settings);
-  if (food.kind === 'apple') {
-    if (phase === 'adult') return { points: 2, growth: 2 };
-    return { points: 1, growth: 1 };
+  switch (food.kind) {
+    case 'apple':
+      if (phase === 'adult') return { points: 2, growth: 2 };
+      return { points: 1, growth: 1 };
+    case 'chicken':
+      if (phase === 'young') {
+        return { points: settings.chickenEggScoreValue, growth: settings.chickenEggGrowthValue };
+      }
+      if (phase === 'adult') {
+        return { points: settings.chickenChickScoreValue, growth: settings.chickenChickGrowthValue };
+      }
+      return { points: settings.chickenAdultScoreValue, growth: settings.chickenAdultGrowthValue };
+    case 'meat':
+      return { points: settings.meatScoreValue, growth: settings.meatGrowthValue };
+    default:
+      return { points: 1, growth: 1 };
   }
-  return { points: 1, growth: 1 };
 }
 
-export function createLevelFood(level: number, pos: Position, settings: GameSettings, phase: FoodPhase = 'young'): Food {
+export function createLevelFood(
+  level: number,
+  pos: Position,
+  settings: GameSettings,
+  phase: FoodPhase = 'young',
+  rng?: RandomPort,
+  id = ''
+): Food {
+  if (
+    rng
+    && level >= settings.chickenSpawnStartLevel
+    && rng.next() < settings.chickenSpawnProbability
+  ) {
+    return ChickenFoodEntity.newborn(pos, id);
+  }
   const age = phase === 'young' ? 0 : (phase === 'adult' ? settings.foodYoungAge : settings.foodAdultAge);
-  void level;
-  return AppleFoodEntity.newborn(pos, age);
+  return AppleFoodEntity.newborn(pos, age, id);
+}
+
+export function assignFoodId(state: GameState, food: Food): Food {
+  if (food.id) return food;
+  const nextId = state.nextFoodId ?? 0;
+  food.id = `food-${nextId}`;
+  state.nextFoodId = nextId + 1;
+  return food;
 }
 
 export function autoReplenishFood(state: GameState, ctx: EngineContext): void {
@@ -38,7 +73,10 @@ export function autoReplenishFood(state: GameState, ctx: EngineContext): void {
 
   const spawnPos = findFarthestFoodPosition(state);
   if (!spawnPos) return;
-  state.foods.push(createLevelFood(state.level, spawnPos, ctx.settings, 'adult'));
+  state.foods.push(assignFoodId(
+    state,
+    createLevelFood(state.level, spawnPos, ctx.settings, 'adult', ctx.rng)
+  ));
   state.lastAutoFoodSpawnTick = state.tickCount;
 }
 
