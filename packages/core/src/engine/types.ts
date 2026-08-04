@@ -16,6 +16,7 @@ export interface Position {
 /** Food lifecycle phase */
 export type FoodPhase = 'young' | 'adult' | 'old';
 export type FoodKind = 'apple' | 'rabbit' | 'chicken' | 'meat';
+export type FoodFacing = 'left' | 'right';
 export type GameMode = 'classic' | 'survival';
 
 /**
@@ -33,6 +34,8 @@ export interface Food {
   incrementReproductionCount(): void;
   originPos?: Position;
   movementClock?: number;
+  facing?: FoodFacing;
+  plannedMove?: Position;
   pendingMandatoryEgg?: boolean;
 }
 

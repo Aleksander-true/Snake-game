@@ -1,6 +1,6 @@
 import { EngineContext } from '../context';
 import { getFoodPhase } from './foodSystem';
-import { Food, GameState, Position } from '../types';
+import { Food, FoodFacing, FoodPhase, GameState, Position } from '../types';
 import { chebyshevDistance } from './rabbitsReproductionSystem';
 
 const NEIGHBOR_OFFSETS: ReadonlyArray<Position> = [
@@ -17,35 +17,58 @@ export function processMovingFood(state: GameState, ctx: EngineContext): void {
 
   for (const chicken of chickens) {
     const phase = getFoodPhase(chicken, ctx.settings);
-    if (phase === 'young') continue;
-    if (chicken.age === ctx.settings.foodYoungAge || chicken.age === ctx.settings.foodAdultAge) continue;
+    if (phase === 'young') {
+      resetPlannedMovement(chicken);
+      continue;
+    }
+    if (chicken.age === ctx.settings.foodYoungAge || chicken.age === ctx.settings.foodAdultAge) {
+      resetPlannedMovement(chicken);
+      continue;
+    }
 
     chicken.movementClock = (chicken.movementClock ?? 0) + 1;
     const interval = phase === 'adult'
       ? ctx.settings.chickenChickMoveInterval
       : ctx.settings.chickenAdultMoveInterval;
+    const planningTick = Math.max(1, interval - 1);
+
+    if (!chicken.plannedMove && chicken.movementClock >= planningTick) {
+      const target = phase === 'adult'
+        ? chooseChickTarget(chicken, state, ctx)
+        : chooseAdultChickenTarget(chicken, state, ctx);
+      if (target) {
+        chicken.plannedMove = { ...target };
+        chicken.facing = getFacingForMove(chicken.pos, target);
+      }
+    }
     if (chicken.movementClock < interval) continue;
     chicken.movementClock = 0;
 
-    if (phase === 'adult') {
-      moveChick(chicken, state, ctx);
-    } else {
-      moveAdultChicken(chicken, state, ctx);
-    }
+    const target = chicken.plannedMove;
+    chicken.plannedMove = undefined;
+    if (target) applyPlannedMove(chicken, target, phase, state, ctx);
   }
 }
 
-function moveChick(chicken: Food, state: GameState, ctx: EngineContext): void {
+function resetPlannedMovement(food: Food): void {
+  food.movementClock = 0;
+  food.plannedMove = undefined;
+}
+
+function chooseChickTarget(chicken: Food, state: GameState, ctx: EngineContext): Position | null {
   const origin = chicken.originPos ?? chicken.pos;
   const candidates = getNeighborPositions(chicken.pos).filter(candidate =>
     chebyshevDistance(candidate, origin) <= ctx.settings.chickenChickRoamRadius
     && isMovementCellFree(candidate, state, chicken)
   );
-  const target = pickRandom(candidates, ctx);
-  if (target) chicken.pos = target;
+  return pickRandom(candidates, ctx);
 }
 
-function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): void {
+function chooseAdultChickenTarget(
+  chicken: Food,
+  state: GameState,
+  ctx: EngineContext
+): Position | null {
   const apples = state.foods.filter(food => food.kind === 'apple');
   const otherChickenPositions = state.foods
     .filter(food => food.kind === 'chicken' && food !== chicken)
@@ -61,7 +84,7 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
     const appleAtCandidate = apples.find(apple => samePosition(apple.pos, candidate));
     return isMovementCellFree(candidate, state, chicken, appleAtCandidate);
   });
-  if (candidates.length === 0) return;
+  if (candidates.length === 0) return null;
 
   let target: Position | null;
   const currentSnakeDistance = livingHeads.length > 0
@@ -127,9 +150,22 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
     target = pickRandom(candidates, ctx);
   }
 
-  if (!target) return;
+  return target;
+}
+
+function applyPlannedMove(
+  chicken: Food,
+  target: Position,
+  phase: FoodPhase,
+  state: GameState,
+  ctx: EngineContext
+): void {
+  const eatenApple = phase === 'old'
+    ? state.foods.find(food => food.kind === 'apple' && samePosition(food.pos, target))
+    : undefined;
+  if (!isMovementCellFree(target, state, chicken, eatenApple)) return;
+
   chicken.pos = target;
-  const eatenApple = apples.find(apple => samePosition(apple.pos, target));
   if (!eatenApple) return;
   state.foods.splice(state.foods.indexOf(eatenApple), 1);
   chicken.age = Math.max(
@@ -142,6 +178,12 @@ function moveAdultChicken(chicken: Food, state: GameState, ctx: EngineContext): 
   );
   chicken.movementClock = 0;
   chicken.pendingMandatoryEgg = false;
+}
+
+function getFacingForMove(origin: Position, target: Position): FoodFacing {
+  if (target.x > origin.x) return 'right';
+  if (target.x < origin.x) return 'left';
+  return target.y < origin.y ? 'right' : 'left';
 }
 
 function getNeighborPositions(origin: Position): Position[] {

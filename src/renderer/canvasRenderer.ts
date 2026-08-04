@@ -159,7 +159,8 @@ function drawFoods(
 
       ctx.save();
       ctx.translate(foodCenterX, foodCenterY + 1);
-      ctx.scale(iconScale, iconScale);
+      const horizontalScale = food.facing === 'right' ? -iconScale : iconScale;
+      ctx.scale(horizontalScale, iconScale);
       ctx.font = `${baseIconSize}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

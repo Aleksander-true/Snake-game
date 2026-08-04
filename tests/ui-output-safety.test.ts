@@ -89,13 +89,19 @@ describe('UI output safety', () => {
     const egg = ChickenFoodEntity.newborn({ x: 1, y: 1 }, 'food-0');
     const chick = ChickenFoodEntity.newborn({ x: 2, y: 1 }, 'food-1');
     chick.age = settings.foodYoungAge;
+    chick.facing = 'right';
     const chicken = ChickenFoodEntity.newborn({ x: 3, y: 1 }, 'food-2');
     chicken.age = settings.foodAdultAge;
+    chicken.facing = 'left';
     state.foods = [egg, chick, chicken, MeatFoodEntity.newborn({ x: 4, y: 1 }, 'food-3')];
     markerTexts.length = 0;
 
     renderGame(ctx, state, 10, settings, { playerMarkerElapsedMs: 1000 });
     expect(markerTexts.map(item => item.text)).toEqual(['🥚', '🐤', '🐔', '🍖']);
+    expect(contextMethods.scale.mock.calls).toEqual(expect.arrayContaining([
+      [-0.92, 0.92],
+      [0.92, 0.92],
+    ]));
   });
 
   test('results render compact final ranking and safe player names', () => {

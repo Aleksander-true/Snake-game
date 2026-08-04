@@ -267,6 +267,7 @@ export class MatchSession {
         position: { ...food.pos },
         kind: food.kind,
         age: food.age,
+        facing: food.facing,
       })),
       walls: this.state.walls.map((wall) => ({ ...wall })),
     };

@@ -1,4 +1,4 @@
-import { Position } from '../types';
+import { FoodFacing, Position } from '../types';
 import { FoodEntity } from './FoodEntity';
 
 export class ChickenFoodEntity extends FoodEntity {
@@ -10,7 +10,9 @@ export class ChickenFoodEntity extends FoodEntity {
     public originPos: Position,
     public movementClock = 0,
     public pendingMandatoryEgg = false,
-    id = ''
+    id = '',
+    public facing?: FoodFacing,
+    public plannedMove?: Position
   ) {
     super(pos, 'chicken', age, clockNum, reproductionCount, id);
   }

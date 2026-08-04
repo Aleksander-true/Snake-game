@@ -2,6 +2,7 @@ import type { RoomLifecycleStatus } from './roomContracts';
 
 export type NetworkDirection = 'up' | 'down' | 'left' | 'right';
 export type NetworkFoodKind = 'apple' | 'rabbit' | 'chicken' | 'meat';
+export type NetworkFoodFacing = 'left' | 'right';
 export type SnakeControllerType = 'human' | 'bot';
 
 export interface PositionDTO {
@@ -33,6 +34,7 @@ export interface FoodSnapshotDTO {
   position: PositionDTO;
   kind: NetworkFoodKind;
   age: number;
+  facing?: NetworkFoodFacing;
 }
 
 export interface GameSnapshotDTO {

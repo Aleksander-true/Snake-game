@@ -113,12 +113,47 @@ describe('Chicken food', () => {
     state.foods = [chicken];
 
     processMovingFood(state, ctx);
-    processMovingFood(state, ctx);
+    expect(chicken.plannedMove).toBeUndefined();
     expect(chicken.pos).toEqual({ x: 10, y: 10 });
+
+    processMovingFood(state, ctx);
+    const plannedMove = chicken.plannedMove;
+    expect(plannedMove).toEqual({ x: 9, y: 9 });
+    expect(chicken.facing).toBe('left');
+    expect(chicken.pos).toEqual({ x: 10, y: 10 });
+
     processMovingFood(state, ctx);
 
-    expect(chicken.pos).not.toEqual({ x: 10, y: 10 });
+    expect(chicken.pos).toEqual(plannedMove);
+    expect(chicken.plannedMove).toBeUndefined();
     expect(Math.max(Math.abs(chicken.pos.x - 10), Math.abs(chicken.pos.y - 10))).toBeLessThanOrEqual(5);
+  });
+
+  test('vertical planned moves face right when going up and left when going down', () => {
+    const settings = createDefaultSettings();
+    const upwardState = createState();
+    const upwardChick = ChickenFoodEntity.newborn({ x: 10, y: 10 }, 'food-0');
+    upwardChick.age = settings.foodYoungAge + 1;
+    upwardState.foods = [upwardChick];
+    const upwardContext = createContext({ nextInt: () => 1 });
+
+    processMovingFood(upwardState, upwardContext);
+    processMovingFood(upwardState, upwardContext);
+
+    expect(upwardChick.plannedMove).toEqual({ x: 10, y: 9 });
+    expect(upwardChick.facing).toBe('right');
+
+    const downwardState = createState();
+    const downwardChick = ChickenFoodEntity.newborn({ x: 10, y: 10 }, 'food-0');
+    downwardChick.age = settings.foodYoungAge + 1;
+    downwardState.foods = [downwardChick];
+    const downwardContext = createContext({ nextInt: () => 6 });
+
+    processMovingFood(downwardState, downwardContext);
+    processMovingFood(downwardState, downwardContext);
+
+    expect(downwardChick.plannedMove).toEqual({ x: 10, y: 11 });
+    expect(downwardChick.facing).toBe('left');
   });
 
   test('adult apple consumption reduces age and reproduction count without mandatory egg', () => {
