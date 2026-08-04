@@ -64,6 +64,8 @@ describe('Hedgehog enemy', () => {
     expect(getHedgehogLevelPopulationPercent(10, settings)).toBe(200);
     expect(getHedgehogSpawnChancePerTick(3, 10, settings)).toBe(0);
     expect(getHedgehogSpawnChancePerTick(5, 3, settings)).toBe(0.016);
+    expect(getHedgehogSpawnChancePerTick(5, 3, settings, 1)).toBe(0.008);
+    expect(getHedgehogSpawnChancePerTick(5, 3, settings, 2)).toBe(0.004);
     expect(getHedgehogMoveInterval(1, settings)).toBe(4);
     expect(getHedgehogMoveInterval(3, settings)).toBe(4);
     expect(getHedgehogMoveInterval(4, settings)).toBe(3);
@@ -92,7 +94,7 @@ describe('Hedgehog enemy', () => {
     )).toBe(true);
   });
 
-  test('rolls hedgehog spawning on each of the first one hundred level ticks', () => {
+  test('rolls hedgehog spawning on every game tick', () => {
     const state = createState(5);
     state.difficultyLevel = 3;
     state.tickCount = 1;
@@ -107,13 +109,13 @@ describe('Hedgehog enemy', () => {
     )).not.toBeNull();
     expect(state.enemies).toHaveLength(1);
 
-    const expiredState = createState(5);
-    expiredState.difficultyLevel = 3;
-    expiredState.tickCount = 101;
+    const lateState = createState(5);
+    lateState.difficultyLevel = 3;
+    lateState.tickCount = 101;
     expect(trySpawnHedgehogForTick(
-      expiredState,
+      lateState,
       createContext({ next: () => 0 })
-    )).toBeNull();
+    )).not.toBeNull();
   });
 
   test('uses directional snake vision radii', () => {

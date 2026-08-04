@@ -76,6 +76,7 @@
     "populationPercentPerLevel": 20,
     "spawnWindowTicks": 100,
     "spawnChanceDivisor": 10000,
+    "spawnChanceDecayFactor": 2,
     "botThreatRadius": 20,
     "botEscapeWeight": 500,
     "extraChanceSlope": 15,

@@ -52,7 +52,6 @@ export class GameEngine {
       gameMode: config.gameMode ?? 'classic',
       difficultyLevel: config.difficultyLevel,
       tickCount: 0,
-      hedgehogSpawnWindowStartTick: 0,
       lastAutoFoodSpawnTick: 0,
       levelTimeLeft: settings.levelTimeLimit,
       gameOver: false,
@@ -126,7 +125,6 @@ export class GameEngine {
 
     state.board = buildBoard(state, this.activeContext.settings);
     state.tickCount = 0;
-    state.hedgehogSpawnWindowStartTick = 0;
     state.lastAutoFoodSpawnTick = 0;
     state.levelTimeLeft = settings.levelTimeLimit;
     state.levelComplete = false;
@@ -194,7 +192,6 @@ export class GameEngine {
     state.width = targetWidth;
     state.height = targetHeight;
     state.targetHedgehogCount = 0;
-    state.hedgehogSpawnWindowStartTick = state.tickCount;
     state.board = buildBoard(state, settings);
     state.levelComplete = false;
     state.gameOver = false;

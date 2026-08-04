@@ -114,6 +114,7 @@ export interface GameState {
   gameMode?: GameMode;
   difficultyLevel: number;
   tickCount: number;
+  /** @deprecated Spawning is now rolled on every tick. */
   hedgehogSpawnWindowStartTick?: number;
   lastAutoFoodSpawnTick: number;
   levelTimeLeft: number;   // in seconds

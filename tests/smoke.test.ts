@@ -119,6 +119,7 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.hedgehogPopulationPercentPerLevel).toBe(20);
     expect(settings.hedgehogSpawnWindowTicks).toBe(100);
     expect(settings.hedgehogSpawnChanceDivisor).toBe(10000);
+    expect(settings.hedgehogSpawnChanceDecayFactor).toBe(2);
     expect(settings.hedgehogBotThreatRadius).toBe(20);
     expect(settings.levelSizeIncrement).toBe(2);
     expect(settings.survivalMaxBoardLevel).toBe(10);

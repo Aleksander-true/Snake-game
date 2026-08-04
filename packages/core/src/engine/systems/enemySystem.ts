@@ -38,13 +38,16 @@ export function getHedgehogExtraPercent(difficulty: number, settings: GameSettin
 export function getHedgehogSpawnChancePerTick(
   level: number,
   difficulty: number,
-  settings: GameSettings
+  settings: GameSettings,
+  existingHedgehogCount = 0
 ): number {
   if (level < settings.hedgehogSpawnStartLevel) return 0;
   const combinedPercent = getHedgehogLevelPopulationPercent(level, settings)
     + getHedgehogExtraPercent(difficulty, settings);
   const divisor = Math.max(1, settings.hedgehogSpawnChanceDivisor);
-  return Math.min(1, combinedPercent / divisor);
+  const decayFactor = Math.max(1, settings.hedgehogSpawnChanceDecayFactor);
+  const decayDivisor = decayFactor ** Math.max(0, Math.floor(existingHedgehogCount));
+  return Math.min(1, combinedPercent / divisor / decayDivisor);
 }
 
 /** Resolve hedgehog movement cadence from the current game difficulty. */
@@ -94,18 +97,13 @@ export function ensureHedgehogPopulation(state: GameState, ctx: EngineContext): 
   return spawned;
 }
 
-/** Try to spawn one hedgehog during the first configured ticks of the current level. */
+/** Try to spawn one hedgehog on the current game tick. */
 export function trySpawnHedgehogForTick(state: GameState, ctx: EngineContext): Enemy | null {
-  const windowStartTick = state.hedgehogSpawnWindowStartTick ?? 0;
-  const elapsedLevelTicks = state.tickCount - windowStartTick;
-  if (elapsedLevelTicks < 1 || elapsedLevelTicks > ctx.settings.hedgehogSpawnWindowTicks) {
-    return null;
-  }
-
   const chance = getHedgehogSpawnChancePerTick(
     state.level,
     state.difficultyLevel,
-    ctx.settings
+    ctx.settings,
+    state.enemies.filter(enemy => enemy.kind === 'hedgehog').length
   );
   if (chance <= 0 || ctx.rng.next() >= chance) return null;
 
