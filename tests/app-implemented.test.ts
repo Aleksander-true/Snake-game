@@ -8,6 +8,7 @@ import {
   createDefaultSettings,
   createEmptyBoard,
   GameEngine,
+  HedgehogEntity,
   processBots,
   resetSettings,
   SnakeEntity,
@@ -356,6 +357,9 @@ describe('App implemented behavior', () => {
 
       const maximumBoard = engine.createGameState(config, ctx.settings.survivalMaxBoardLevel);
       engine.initLevel(maximumBoard, config);
+      maximumBoard.enemies.push(
+        new HedgehogEntity('enemy-0', { x: 0, y: 0 }, 2, 2, 'right')
+      );
       const maximumWidth = maximumBoard.width;
       const maximumHead = { ...maximumBoard.snakes[0].head };
       const preservedEnemy = maximumBoard.enemies[0];

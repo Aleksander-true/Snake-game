@@ -9,9 +9,7 @@ import { DomainEvent, TickResult } from './events';
 import { SnakeEntity } from './entities/SnakeEntity';
 import { getInitialFoodCount, getWallClusterCount, getWallLength } from './formulas';
 import {
-  ensureHedgehogPopulation,
   getEnemyCells,
-  getTargetHedgehogCount,
 } from './systems/enemySystem';
 
 /**
@@ -54,6 +52,7 @@ export class GameEngine {
       gameMode: config.gameMode ?? 'classic',
       difficultyLevel: config.difficultyLevel,
       tickCount: 0,
+      hedgehogSpawnWindowStartTick: 0,
       lastAutoFoodSpawnTick: 0,
       levelTimeLeft: settings.levelTimeLimit,
       gameOver: false,
@@ -123,15 +122,11 @@ export class GameEngine {
       levelOverride.foodCount
       ?? getInitialFoodCount(totalSnakes, state.difficultyLevel, settings);
     state.foods = spawnFood(foodCount, state, this.activeContext);
-    state.targetHedgehogCount = getTargetHedgehogCount(
-      state.level,
-      state.difficultyLevel,
-      this.activeContext
-    );
-    ensureHedgehogPopulation(state, this.activeContext);
+    state.targetHedgehogCount = 0;
 
     state.board = buildBoard(state, this.activeContext.settings);
     state.tickCount = 0;
+    state.hedgehogSpawnWindowStartTick = 0;
     state.lastAutoFoodSpawnTick = 0;
     state.levelTimeLeft = settings.levelTimeLimit;
     state.levelComplete = false;
@@ -198,12 +193,8 @@ export class GameEngine {
     state.level = nextLevel;
     state.width = targetWidth;
     state.height = targetHeight;
-    state.targetHedgehogCount = getTargetHedgehogCount(
-      nextLevel,
-      state.difficultyLevel,
-      this.activeContext
-    );
-    ensureHedgehogPopulation(state, this.activeContext);
+    state.targetHedgehogCount = 0;
+    state.hedgehogSpawnWindowStartTick = state.tickCount;
     state.board = buildBoard(state, settings);
     state.levelComplete = false;
     state.gameOver = false;

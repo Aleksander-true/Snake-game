@@ -111,6 +111,8 @@ export interface GameSettings {
   hedgehogBelowVisionRadius: number;
   hedgehogFoodVisionRadius: number;
   hedgehogPopulationPercentPerLevel: number;
+  hedgehogSpawnWindowTicks: number;
+  hedgehogSpawnChanceDivisor: number;
   hedgehogBotThreatRadius: number;
   hedgehogBotEscapeWeight: number;
   hedgehogExtraChanceSlope: number;
@@ -227,6 +229,8 @@ export function createDefaultSettings(): GameSettings {
     hedgehogBelowVisionRadius:  defaultJson.hedgehog.belowVisionRadius,
     hedgehogFoodVisionRadius:   defaultJson.hedgehog.foodVisionRadius,
     hedgehogPopulationPercentPerLevel: defaultJson.hedgehog.populationPercentPerLevel,
+    hedgehogSpawnWindowTicks:   defaultJson.hedgehog.spawnWindowTicks,
+    hedgehogSpawnChanceDivisor: defaultJson.hedgehog.spawnChanceDivisor,
     hedgehogBotThreatRadius:    defaultJson.hedgehog.botThreatRadius,
     hedgehogBotEscapeWeight:    defaultJson.hedgehog.botEscapeWeight,
     hedgehogExtraChanceSlope:   defaultJson.hedgehog.extraChanceSlope,
@@ -349,6 +353,8 @@ export interface GameDefaultsJSON {
     belowVisionRadius: number;
     foodVisionRadius: number;
     populationPercentPerLevel: number;
+    spawnWindowTicks: number;
+    spawnChanceDivisor: number;
     botThreatRadius: number;
     botEscapeWeight: number;
     extraChanceSlope: number;
@@ -469,6 +475,8 @@ export function settingsToJSON(): GameDefaultsJSON {
       belowVisionRadius: settings.hedgehogBelowVisionRadius,
       foodVisionRadius: settings.hedgehogFoodVisionRadius,
       populationPercentPerLevel: settings.hedgehogPopulationPercentPerLevel,
+      spawnWindowTicks: settings.hedgehogSpawnWindowTicks,
+      spawnChanceDivisor: settings.hedgehogSpawnChanceDivisor,
       botThreatRadius: settings.hedgehogBotThreatRadius,
       botEscapeWeight: settings.hedgehogBotEscapeWeight,
       extraChanceSlope: settings.hedgehogExtraChanceSlope,
@@ -589,6 +597,8 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.hedgehog.belowVisionRadius != null) settings.hedgehogBelowVisionRadius = data.hedgehog.belowVisionRadius;
     if (data.hedgehog.foodVisionRadius != null) settings.hedgehogFoodVisionRadius = data.hedgehog.foodVisionRadius;
     if (data.hedgehog.populationPercentPerLevel != null) settings.hedgehogPopulationPercentPerLevel = data.hedgehog.populationPercentPerLevel;
+    if (data.hedgehog.spawnWindowTicks != null) settings.hedgehogSpawnWindowTicks = data.hedgehog.spawnWindowTicks;
+    if (data.hedgehog.spawnChanceDivisor != null) settings.hedgehogSpawnChanceDivisor = data.hedgehog.spawnChanceDivisor;
     if (data.hedgehog.botThreatRadius != null) settings.hedgehogBotThreatRadius = data.hedgehog.botThreatRadius;
     if (data.hedgehog.botEscapeWeight != null) settings.hedgehogBotEscapeWeight = data.hedgehog.botEscapeWeight;
     if (data.hedgehog.extraChanceSlope != null) settings.hedgehogExtraChanceSlope = data.hedgehog.extraChanceSlope;
@@ -739,6 +749,7 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'hedgehogMoveInterval', 'hedgehogFrontVisionRadius', 'hedgehogRearVisionRadius',
     'hedgehogAboveVisionRadius', 'hedgehogBelowVisionRadius',
     'hedgehogFoodVisionRadius', 'hedgehogPopulationPercentPerLevel',
+    'hedgehogSpawnWindowTicks', 'hedgehogSpawnChanceDivisor',
     'hedgehogBotThreatRadius', 'hedgehogBotEscapeWeight',
     'hedgehogExtraChanceSlope', 'hedgehogExtraChanceIntercept',
     'wallClusterCoeff', 'wallClusterBase', 'wallLengthCoeff', 'wallLengthBase',

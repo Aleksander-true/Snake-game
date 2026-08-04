@@ -294,19 +294,12 @@ describe('multiplayer room lobby', () => {
     expect(botSnapshot.snakes[0].controller).toMatchObject({ type: 'bot', connected: true });
   });
 
-  test('includes authoritative enemies in snapshots from level four', () => {
+  test('does not spawn authoritative enemies immediately when level four starts', () => {
     const room = createPlayingRoomSnapshot(4);
     const session = new MatchSession({ room, seed: 31, onSnapshot: () => undefined });
     const enemies = session.createSnapshot().enemies;
 
-    expect(enemies.length).toBeGreaterThanOrEqual(1);
-    expect(enemies[0]).toEqual(expect.objectContaining({
-      enemyId: 'enemy-0',
-      kind: 'hedgehog',
-      width: 2,
-      height: 2,
-      facing: expect.stringMatching(/^(left|right)$/),
-    }));
+    expect(enemies).toHaveLength(0);
   });
 });
 

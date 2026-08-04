@@ -9,11 +9,12 @@ import {
   getEnemyCells,
   getHedgehogExtraPercent,
   getHedgehogLevelPopulationPercent,
-  getTargetHedgehogCount,
+  getHedgehogSpawnChancePerTick,
   HedgehogEntity,
   MeatFoodEntity,
   processEnemies,
   SnakeEntity,
+  trySpawnHedgehogForTick,
 } from '@snake-game/core';
 import type { EngineContext, GameState, RandomPort } from '@snake-game/core';
 
@@ -60,13 +61,8 @@ describe('Hedgehog enemy', () => {
     expect(getHedgehogLevelPopulationPercent(4, settings)).toBe(80);
     expect(getHedgehogLevelPopulationPercent(5, settings)).toBe(100);
     expect(getHedgehogLevelPopulationPercent(10, settings)).toBe(200);
-
-    expect(getTargetHedgehogCount(3, 10, createContext())).toBe(0);
-    expect(getTargetHedgehogCount(5, 1, createContext())).toBe(1);
-    expect(getTargetHedgehogCount(10, 1, createContext())).toBe(2);
-    expect(getTargetHedgehogCount(5, 3, createContext({ next: () => 0.59 }))).toBe(2);
-    expect(getTargetHedgehogCount(5, 3, createContext({ next: () => 0.6 }))).toBe(1);
-    expect(getTargetHedgehogCount(7, 7, createContext({ next: () => 0.19 }))).toBe(4);
+    expect(getHedgehogSpawnChancePerTick(3, 10, settings)).toBe(0);
+    expect(getHedgehogSpawnChancePerTick(5, 3, settings)).toBe(0.0016);
 
     const state = createState();
     state.snakes = [new SnakeEntity(0, 'P1', [{ x: 15, y: 15 }], 'right', false)];
@@ -87,6 +83,30 @@ describe('Hedgehog enemy', () => {
     expect(getEnemyCells(enemy).every(cell =>
       Math.max(Math.abs(cell.x - 15), Math.abs(cell.y - 15)) > 10
     )).toBe(true);
+  });
+
+  test('rolls hedgehog spawning on each of the first one hundred level ticks', () => {
+    const state = createState(5);
+    state.difficultyLevel = 3;
+    state.tickCount = 1;
+
+    expect(trySpawnHedgehogForTick(
+      state,
+      createContext({ next: () => 0.0016 })
+    )).toBeNull();
+    expect(trySpawnHedgehogForTick(
+      state,
+      createContext({ next: () => 0.001599 })
+    )).not.toBeNull();
+    expect(state.enemies).toHaveLength(1);
+
+    const expiredState = createState(5);
+    expiredState.difficultyLevel = 3;
+    expiredState.tickCount = 101;
+    expect(trySpawnHedgehogForTick(
+      expiredState,
+      createContext({ next: () => 0 })
+    )).toBeNull();
   });
 
   test('uses directional snake vision radii', () => {

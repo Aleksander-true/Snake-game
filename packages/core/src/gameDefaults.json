@@ -69,6 +69,8 @@
     "belowVisionRadius": 20,
     "foodVisionRadius": 20,
     "populationPercentPerLevel": 20,
+    "spawnWindowTicks": 100,
+    "spawnChanceDivisor": 100000,
     "botThreatRadius": 20,
     "botEscapeWeight": 500,
     "extraChanceSlope": 15,

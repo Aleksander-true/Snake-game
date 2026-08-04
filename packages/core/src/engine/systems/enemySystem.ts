@@ -34,7 +34,20 @@ export function getHedgehogExtraPercent(difficulty: number, settings: GameSettin
   );
 }
 
-/** Roll the target hedgehog population once when a level starts. */
+/** Calculate one tick's spawn probability from the combined level and difficulty percentage. */
+export function getHedgehogSpawnChancePerTick(
+  level: number,
+  difficulty: number,
+  settings: GameSettings
+): number {
+  if (level < settings.hedgehogSpawnStartLevel) return 0;
+  const combinedPercent = getHedgehogLevelPopulationPercent(level, settings)
+    + getHedgehogExtraPercent(difficulty, settings);
+  const divisor = Math.max(1, settings.hedgehogSpawnChanceDivisor);
+  return Math.min(1, combinedPercent / divisor);
+}
+
+/** @deprecated The engine now rolls one spawn chance per tick instead of using a fixed target. */
 export function getTargetHedgehogCount(
   level: number,
   difficulty: number,
@@ -56,7 +69,7 @@ function rollPercentage(percent: number, ctx: EngineContext): number {
   return guaranteedCount + (remainder > 0 && ctx.rng.next() < remainder ? 1 : 0);
 }
 
-/** Spawn missing hedgehogs at valid border positions. */
+/** @deprecated Retained for compatibility; normal gameplay uses trySpawnHedgehogForTick. */
 export function ensureHedgehogPopulation(state: GameState, ctx: EngineContext): Enemy[] {
   const spawned: Enemy[] = [];
   while (
@@ -70,13 +83,34 @@ export function ensureHedgehogPopulation(state: GameState, ctx: EngineContext): 
   return spawned;
 }
 
+/** Try to spawn one hedgehog during the first configured ticks of the current level. */
+export function trySpawnHedgehogForTick(state: GameState, ctx: EngineContext): Enemy | null {
+  const windowStartTick = state.hedgehogSpawnWindowStartTick ?? 0;
+  const elapsedLevelTicks = state.tickCount - windowStartTick;
+  if (elapsedLevelTicks < 1 || elapsedLevelTicks > ctx.settings.hedgehogSpawnWindowTicks) {
+    return null;
+  }
+
+  const chance = getHedgehogSpawnChancePerTick(
+    state.level,
+    state.difficultyLevel,
+    ctx.settings
+  );
+  if (chance <= 0 || ctx.rng.next() >= chance) return null;
+
+  const enemy = spawnHedgehog(state, ctx);
+  if (!enemy) return null;
+  state.enemies.push(enemy);
+  return enemy;
+}
+
 /** Plan and execute hedgehog movement in stable id order. */
 export function processEnemies(
   state: GameState,
   ctx: EngineContext,
   events: DomainEvent[]
 ): void {
-  ensureHedgehogPopulation(state, ctx);
+  trySpawnHedgehogForTick(state, ctx);
   const enemies = [...state.enemies].sort((left, right) => left.id.localeCompare(right.id));
 
   for (const enemy of enemies) {

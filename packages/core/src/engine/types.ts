@@ -114,6 +114,7 @@ export interface GameState {
   gameMode?: GameMode;
   difficultyLevel: number;
   tickCount: number;
+  hedgehogSpawnWindowStartTick?: number;
   lastAutoFoodSpawnTick: number;
   levelTimeLeft: number;   // in seconds
   gameOver: boolean;
