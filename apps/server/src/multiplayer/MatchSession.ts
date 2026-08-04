@@ -9,6 +9,7 @@ import {
 } from '@snake-game/contracts';
 import {
   applyDirection,
+  chooseDirectionByDifficulty,
   createDefaultSettings,
   createSeededRng,
   GameEngine,
@@ -46,6 +47,7 @@ export class MatchSession {
   private levelSecondAccumulatorMs = 0;
   private roundStartScores = new Map<number, number>();
   private foodsEatenThisRound = new Map<number, number>();
+  private readonly replacementBotSnakeIds = new Set<number>();
 
   constructor(private readonly options: MatchSessionOptions) {
     if (options.room.status !== 'playing') {
@@ -64,6 +66,7 @@ export class MatchSession {
     const gameConfig = this.createGameConfig();
     this.state = this.engine.createGameState(gameConfig, this.room.currentRound);
     this.engine.initLevel(this.state, gameConfig);
+    this.applyParticipantControllerStates();
     this.resetRoundTracking();
     for (const participant of participants) this.acknowledgedInputs[participant.playerId] = -1;
   }
@@ -103,6 +106,7 @@ export class MatchSession {
     this.room = room;
     this.state = this.engine.createGameState(this.createGameConfig(), room.currentRound);
     this.engine.initLevel(this.state, this.createGameConfig());
+    this.applyParticipantControllerStates();
     for (let snakeIndex = 0; snakeIndex < this.state.snakes.length; snakeIndex++) {
       const previousSnake = previousState.snakes[snakeIndex];
       const nextSnake = this.state.snakes[snakeIndex];
@@ -125,13 +129,43 @@ export class MatchSession {
     if (!participant || command.playerId !== playerId) {
       throw new MatchSessionError('PLAYER_MISMATCH', 'Direction command does not belong to this connection');
     }
+    const snake = this.state.snakes[participant.slotIndex];
+    if (!snake || snake.isBot || snake.movementPaused) {
+      throw new MatchSessionError('PLAYER_CONTROL_UNAVAILABLE', 'Player does not currently control a moving snake');
+    }
     const pendingSequence = this.pendingInputs.get(playerId)?.sequence ?? -1;
     const acknowledgedSequence = this.acknowledgedInputs[playerId] ?? -1;
     if (command.sequence <= Math.max(pendingSequence, acknowledgedSequence)) return;
     this.pendingInputs.set(playerId, command);
   }
 
+  pausePlayer(room: RoomSnapshotDTO, playerId: string): void {
+    this.room = room;
+    const snake = this.requireParticipantSnake(playerId);
+    if (!snake.isBot && snake.alive) snake.movementPaused = true;
+    this.pendingInputs.delete(playerId);
+  }
+
+  restorePlayer(room: RoomSnapshotDTO, playerId: string): void {
+    this.room = room;
+    const snake = this.requireParticipantSnake(playerId);
+    if (snake.isBot) {
+      throw new MatchSessionError('PLAYER_CONTROL_UNAVAILABLE', 'Player control has already passed to a bot');
+    }
+    snake.movementPaused = false;
+  }
+
+  replacePlayerWithBot(room: RoomSnapshotDTO, playerId: string): void {
+    this.room = room;
+    const snake = this.requireParticipantSnake(playerId);
+    snake.isBot = true;
+    snake.movementPaused = false;
+    this.replacementBotSnakeIds.add(snake.id);
+    this.pendingInputs.delete(playerId);
+  }
+
   processTick(): GameSnapshotDTO {
+    this.applyBotDirections();
     for (const [playerId, command] of this.pendingInputs) {
       const participant = this.participantsById.get(playerId);
       const snake = participant ? this.state.snakes[participant.slotIndex] : undefined;
@@ -163,6 +197,41 @@ export class MatchSession {
       this.options.onComplete?.(snapshot);
     }
     return snapshot;
+  }
+
+  private applyBotDirections(): void {
+    const settings = this.engine.getSettings();
+    for (const snake of this.state.snakes) {
+      if (!snake.isBot || !snake.alive) continue;
+      const decisionState = this.replacementBotSnakeIds.has(snake.id)
+        ? { ...this.state, difficultyLevel: 5 }
+        : this.state;
+      applyDirection(snake, chooseDirectionByDifficulty(decisionState, snake, settings));
+    }
+  }
+
+  private applyParticipantControllerStates(): void {
+    this.replacementBotSnakeIds.clear();
+    for (const participant of this.room.participants) {
+      const snake = this.state.snakes[participant.slotIndex];
+      if (!snake) continue;
+      if (participant.status === 'replaced-by-bot') {
+        snake.isBot = true;
+        snake.movementPaused = false;
+        this.replacementBotSnakeIds.add(snake.id);
+      } else if (participant.status === 'reconnecting') {
+        snake.movementPaused = true;
+      }
+    }
+  }
+
+  private requireParticipantSnake(playerId: string) {
+    const participant = this.participantsById.get(playerId);
+    const snake = participant ? this.state.snakes[participant.slotIndex] : undefined;
+    if (!participant || !snake) {
+      throw new MatchSessionError('PLAYER_NOT_FOUND', 'Player does not own a snake in this match');
+    }
+    return snake;
   }
 
   createSnapshot(): GameSnapshotDTO {

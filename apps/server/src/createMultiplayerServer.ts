@@ -8,6 +8,7 @@ import {
   HEARTBEAT_TIMEOUT_MS,
   MAX_INCOMING_WEBSOCKET_MESSAGE_BYTES,
   NETWORK_PROTOCOL_VERSION,
+  RECONNECT_WINDOW_MS,
   parseClientMessageText,
   type CreateRoomRequestDTO,
   type ClientMessage,
@@ -27,6 +28,7 @@ export interface MultiplayerServerOptions {
   onClientMessage?: (connection: ClientConnection, message: Exclude<ClientMessage, { type: 'handshake' }>) => void;
   heartbeatIntervalMs?: number;
   heartbeatTimeoutMs?: number;
+  reconnectWindowMs?: number;
 }
 
 export interface MultiplayerServer {
@@ -44,6 +46,7 @@ interface ConnectionState {
   lastSeenAt: number;
   roomId?: string;
   playerId?: string;
+  departureHandled: boolean;
 }
 
 export function createMultiplayerServer(options: MultiplayerServerOptions = {}): MultiplayerServer {
@@ -73,6 +76,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   });
   const connectionStates = new Map<WebSocket, ConnectionState>();
   const matchSessions = new Map<string, MatchSession>();
+  const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let shuttingDown = false;
 
   httpServer.on('upgrade', (request, socket, head) => {
     const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
@@ -90,6 +95,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       connectionId: randomUUID(),
       handshakeComplete: false,
       lastSeenAt: Date.now(),
+      departureHandled: false,
     };
     connectionStates.set(socket, state);
 
@@ -146,12 +152,23 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
           const joined = rooms.reconnect(parsed.message.roomId, parsed.message.reconnectToken);
           state.roomId = joined.room.roomId;
           state.playerId = joined.playerId;
+          clearReconnectTimer(joined.room.roomId, joined.playerId);
+          matchSessions.get(joined.room.roomId)?.restorePlayer(joined.room, joined.playerId);
           sendJson(socket, {
             protocolVersion: NETWORK_PROTOCOL_VERSION,
             type: 'room-joined',
             ...joined,
           });
           broadcastRoomState(joined.room.roomId, joined.room);
+          return;
+        }
+        if (parsed.message.type === 'leave-match') {
+          if (!state.roomId || !state.playerId) {
+            throw new RoomRegistryError('ROOM_JOIN_REQUIRED', 'Join a room before leaving a match');
+          }
+          replacePlayerWithBot(state.roomId, state.playerId);
+          state.departureHandled = true;
+          socket.close(1000, 'PLAYER_LEFT');
           return;
         }
         if (parsed.message.type === 'set-ready') {
@@ -188,6 +205,9 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     });
     socket.on('close', () => {
       connectionStates.delete(socket);
+      if (!shuttingDown && !state.departureHandled && state.roomId && state.playerId) {
+        beginReconnectWindow(state.roomId, state.playerId);
+      }
     });
   });
 
@@ -210,7 +230,10 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     rooms,
     start: (port = 3000, host = '127.0.0.1') => listen(httpServer, port, host),
     close: async () => {
+      shuttingDown = true;
       clearInterval(heartbeatTimer);
+      for (const timer of reconnectTimers.values()) clearTimeout(timer);
+      reconnectTimers.clear();
       for (const session of matchSessions.values()) session.stop();
       matchSessions.clear();
       for (const socket of webSocketServer.clients) {
@@ -259,6 +282,41 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     matchSessions.set(roomId, session);
     session.start();
   }
+
+  function beginReconnectWindow(roomId: string, playerId: string): void {
+    clearReconnectTimer(roomId, playerId);
+    try {
+      const room = rooms.markReconnecting(roomId, playerId);
+      matchSessions.get(roomId)?.pausePlayer(room, playerId);
+      broadcastRoomState(roomId, room);
+    } catch {
+      return;
+    }
+    const timer = setTimeout(() => {
+      reconnectTimers.delete(reconnectTimerKey(roomId, playerId));
+      replacePlayerWithBot(roomId, playerId);
+    }, options.reconnectWindowMs ?? RECONNECT_WINDOW_MS);
+    timer.unref();
+    reconnectTimers.set(reconnectTimerKey(roomId, playerId), timer);
+  }
+
+  function replacePlayerWithBot(roomId: string, playerId: string): void {
+    clearReconnectTimer(roomId, playerId);
+    const room = rooms.replaceParticipantWithBot(roomId, playerId);
+    matchSessions.get(roomId)?.replacePlayerWithBot(room, playerId);
+    broadcastRoomState(roomId, room);
+  }
+
+  function clearReconnectTimer(roomId: string, playerId: string): void {
+    const key = reconnectTimerKey(roomId, playerId);
+    const timer = reconnectTimers.get(key);
+    if (timer) clearTimeout(timer);
+    reconnectTimers.delete(key);
+  }
+}
+
+function reconnectTimerKey(roomId: string, playerId: string): string {
+  return `${roomId}:${playerId}`;
 }
 
 function listen(server: HttpServer, port: number, host: string): Promise<AddressInfo> {

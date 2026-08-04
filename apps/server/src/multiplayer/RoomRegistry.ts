@@ -104,12 +104,32 @@ export class RoomRegistry {
     if (!participant) {
       throw new RoomRegistryError('INVALID_RECONNECT_TOKEN', 'Reconnect token is invalid');
     }
+    if (participant.status === 'replaced-by-bot') {
+      throw new RoomRegistryError('RECONNECT_WINDOW_EXPIRED', 'Player control has already passed to a bot');
+    }
     participant.status = 'connected';
     return {
       room: toSnapshot(room),
       playerId: participant.playerId,
       reconnectToken: participant.reconnectToken,
     };
+  }
+
+  markReconnecting(roomId: string, playerId: string): RoomSnapshotDTO {
+    const room = this.requireRoom(roomId);
+    const participant = requireParticipant(room, playerId);
+    if (participant.status === 'replaced-by-bot') return toSnapshot(room);
+    participant.status = 'reconnecting';
+    transferCreator(room, participant);
+    return toSnapshot(room);
+  }
+
+  replaceParticipantWithBot(roomId: string, playerId: string): RoomSnapshotDTO {
+    const room = this.requireRoom(roomId);
+    const participant = requireParticipant(room, playerId);
+    participant.status = 'replaced-by-bot';
+    transferCreator(room, participant);
+    return toSnapshot(room);
   }
 
   setReady(roomId: string, playerId: string, ready: boolean): RoomSnapshotDTO {
@@ -133,7 +153,9 @@ export class RoomRegistry {
     const room = this.requireRoom(roomId);
     return (room.status === 'waiting' || room.status === 'round-complete')
       && room.participants.length === room.config.humanSlots
-      && room.participants.every((participant) => participant.status === 'ready');
+      && room.participants.every((participant) =>
+        participant.status === 'ready' || participant.status === 'replaced-by-bot'
+      );
   }
 
   startRound(roomId: string): RoomSnapshotDTO {
@@ -150,7 +172,9 @@ export class RoomRegistry {
     const room = this.requireRoom(roomId);
     room.status = gameComplete ? 'game-complete' : 'round-complete';
     if (!gameComplete) {
-      for (const participant of room.participants) participant.status = 'connected';
+      for (const participant of room.participants) {
+        if (participant.status !== 'replaced-by-bot') participant.status = 'connected';
+      }
     }
     return toSnapshot(room);
   }
@@ -175,6 +199,27 @@ export class RoomRegistry {
     if (!room) throw new RoomRegistryError('ROOM_NOT_FOUND', 'Room was not found');
     return room;
   }
+}
+
+function requireParticipant(room: StoredRoom, playerId: string): StoredParticipant {
+  const participant = room.participants.find((item) => item.playerId === playerId);
+  if (!participant) {
+    throw new RoomRegistryError('PLAYER_NOT_FOUND', 'Player does not belong to this room');
+  }
+  return participant;
+}
+
+function transferCreator(room: StoredRoom, departingParticipant: StoredParticipant): void {
+  if (!departingParticipant.isCreator) return;
+  const successor = room.participants
+    .filter((participant) =>
+      participant.playerId !== departingParticipant.playerId
+      && (participant.status === 'connected' || participant.status === 'ready')
+    )
+    .sort((left, right) => left.slotIndex - right.slotIndex)[0];
+  if (!successor) return;
+  departingParticipant.isCreator = false;
+  successor.isCreator = true;
 }
 
 function createParticipant(name: string, slotIndex: number, isCreator: boolean): StoredParticipant {

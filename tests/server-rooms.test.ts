@@ -139,6 +139,104 @@ describe('multiplayer room lobby', () => {
     socket.close();
   });
 
+  test('cancels replacement on reconnect and assigns a bot after the next timeout', async () => {
+    server = createMultiplayerServer({ reconnectWindowMs: 250 });
+    const address = await server.start(0);
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const webSocketUrl = `ws://127.0.0.1:${address.port}/ws`;
+    const created = await createRoom(baseUrl, {
+      ...baseConfig,
+      humanSlots: 1,
+      bots: [{ replaceableByPlayerBetweenRounds: false }],
+    });
+    const socket = await connectAndHandshake(webSocketUrl);
+    const joinedPromise = readUntilType(socket, 'room-joined');
+    socket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'reconnect',
+      roomId: created.room.roomId,
+      reconnectToken: created.reconnectToken,
+    }));
+    await joinedPromise;
+    const initialStatePromise = readUntilType(socket, 'game-state');
+    socket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'set-ready',
+      ready: true,
+    }));
+    await initialStatePromise;
+
+    await closeSocket(socket);
+    await waitForCondition(() =>
+      server.rooms.getSnapshot(created.room.roomId).participants[0].status === 'reconnecting'
+    );
+
+    const reconnectedSocket = await connectAndHandshake(webSocketUrl);
+    const rejoinedPromise = readUntilType(reconnectedSocket, 'room-joined');
+    reconnectedSocket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'reconnect',
+      roomId: created.room.roomId,
+      reconnectToken: created.reconnectToken,
+    }));
+    await rejoinedPromise;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(server.rooms.getSnapshot(created.room.roomId).participants[0].status).toBe('connected');
+
+    await closeSocket(reconnectedSocket);
+    await waitForCondition(() =>
+      server.rooms.getSnapshot(created.room.roomId).participants[0].status === 'replaced-by-bot'
+    );
+
+    const rejectedSocket = await connectAndHandshake(webSocketUrl);
+    const errorPromise = readUntilType(rejectedSocket, 'error');
+    rejectedSocket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'reconnect',
+      roomId: created.room.roomId,
+      reconnectToken: created.reconnectToken,
+    }));
+    await expect(errorPromise).resolves.toMatchObject({ code: 'RECONNECT_WINDOW_EXPIRED' });
+    rejectedSocket.close();
+  });
+
+  test('intentional leave transfers control to a bot immediately', async () => {
+    server = createMultiplayerServer();
+    const address = await server.start(0);
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const webSocketUrl = `ws://127.0.0.1:${address.port}/ws`;
+    const created = await createRoom(baseUrl, {
+      ...baseConfig,
+      humanSlots: 1,
+      bots: [{ replaceableByPlayerBetweenRounds: false }],
+    });
+    const socket = await connectAndHandshake(webSocketUrl);
+    const joinedPromise = readUntilType(socket, 'room-joined');
+    socket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'reconnect',
+      roomId: created.room.roomId,
+      reconnectToken: created.reconnectToken,
+    }));
+    await joinedPromise;
+    const initialStatePromise = readUntilType(socket, 'game-state');
+    socket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'set-ready',
+      ready: true,
+    }));
+    await initialStatePromise;
+
+    const replacedStatePromise = readUntilType(socket, 'room-state');
+    socket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'leave-match',
+    }));
+    const replacedState = await replacedStatePromise;
+
+    expect(replacedState.room.participants[0].status).toBe('replaced-by-bot');
+  });
+
   test('carries progress into the next round and completes the series after round 10', () => {
     const firstRoom = createPlayingRoomSnapshot(1);
     const emittedSnapshots: Array<Extract<ServerMessage, { type: 'game-state' }>['snapshot']> = [];
@@ -175,6 +273,26 @@ describe('multiplayer room lobby', () => {
     });
     expect(processUntilComplete(finalSession).status).toBe('game-complete');
   });
+
+  test('pauses a reconnecting snake and resumes the same slot under bot control', () => {
+    const room = createPlayingRoomSnapshot(1);
+    const session = new MatchSession({ room, seed: 23, onSnapshot: () => undefined });
+    const playerId = room.participants[0].playerId;
+    const initialHead = session.createSnapshot().snakes[0].segments[0];
+    const reconnectingRoom = withParticipantStatus(room, playerId, 'reconnecting');
+
+    session.pausePlayer(reconnectingRoom, playerId);
+    const pausedSnapshot = session.processTick();
+    expect(pausedSnapshot.snakes[0].segments[0]).toEqual(initialHead);
+    expect(pausedSnapshot.snakes[0].ticksWithoutFood).toBe(1);
+    expect(pausedSnapshot.snakes[0].controller).toMatchObject({ type: 'human', connected: false });
+
+    const replacedRoom = withParticipantStatus(room, playerId, 'replaced-by-bot');
+    session.replacePlayerWithBot(replacedRoom, playerId);
+    const botSnapshot = session.processTick();
+    expect(botSnapshot.snakes[0].segments[0]).not.toEqual(initialHead);
+    expect(botSnapshot.snakes[0].controller).toMatchObject({ type: 'bot', connected: true });
+  });
 });
 
 async function createRoom(baseUrl: string, config: RoomConfigDTO): Promise<CreateRoomResponseDTO> {
@@ -197,6 +315,21 @@ async function connectAndHandshake(url: string): Promise<WebSocket> {
   socket.send(JSON.stringify({ protocolVersion: NETWORK_PROTOCOL_VERSION, type: 'handshake' }));
   await connectedPromise;
   return socket;
+}
+
+function closeSocket(socket: WebSocket): Promise<void> {
+  return new Promise((resolve) => {
+    socket.once('close', () => resolve());
+    socket.close();
+  });
+}
+
+async function waitForCondition(predicate: () => boolean, timeoutMs = 1000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error('Timed out while waiting for server state');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
 }
 
 function readServerMessage(socket: WebSocket): Promise<ServerMessage> {
@@ -236,6 +369,19 @@ function createPlayingRoomSnapshot(currentRound: number): RoomSnapshotDTO {
       { playerId: 'player-1', name: 'Первый', slotIndex: 0, isCreator: true, status: 'ready' },
       { playerId: 'player-2', name: 'Второй', slotIndex: 1, isCreator: false, status: 'ready' },
     ],
+  };
+}
+
+function withParticipantStatus(
+  room: RoomSnapshotDTO,
+  playerId: string,
+  status: RoomSnapshotDTO['participants'][number]['status'],
+): RoomSnapshotDTO {
+  return {
+    ...room,
+    participants: room.participants.map((participant) =>
+      participant.playerId === playerId ? { ...participant, status } : { ...participant }
+    ),
   };
 }
 
