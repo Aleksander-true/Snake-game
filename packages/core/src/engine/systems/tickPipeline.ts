@@ -28,7 +28,7 @@ export function runTickPipeline(state: GameState, ctx: EngineContext, events: Do
 /* ---- System 1: Movement + collisions + eating ---- */
 function movementSystem(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
   const intents = state.snakes
-    .filter(snake => snake.alive)
+    .filter(snake => snake.alive && !snake.movementPaused)
     .map(snake => createMoveIntent(snake, state.foods, ctx));
   const deathReasons = resolveMoveDeaths(intents, state);
 
@@ -96,9 +96,12 @@ function resolveMoveDeaths(intents: MoveIntent[], state: GameState): Map<number,
       continue;
     }
 
-    const hitsOtherBody = intents.some(other => {
-      if (other.snake.id === intent.snake.id) return false;
-      const body = deaths.has(other.snake.id) ? other.snake.segments : other.projectedBody.slice(1);
+    const hitsOtherBody = state.snakes.some(otherSnake => {
+      if (!otherSnake.alive || otherSnake.id === intent.snake.id) return false;
+      const otherIntent = intents.find(other => other.snake.id === otherSnake.id);
+      const body = !otherIntent || deaths.has(otherSnake.id)
+        ? otherSnake.segments
+        : otherIntent.projectedBody.slice(1);
       return body.some(segment => samePosition(segment, intent.nextHead));
     });
     if (hitsOtherBody) {

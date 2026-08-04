@@ -5,6 +5,7 @@ export class SnakeEntity implements Snake {
   public score: number;
   public levelsWon: number;
   public ticksWithoutFood: number;
+  public movementPaused: boolean;
   public deathReason?: string;
 
   constructor(
@@ -18,6 +19,7 @@ export class SnakeEntity implements Snake {
     this.score = 0;
     this.levelsWon = 0;
     this.ticksWithoutFood = 0;
+    this.movementPaused = false;
   }
 
   get head(): Position {

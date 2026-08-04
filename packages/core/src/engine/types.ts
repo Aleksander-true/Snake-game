@@ -49,6 +49,7 @@ export interface Snake {
   levelsWon: number;
   ticksWithoutFood: number;
   isBot: boolean;
+  movementPaused?: boolean;
   deathReason?: string;
   readonly head: Position;
   applyDirection(newDirection: Direction): void;

@@ -117,6 +117,36 @@ describe('Board integration - multiplayer and edge cases', () => {
     }
   });
 
+  test('paused snake stays in place, remains collidable and continues hunger', () => {
+    const ctx = createCtx();
+    const engine = new GameEngine(ctx);
+    const state = createState();
+    const paused = new SnakeEntity(
+      0,
+      'Disconnected',
+      [{ x: 6, y: 5 }, { x: 6, y: 6 }, { x: 6, y: 7 }],
+      'up',
+      false
+    );
+    paused.movementPaused = true;
+    const mover = new SnakeEntity(
+      1,
+      'Connected',
+      [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }],
+      'right',
+      false
+    );
+    state.snakes = [paused, mover];
+
+    engine.processTick(state);
+
+    expect(paused.head).toEqual({ x: 6, y: 5 });
+    expect(paused.ticksWithoutFood).toBe(1);
+    expect(paused.alive).toBe(true);
+    expect(mover.alive).toBe(false);
+    expect(mover.deathReason).toBe('Столкнулась с другой змейкой');
+  });
+
   test('multiplayer level completes with winner and increments levelsWon for survivor', () => {
     const ctx = createCtx();
     const engine = new GameEngine(ctx);
