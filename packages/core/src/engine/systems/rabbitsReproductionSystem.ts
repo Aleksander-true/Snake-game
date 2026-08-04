@@ -7,6 +7,7 @@ import { ChickenFoodEntity } from '../entities/ChickenFoodEntity';
 import { MeatFoodEntity } from '../entities/MeatFoodEntity';
 import { RabbitFoodEntity } from '../entities/RabbitFoodEntity';
 import { assignFoodId, getFoodPhase } from './foodSystem';
+import { isPositionInsideEnemy } from './enemySystem';
 
 export interface FoodBirth {
   parentPos: Position;
@@ -45,6 +46,7 @@ export function isValidFoodPosition(
 
   // Not on wall
   if (state.walls.some(wall => wall.x === pos.x && wall.y === pos.y)) return false;
+  if (isPositionInsideEnemy(pos, state)) return false;
 
   // Not on snake
   for (const snake of state.snakes) {
@@ -64,6 +66,7 @@ export function isValidFoodPosition(
 export function isFreeFoodCell(pos: Position, state: GameState): boolean {
   if (!inBounds(pos, state.width, state.height)) return false;
   if (state.walls.some(wall => wall.x === pos.x && wall.y === pos.y)) return false;
+  if (isPositionInsideEnemy(pos, state)) return false;
   if (state.snakes.some(snake => snake.segments.some(segment => samePosition(segment, pos)))) return false;
   return !state.foods.some(food => samePosition(food.pos, pos));
 }

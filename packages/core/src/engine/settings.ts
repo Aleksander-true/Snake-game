@@ -98,6 +98,21 @@ export interface GameSettings {
   meatScoreValue: number;
   meatGrowthValue: number;
 
+  /* Hedgehog enemy */
+  hedgehogSpawnStartLevel: number;
+  hedgehogSecondSpawnStartLevel: number;
+  hedgehogWidth: number;
+  hedgehogHeight: number;
+  hedgehogSpawnSnakeDistance: number;
+  hedgehogMoveInterval: number;
+  hedgehogFrontVisionRadius: number;
+  hedgehogRearVisionRadius: number;
+  hedgehogAboveVisionRadius: number;
+  hedgehogBelowVisionRadius: number;
+  hedgehogFoodVisionRadius: number;
+  hedgehogExtraChanceSlope: number;
+  hedgehogExtraChanceIntercept: number;
+
   /* Walls — generation formulas */
   wallClusterCoeff: number;
   wallClusterBase: number;
@@ -196,6 +211,20 @@ export function createDefaultSettings(): GameSettings {
     meatMaxAge:                 defaultJson.meat.maxAge,
     meatScoreValue:             defaultJson.meat.scoreValue,
     meatGrowthValue:            defaultJson.meat.growthValue,
+
+    hedgehogSpawnStartLevel:    defaultJson.hedgehog.spawnStartLevel,
+    hedgehogSecondSpawnStartLevel: defaultJson.hedgehog.secondSpawnStartLevel,
+    hedgehogWidth:              defaultJson.hedgehog.width,
+    hedgehogHeight:             defaultJson.hedgehog.height,
+    hedgehogSpawnSnakeDistance: defaultJson.hedgehog.spawnSnakeDistance,
+    hedgehogMoveInterval:       defaultJson.hedgehog.moveInterval,
+    hedgehogFrontVisionRadius:  defaultJson.hedgehog.frontVisionRadius,
+    hedgehogRearVisionRadius:   defaultJson.hedgehog.rearVisionRadius,
+    hedgehogAboveVisionRadius:  defaultJson.hedgehog.aboveVisionRadius,
+    hedgehogBelowVisionRadius:  defaultJson.hedgehog.belowVisionRadius,
+    hedgehogFoodVisionRadius:   defaultJson.hedgehog.foodVisionRadius,
+    hedgehogExtraChanceSlope:   defaultJson.hedgehog.extraChanceSlope,
+    hedgehogExtraChanceIntercept: defaultJson.hedgehog.extraChanceIntercept,
 
     wallClusterCoeff:             defaultJson.walls.clusterCoeff,
     wallClusterBase:              defaultJson.walls.clusterBase,
@@ -301,6 +330,21 @@ export interface GameDefaultsJSON {
     scoreValue: number;
     growthValue: number;
   };
+  hedgehog: {
+    spawnStartLevel: number;
+    secondSpawnStartLevel: number;
+    width: number;
+    height: number;
+    spawnSnakeDistance: number;
+    moveInterval: number;
+    frontVisionRadius: number;
+    rearVisionRadius: number;
+    aboveVisionRadius: number;
+    belowVisionRadius: number;
+    foodVisionRadius: number;
+    extraChanceSlope: number;
+    extraChanceIntercept: number;
+  };
   walls: {
     clusterCoeff: number;
     clusterBase: number;
@@ -403,6 +447,21 @@ export function settingsToJSON(): GameDefaultsJSON {
       scoreValue: settings.meatScoreValue,
       growthValue: settings.meatGrowthValue,
     },
+    hedgehog: {
+      spawnStartLevel: settings.hedgehogSpawnStartLevel,
+      secondSpawnStartLevel: settings.hedgehogSecondSpawnStartLevel,
+      width: settings.hedgehogWidth,
+      height: settings.hedgehogHeight,
+      spawnSnakeDistance: settings.hedgehogSpawnSnakeDistance,
+      moveInterval: settings.hedgehogMoveInterval,
+      frontVisionRadius: settings.hedgehogFrontVisionRadius,
+      rearVisionRadius: settings.hedgehogRearVisionRadius,
+      aboveVisionRadius: settings.hedgehogAboveVisionRadius,
+      belowVisionRadius: settings.hedgehogBelowVisionRadius,
+      foodVisionRadius: settings.hedgehogFoodVisionRadius,
+      extraChanceSlope: settings.hedgehogExtraChanceSlope,
+      extraChanceIntercept: settings.hedgehogExtraChanceIntercept,
+    },
     walls: {
       clusterCoeff: settings.wallClusterCoeff,
       clusterBase: settings.wallClusterBase,
@@ -504,6 +563,21 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.meat.maxAge != null)      settings.meatMaxAge = data.meat.maxAge;
     if (data.meat.scoreValue != null)  settings.meatScoreValue = data.meat.scoreValue;
     if (data.meat.growthValue != null) settings.meatGrowthValue = data.meat.growthValue;
+  }
+  if (data.hedgehog) {
+    if (data.hedgehog.spawnStartLevel != null) settings.hedgehogSpawnStartLevel = data.hedgehog.spawnStartLevel;
+    if (data.hedgehog.secondSpawnStartLevel != null) settings.hedgehogSecondSpawnStartLevel = data.hedgehog.secondSpawnStartLevel;
+    if (data.hedgehog.width != null) settings.hedgehogWidth = data.hedgehog.width;
+    if (data.hedgehog.height != null) settings.hedgehogHeight = data.hedgehog.height;
+    if (data.hedgehog.spawnSnakeDistance != null) settings.hedgehogSpawnSnakeDistance = data.hedgehog.spawnSnakeDistance;
+    if (data.hedgehog.moveInterval != null) settings.hedgehogMoveInterval = data.hedgehog.moveInterval;
+    if (data.hedgehog.frontVisionRadius != null) settings.hedgehogFrontVisionRadius = data.hedgehog.frontVisionRadius;
+    if (data.hedgehog.rearVisionRadius != null) settings.hedgehogRearVisionRadius = data.hedgehog.rearVisionRadius;
+    if (data.hedgehog.aboveVisionRadius != null) settings.hedgehogAboveVisionRadius = data.hedgehog.aboveVisionRadius;
+    if (data.hedgehog.belowVisionRadius != null) settings.hedgehogBelowVisionRadius = data.hedgehog.belowVisionRadius;
+    if (data.hedgehog.foodVisionRadius != null) settings.hedgehogFoodVisionRadius = data.hedgehog.foodVisionRadius;
+    if (data.hedgehog.extraChanceSlope != null) settings.hedgehogExtraChanceSlope = data.hedgehog.extraChanceSlope;
+    if (data.hedgehog.extraChanceIntercept != null) settings.hedgehogExtraChanceIntercept = data.hedgehog.extraChanceIntercept;
   }
   if (data.walls) {
     if (data.walls.clusterCoeff != null)  settings.wallClusterCoeff = data.walls.clusterCoeff;
@@ -645,6 +719,11 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'chickenChickScoreValue', 'chickenChickGrowthValue',
     'chickenAdultScoreValue', 'chickenAdultGrowthValue',
     'meatMaxAge', 'meatScoreValue', 'meatGrowthValue',
+    'hedgehogSpawnStartLevel', 'hedgehogSecondSpawnStartLevel',
+    'hedgehogWidth', 'hedgehogHeight', 'hedgehogSpawnSnakeDistance',
+    'hedgehogMoveInterval', 'hedgehogFrontVisionRadius', 'hedgehogRearVisionRadius',
+    'hedgehogAboveVisionRadius', 'hedgehogBelowVisionRadius',
+    'hedgehogFoodVisionRadius', 'hedgehogExtraChanceSlope', 'hedgehogExtraChanceIntercept',
     'wallClusterCoeff', 'wallClusterBase', 'wallLengthCoeff', 'wallLengthBase',
     'targetScoreCoeff', 'targetScoreBase',
     'baseWidth', 'baseHeight', 'levelSizeIncrement', 'survivalMaxBoardLevel',

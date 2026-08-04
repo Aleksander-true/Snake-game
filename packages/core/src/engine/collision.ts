@@ -1,4 +1,4 @@
-import { Position, Snake, GameState } from './types';
+import { Enemy, Position, Snake, GameState } from './types';
 import { inBounds } from './board';
 
 /**
@@ -7,6 +7,16 @@ import { inBounds } from './board';
 export function collidesWithWall(pos: Position, state: GameState): boolean {
   if (!inBounds(pos, state.width, state.height)) return true; // out of bounds = wall
   return state.walls.some(wall => wall.x === pos.x && wall.y === pos.y);
+}
+
+/** Check if a position is occupied by any enemy footprint. */
+export function collidesWithEnemy(pos: Position, enemies: Enemy[]): boolean {
+  return enemies.some(enemy =>
+    pos.x >= enemy.pos.x
+    && pos.x < enemy.pos.x + enemy.width
+    && pos.y >= enemy.pos.y
+    && pos.y < enemy.pos.y + enemy.height
+  );
 }
 
 /**

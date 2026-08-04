@@ -269,6 +269,14 @@ export class MatchSession {
         age: food.age,
         facing: food.facing,
       })),
+      enemies: this.state.enemies.map((enemy) => ({
+        enemyId: enemy.id,
+        kind: enemy.kind,
+        position: { ...enemy.pos },
+        width: enemy.width,
+        height: enemy.height,
+        facing: enemy.facing,
+      })),
       walls: this.state.walls.map((wall) => ({ ...wall })),
     };
   }

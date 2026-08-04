@@ -109,6 +109,10 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.chickenReproductionLimitBase).toBe(10);
     expect(settings.chickenMaxEggs).toBe(3);
     expect(settings.meatMaxAge).toBe(50);
+    expect(settings.hedgehogSpawnStartLevel).toBe(4);
+    expect(settings.hedgehogSecondSpawnStartLevel).toBe(7);
+    expect(settings.hedgehogMoveInterval).toBe(2);
+    expect(settings.hedgehogFrontVisionRadius).toBe(20);
     expect(settings.levelSizeIncrement).toBe(2);
     expect(settings.survivalMaxBoardLevel).toBe(10);
   });

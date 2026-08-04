@@ -2,6 +2,7 @@ import { Position, Food, GameState } from '../types';
 import { EngineContext } from '../context';
 import { chebyshevDistance } from '../systems/rabbitsReproductionSystem';
 import { assignFoodId, createLevelFood } from '../systems/foodSystem';
+import { getEnemyCells } from '../systems/enemySystem';
 
 /**
  * Spawn initial food for a level.
@@ -26,6 +27,9 @@ export function spawnFood(
     for (const seg of snake.segments) {
       occupiedSet.add(`${seg.x},${seg.y}`);
     }
+  }
+  for (const enemy of state.enemies) {
+    for (const cell of getEnemyCells(enemy)) occupiedSet.add(`${cell.x},${cell.y}`);
   }
 
   let attempts = 0;

@@ -126,7 +126,13 @@ function isInBounds(pos: Position, state: GameState): boolean {
 }
 
 function isWall(pos: Position, state: GameState): boolean {
-  return state.walls.some(wall => wall.x === pos.x && wall.y === pos.y);
+  return state.walls.some(wall => wall.x === pos.x && wall.y === pos.y)
+    || state.enemies.some(enemy =>
+      pos.x >= enemy.pos.x
+      && pos.x < enemy.pos.x + enemy.width
+      && pos.y >= enemy.pos.y
+      && pos.y < enemy.pos.y + enemy.height
+    );
 }
 
 function isSnakeCollision(pos: Position, state: GameState, currentSnake: Snake, growing: boolean): boolean {
@@ -145,6 +151,13 @@ function isSnakeCollision(pos: Position, state: GameState, currentSnake: Snake, 
 function buildBlockedCells(state: GameState, currentSnake: Snake, growing: boolean): Set<string> {
   const blocked = new Set<string>();
   for (const wall of state.walls) blocked.add(cellKey(wall));
+  for (const enemy of state.enemies) {
+    for (let y = enemy.pos.y; y < enemy.pos.y + enemy.height; y++) {
+      for (let x = enemy.pos.x; x < enemy.pos.x + enemy.width; x++) {
+        blocked.add(cellKey({ x, y }));
+      }
+    }
+  }
 
   for (const snake of state.snakes) {
     if (!snake.alive) continue;

@@ -8,6 +8,11 @@ import { runTickPipeline } from './systems/tickPipeline';
 import { DomainEvent, TickResult } from './events';
 import { SnakeEntity } from './entities/SnakeEntity';
 import { getInitialFoodCount, getWallClusterCount, getWallLength } from './formulas';
+import {
+  ensureHedgehogPopulation,
+  getEnemyCells,
+  getTargetHedgehogCount,
+} from './systems/enemySystem';
 
 /**
  * OOP facade for core game engine operations.
@@ -39,7 +44,10 @@ export class GameEngine {
       height,
       snakes: [],
       foods: [],
+      enemies: [],
       nextFoodId: 0,
+      nextEnemyId: 0,
+      targetHedgehogCount: 0,
       roundResults: [],
       walls: [],
       level,
@@ -108,10 +116,19 @@ export class GameEngine {
       snakeId++;
     }
 
+    state.enemies = [];
+    state.nextEnemyId = 0;
+
     const foodCount =
       levelOverride.foodCount
       ?? getInitialFoodCount(totalSnakes, state.difficultyLevel, settings);
     state.foods = spawnFood(foodCount, state, this.activeContext);
+    state.targetHedgehogCount = getTargetHedgehogCount(
+      state.level,
+      state.difficultyLevel,
+      this.activeContext
+    );
+    ensureHedgehogPopulation(state, this.activeContext);
 
     state.board = buildBoard(state, this.activeContext.settings);
     state.tickCount = 0;
@@ -157,6 +174,10 @@ export class GameEngine {
         this.shiftPosition(food.pos, offsetX, offsetY);
         if (food.originPos) this.shiftPosition(food.originPos, offsetX, offsetY);
       }
+      for (const enemy of state.enemies) {
+        this.shiftPosition(enemy.pos, offsetX, offsetY);
+        if (enemy.plannedMove) this.shiftPosition(enemy.plannedMove, offsetX, offsetY);
+      }
       for (const wall of state.walls) this.shiftPosition(wall, offsetX, offsetY);
 
       const nextOverride = getLevelOverride(nextLevel, settings);
@@ -177,6 +198,12 @@ export class GameEngine {
     state.level = nextLevel;
     state.width = targetWidth;
     state.height = targetHeight;
+    state.targetHedgehogCount = getTargetHedgehogCount(
+      nextLevel,
+      state.difficultyLevel,
+      this.activeContext
+    );
+    ensureHedgehogPopulation(state, this.activeContext);
     state.board = buildBoard(state, settings);
     state.levelComplete = false;
     state.gameOver = false;
@@ -210,6 +237,7 @@ export class GameEngine {
     const occupiedPositions = [
       ...state.snakes.flatMap(snake => snake.segments),
       ...state.foods.map(food => food.pos),
+      ...state.enemies.flatMap(enemy => getEnemyCells(enemy)),
     ];
     const isInExpandedArea = (position: { x: number; y: number }): boolean =>
       position.x < oldBounds.x

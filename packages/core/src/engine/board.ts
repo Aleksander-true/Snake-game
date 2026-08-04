@@ -1,6 +1,7 @@
 import { GameSettings } from './settings';
 import { CellContent, Food, GameState, Position } from './types';
 import { getFoodReward } from './systems/foodSystem';
+import { getEnemyCells } from './systems/enemySystem';
 
 /**
  * Creates an empty board of given dimensions.
@@ -42,6 +43,13 @@ export function buildBoard(state: GameState, settings: GameSettings): CellConten
         if (!snake.alive && board[seg.y][seg.x].startsWith('&x')) continue;
         board[seg.y][seg.x] = String(snake.id + 1);
       }
+    }
+  }
+
+  // Enemies have display and collision priority over food and snake bodies.
+  for (const enemy of state.enemies) {
+    for (const cell of getEnemyCells(enemy)) {
+      if (inBounds(cell, state.width, state.height)) board[cell.y][cell.x] = '!';
     }
   }
 

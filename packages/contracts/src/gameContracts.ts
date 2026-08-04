@@ -3,6 +3,7 @@ import type { RoomLifecycleStatus } from './roomContracts';
 export type NetworkDirection = 'up' | 'down' | 'left' | 'right';
 export type NetworkFoodKind = 'apple' | 'rabbit' | 'chicken' | 'meat';
 export type NetworkFoodFacing = 'left' | 'right';
+export type NetworkEnemyKind = 'hedgehog';
 export type SnakeControllerType = 'human' | 'bot';
 
 export interface PositionDTO {
@@ -37,6 +38,15 @@ export interface FoodSnapshotDTO {
   facing?: NetworkFoodFacing;
 }
 
+export interface EnemySnapshotDTO {
+  enemyId: string;
+  kind: NetworkEnemyKind;
+  position: PositionDTO;
+  width: number;
+  height: number;
+  facing: NetworkFoodFacing;
+}
+
 export interface GameSnapshotDTO {
   protocolVersion: number;
   matchId: string;
@@ -52,6 +62,7 @@ export interface GameSnapshotDTO {
   height: number;
   snakes: SnakeSnapshotDTO[];
   foods: FoodSnapshotDTO[];
+  enemies: EnemySnapshotDTO[];
   walls: PositionDTO[];
 }
 

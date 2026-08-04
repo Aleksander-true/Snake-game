@@ -3,7 +3,7 @@ import { EngineContext } from '../context';
 import { DomainEvent } from '../events';
 import { buildBoard } from '../board';
 import { moveSnake } from './movementSystem';
-import { collidesWithWall } from '../collision';
+import { collidesWithEnemy, collidesWithWall } from '../collision';
 import { processHunger, resetHunger } from './hungerSystem';
 import { awardFoodPoints } from './scoringSystem';
 import { processFoodLifecycle } from './rabbitsReproductionSystem';
@@ -11,6 +11,7 @@ import { checkLevelComplete, getMaxLevel } from './levelSystem';
 import { autoReplenishFood, getFoodReward, spawnPeriodicFood } from './foodSystem';
 import { processMovingFood } from './movingFoodSystem';
 import { createMeatDropsForSnakeDeaths } from './meatSystem';
+import { consumeMeatUnderEnemies, processEnemies } from './enemySystem';
 
 /**
  * Run all tick systems in the required order.
@@ -20,7 +21,9 @@ export function runTickPipeline(state: GameState, ctx: EngineContext, events: Do
   hungerSystem(state, ctx, events);
   reproductionSystem(state, ctx, events);
   processMovingFood(state, ctx);
+  processEnemies(state, ctx, events);
   createMeatDropsForSnakeDeaths(state, events);
+  consumeMeatUnderEnemies(state);
   boardSystem(state, ctx);
   levelCheckSystem(state, ctx, events);
 }
@@ -70,6 +73,8 @@ function resolveMoveDeaths(intents: MoveIntent[], state: GameState): Map<number,
   for (const intent of intents) {
     if (collidesWithWall(intent.nextHead, state)) {
       deaths.set(intent.snake.id, 'Врезалась в стену');
+    } else if (collidesWithEnemy(intent.nextHead, state.enemies)) {
+      deaths.set(intent.snake.id, 'Столкнулась с ёжиком');
     }
   }
 

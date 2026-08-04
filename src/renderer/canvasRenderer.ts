@@ -1,5 +1,5 @@
 import { getFoodPhase } from '@snake-game/core';
-import type { Food, GameSettings, GameState, Snake } from '@snake-game/core';
+import type { Enemy, Food, GameSettings, GameState, Snake } from '@snake-game/core';
 import { darkenColor, getDeadSnakeColor } from '../shared/color';
 
 const PLAYER_MARKER_DURATION_MS = 1000;
@@ -111,6 +111,7 @@ export function renderGame(
   drawSnakes(ctx, state.snakes, cellSize, settings, false);
   drawFoods(ctx, state.foods.filter(food => food.kind === 'meat'), cellSize, settings);
   drawSnakes(ctx, state.snakes, cellSize, settings, true);
+  drawEnemies(ctx, state.enemies, cellSize);
 
   if (
     options.playerMarkerElapsedMs !== undefined
@@ -127,6 +128,37 @@ export function renderGame(
     );
   }
   ctx.restore();
+}
+
+/* ====== Enemies ====== */
+
+function drawEnemies(
+  ctx: CanvasRenderingContext2D,
+  enemies: Enemy[],
+  cellSize: number
+): void {
+  for (const enemy of enemies) {
+    const left = enemy.pos.x * cellSize;
+    const top = enemy.pos.y * cellSize;
+    const width = enemy.width * cellSize;
+    const height = enemy.height * cellSize;
+    const centerX = left + width / 2;
+    const centerY = top + height / 2;
+    const iconSize = Math.max(8, Math.floor(Math.min(width, height) * 0.78));
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, width, height);
+    ctx.clip();
+    ctx.translate(centerX, centerY);
+    ctx.scale(enemy.facing === 'right' ? -1 : 1, 1);
+    ctx.font = `${iconSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.filter = 'none';
+    ctx.fillText('🦔', 0, 0);
+    ctx.restore();
+  }
 }
 
 /* ====== Food ====== */

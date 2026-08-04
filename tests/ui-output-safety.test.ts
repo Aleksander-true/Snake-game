@@ -2,6 +2,7 @@ import {
   ChickenFoodEntity,
   createDefaultSettings,
   createEmptyBoard,
+  HedgehogEntity,
   MeatFoodEntity,
   SnakeEntity,
 } from '@snake-game/core';
@@ -20,6 +21,9 @@ function createUnsafeState(): GameState {
     height: 8,
     snakes: [new SnakeEntity(0, '<img src=x onerror="alert(1)">', [{ x: 2, y: 2 }], 'right', false)],
     foods: [],
+    enemies: [],
+    nextEnemyId: 0,
+    targetHedgehogCount: 0,
     roundResults: [],
     walls: [],
     level: 1,
@@ -61,6 +65,8 @@ describe('UI output safety', () => {
       lineTo: jest.fn(),
       stroke: jest.fn(),
       arc: jest.fn(),
+      rect: jest.fn(),
+      clip: jest.fn(),
       fill: jest.fn(),
       save: jest.fn(),
       restore: jest.fn(),
@@ -94,10 +100,11 @@ describe('UI output safety', () => {
     chicken.age = settings.foodAdultAge;
     chicken.facing = 'left';
     state.foods = [egg, chick, chicken, MeatFoodEntity.newborn({ x: 4, y: 1 }, 'food-3')];
+    state.enemies = [new HedgehogEntity('enemy-0', { x: 5, y: 1 }, 2, 2, 'right')];
     markerTexts.length = 0;
 
     renderGame(ctx, state, 10, settings, { playerMarkerElapsedMs: 1000 });
-    expect(markerTexts.map(item => item.text)).toEqual(['🥚', '🐤', '🐔', '🍖']);
+    expect(markerTexts.map(item => item.text)).toEqual(['🥚', '🐤', '🐔', '🍖', '🦔']);
     expect(contextMethods.scale.mock.calls).toEqual(expect.arrayContaining([
       [-0.92, 0.92],
       [0.92, 0.92],

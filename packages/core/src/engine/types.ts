@@ -17,6 +17,7 @@ export interface Position {
 export type FoodPhase = 'young' | 'adult' | 'old';
 export type FoodKind = 'apple' | 'rabbit' | 'chicken' | 'meat';
 export type FoodFacing = 'left' | 'right';
+export type EnemyKind = 'hedgehog';
 export type GameMode = 'classic' | 'survival';
 
 /**
@@ -37,6 +38,18 @@ export interface Food {
   facing?: FoodFacing;
   plannedMove?: Position;
   pendingMandatoryEgg?: boolean;
+}
+
+/** Moving hostile entity occupying one or more board cells. */
+export interface Enemy {
+  id: string;
+  kind: EnemyKind;
+  pos: Position;
+  width: number;
+  height: number;
+  facing: FoodFacing;
+  movementClock: number;
+  plannedMove?: Position;
 }
 
 /**
@@ -91,7 +104,10 @@ export interface GameState {
   height: number;
   snakes: Snake[];
   foods: Food[];
+  enemies: Enemy[];
   nextFoodId?: number;
+  nextEnemyId?: number;
+  targetHedgehogCount: number;
   roundResults: RoundResult[];
   walls: Position[];
   level: number;

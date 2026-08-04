@@ -56,6 +56,22 @@
     "growthValue": 1
   },
 
+  "hedgehog": {
+    "spawnStartLevel": 4,
+    "secondSpawnStartLevel": 7,
+    "width": 2,
+    "height": 2,
+    "spawnSnakeDistance": 10,
+    "moveInterval": 2,
+    "frontVisionRadius": 20,
+    "rearVisionRadius": 5,
+    "aboveVisionRadius": 5,
+    "belowVisionRadius": 20,
+    "foodVisionRadius": 20,
+    "extraChanceSlope": 15,
+    "extraChanceIntercept": 15
+  },
+
   "walls": {
     "clusterCoeff": 1.2,
     "clusterBase": 2,

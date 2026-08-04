@@ -4,6 +4,7 @@ import { ChickenFoodEntity } from '../entities/ChickenFoodEntity';
 import { RandomPort } from '../ports';
 import { GameSettings } from '../settings';
 import { Food, FoodPhase, GameState, Position } from '../types';
+import { getEnemyCells } from './enemySystem';
 
 export function getFoodPhase(food: Food, settings: GameSettings): FoodPhase {
   if (food.age < settings.foodYoungAge) return 'young';
@@ -133,6 +134,9 @@ function findFarthestFoodPosition(state: GameState): Position | null {
     for (const segment of snake.segments) occupied.add(`${segment.x},${segment.y}`);
   }
   for (const food of state.foods) occupied.add(`${food.pos.x},${food.pos.y}`);
+  for (const enemy of state.enemies) {
+    for (const cell of getEnemyCells(enemy)) occupied.add(`${cell.x},${cell.y}`);
+  }
 
   const snakeHeads = state.snakes.filter(snake => snake.alive).map(snake => snake.head);
   if (snakeHeads.length === 0) return null;

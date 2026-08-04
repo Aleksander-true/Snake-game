@@ -8,6 +8,7 @@ import { chebyshevDistance } from './rabbitsReproductionSystem';
 const MEAT_DEATH_REASONS = new Set([
   'Врезалась в стену',
   'Столкнулась с другой змейкой',
+  'Столкнулась с ёжиком',
   'Съела саму себя',
 ]);
 

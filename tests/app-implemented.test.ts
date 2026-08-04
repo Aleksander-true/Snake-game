@@ -46,6 +46,9 @@ function createState(width = 12, height = 12): GameState {
     height,
     snakes: [],
     foods: [],
+    enemies: [],
+    nextEnemyId: 0,
+    targetHedgehogCount: 0,
     roundResults: [],
     walls: [],
     level: 1,
@@ -355,10 +358,14 @@ describe('App implemented behavior', () => {
       engine.initLevel(maximumBoard, config);
       const maximumWidth = maximumBoard.width;
       const maximumHead = { ...maximumBoard.snakes[0].head };
+      const preservedEnemy = maximumBoard.enemies[0];
+      const preservedEnemyPosition = { ...preservedEnemy.pos };
       progression.advanceToNextLevel(maximumBoard, config, engine);
       expect(maximumBoard.level).toBe(ctx.settings.survivalMaxBoardLevel + 1);
       expect(maximumBoard.width).toBe(maximumWidth);
       expect(maximumBoard.snakes[0].head).toEqual(maximumHead);
+      expect(maximumBoard.enemies).toContain(preservedEnemy);
+      expect(preservedEnemy.pos).toEqual(preservedEnemyPosition);
     });
   });
 

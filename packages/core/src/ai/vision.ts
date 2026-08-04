@@ -42,6 +42,14 @@ export function generateVision(
         if (state.walls.some(wall => wall.x === worldPos.x && wall.y === worldPos.y)) {
           signal += getObstacleSignal(distance, settings);
         }
+        if (state.enemies.some(enemy =>
+          worldPos.x >= enemy.pos.x
+          && worldPos.x < enemy.pos.x + enemy.width
+          && worldPos.y >= enemy.pos.y
+          && worldPos.y < enemy.pos.y + enemy.height
+        )) {
+          signal += getObstacleSignal(distance, settings);
+        }
 
         // Check snake bodies
         for (const snake of state.snakes) {

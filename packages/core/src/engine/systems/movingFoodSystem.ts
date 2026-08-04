@@ -2,6 +2,7 @@ import { EngineContext } from '../context';
 import { getFoodPhase } from './foodSystem';
 import { Food, FoodFacing, FoodPhase, GameState, Position } from '../types';
 import { chebyshevDistance } from './rabbitsReproductionSystem';
+import { isPositionInsideEnemy } from './enemySystem';
 
 const NEIGHBOR_OFFSETS: ReadonlyArray<Position> = [
   { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 },
@@ -198,6 +199,7 @@ function isMovementCellFree(
 ): boolean {
   if (pos.x < 0 || pos.x >= state.width || pos.y < 0 || pos.y >= state.height) return false;
   if (state.walls.some(wall => samePosition(wall, pos))) return false;
+  if (isPositionInsideEnemy(pos, state)) return false;
   if (state.snakes.some(snake => snake.segments.some(segment => samePosition(segment, pos)))) return false;
   return !state.foods.some(food =>
     food !== movingFood && food !== allowedFood && samePosition(food.pos, pos)
