@@ -104,7 +104,13 @@ export interface GameSettings {
   hedgehogWidth: number;
   hedgehogHeight: number;
   hedgehogSpawnSnakeDistance: number;
+  /** Legacy compatibility setting; movement speed now depends on difficulty. */
   hedgehogMoveInterval: number;
+  hedgehogEasyMoveInterval: number;
+  hedgehogMediumMoveInterval: number;
+  hedgehogHardMoveInterval: number;
+  hedgehogEasyDifficultyMax: number;
+  hedgehogMediumDifficultyMax: number;
   hedgehogFrontVisionRadius: number;
   hedgehogRearVisionRadius: number;
   hedgehogAboveVisionRadius: number;
@@ -223,6 +229,11 @@ export function createDefaultSettings(): GameSettings {
     hedgehogHeight:             defaultJson.hedgehog.height,
     hedgehogSpawnSnakeDistance: defaultJson.hedgehog.spawnSnakeDistance,
     hedgehogMoveInterval:       defaultJson.hedgehog.moveInterval,
+    hedgehogEasyMoveInterval:   defaultJson.hedgehog.easyMoveInterval,
+    hedgehogMediumMoveInterval: defaultJson.hedgehog.mediumMoveInterval,
+    hedgehogHardMoveInterval:   defaultJson.hedgehog.hardMoveInterval,
+    hedgehogEasyDifficultyMax:  defaultJson.hedgehog.easyDifficultyMax,
+    hedgehogMediumDifficultyMax: defaultJson.hedgehog.mediumDifficultyMax,
     hedgehogFrontVisionRadius:  defaultJson.hedgehog.frontVisionRadius,
     hedgehogRearVisionRadius:   defaultJson.hedgehog.rearVisionRadius,
     hedgehogAboveVisionRadius:  defaultJson.hedgehog.aboveVisionRadius,
@@ -347,6 +358,11 @@ export interface GameDefaultsJSON {
     height: number;
     spawnSnakeDistance: number;
     moveInterval: number;
+    easyMoveInterval: number;
+    mediumMoveInterval: number;
+    hardMoveInterval: number;
+    easyDifficultyMax: number;
+    mediumDifficultyMax: number;
     frontVisionRadius: number;
     rearVisionRadius: number;
     aboveVisionRadius: number;
@@ -469,6 +485,11 @@ export function settingsToJSON(): GameDefaultsJSON {
       height: settings.hedgehogHeight,
       spawnSnakeDistance: settings.hedgehogSpawnSnakeDistance,
       moveInterval: settings.hedgehogMoveInterval,
+      easyMoveInterval: settings.hedgehogEasyMoveInterval,
+      mediumMoveInterval: settings.hedgehogMediumMoveInterval,
+      hardMoveInterval: settings.hedgehogHardMoveInterval,
+      easyDifficultyMax: settings.hedgehogEasyDifficultyMax,
+      mediumDifficultyMax: settings.hedgehogMediumDifficultyMax,
       frontVisionRadius: settings.hedgehogFrontVisionRadius,
       rearVisionRadius: settings.hedgehogRearVisionRadius,
       aboveVisionRadius: settings.hedgehogAboveVisionRadius,
@@ -591,6 +612,11 @@ export function applyJSONToSettings(data: Partial<GameDefaultsJSON>): void {
     if (data.hedgehog.height != null) settings.hedgehogHeight = data.hedgehog.height;
     if (data.hedgehog.spawnSnakeDistance != null) settings.hedgehogSpawnSnakeDistance = data.hedgehog.spawnSnakeDistance;
     if (data.hedgehog.moveInterval != null) settings.hedgehogMoveInterval = data.hedgehog.moveInterval;
+    if (data.hedgehog.easyMoveInterval != null) settings.hedgehogEasyMoveInterval = data.hedgehog.easyMoveInterval;
+    if (data.hedgehog.mediumMoveInterval != null) settings.hedgehogMediumMoveInterval = data.hedgehog.mediumMoveInterval;
+    if (data.hedgehog.hardMoveInterval != null) settings.hedgehogHardMoveInterval = data.hedgehog.hardMoveInterval;
+    if (data.hedgehog.easyDifficultyMax != null) settings.hedgehogEasyDifficultyMax = data.hedgehog.easyDifficultyMax;
+    if (data.hedgehog.mediumDifficultyMax != null) settings.hedgehogMediumDifficultyMax = data.hedgehog.mediumDifficultyMax;
     if (data.hedgehog.frontVisionRadius != null) settings.hedgehogFrontVisionRadius = data.hedgehog.frontVisionRadius;
     if (data.hedgehog.rearVisionRadius != null) settings.hedgehogRearVisionRadius = data.hedgehog.rearVisionRadius;
     if (data.hedgehog.aboveVisionRadius != null) settings.hedgehogAboveVisionRadius = data.hedgehog.aboveVisionRadius;
@@ -746,7 +772,9 @@ function createDefaultFieldScopes(): Record<string, boolean> {
     'meatMaxAge', 'meatScoreValue', 'meatGrowthValue',
     'hedgehogSpawnStartLevel', 'hedgehogSecondSpawnStartLevel',
     'hedgehogWidth', 'hedgehogHeight', 'hedgehogSpawnSnakeDistance',
-    'hedgehogMoveInterval', 'hedgehogFrontVisionRadius', 'hedgehogRearVisionRadius',
+    'hedgehogMoveInterval', 'hedgehogEasyMoveInterval', 'hedgehogMediumMoveInterval',
+    'hedgehogHardMoveInterval', 'hedgehogEasyDifficultyMax',
+    'hedgehogMediumDifficultyMax', 'hedgehogFrontVisionRadius', 'hedgehogRearVisionRadius',
     'hedgehogAboveVisionRadius', 'hedgehogBelowVisionRadius',
     'hedgehogFoodVisionRadius', 'hedgehogPopulationPercentPerLevel',
     'hedgehogSpawnWindowTicks', 'hedgehogSpawnChanceDivisor',

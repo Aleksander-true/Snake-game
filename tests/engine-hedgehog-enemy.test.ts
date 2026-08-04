@@ -9,6 +9,7 @@ import {
   getEnemyCells,
   getHedgehogExtraPercent,
   getHedgehogLevelPopulationPercent,
+  getHedgehogMoveInterval,
   getHedgehogSpawnChancePerTick,
   HedgehogEntity,
   MeatFoodEntity,
@@ -62,7 +63,13 @@ describe('Hedgehog enemy', () => {
     expect(getHedgehogLevelPopulationPercent(5, settings)).toBe(100);
     expect(getHedgehogLevelPopulationPercent(10, settings)).toBe(200);
     expect(getHedgehogSpawnChancePerTick(3, 10, settings)).toBe(0);
-    expect(getHedgehogSpawnChancePerTick(5, 3, settings)).toBe(0.0016);
+    expect(getHedgehogSpawnChancePerTick(5, 3, settings)).toBe(0.016);
+    expect(getHedgehogMoveInterval(1, settings)).toBe(4);
+    expect(getHedgehogMoveInterval(3, settings)).toBe(4);
+    expect(getHedgehogMoveInterval(4, settings)).toBe(3);
+    expect(getHedgehogMoveInterval(7, settings)).toBe(3);
+    expect(getHedgehogMoveInterval(8, settings)).toBe(2);
+    expect(getHedgehogMoveInterval(10, settings)).toBe(2);
 
     const state = createState();
     state.snakes = [new SnakeEntity(0, 'P1', [{ x: 15, y: 15 }], 'right', false)];
@@ -92,11 +99,11 @@ describe('Hedgehog enemy', () => {
 
     expect(trySpawnHedgehogForTick(
       state,
-      createContext({ next: () => 0.0016 })
+      createContext({ next: () => 0.016 })
     )).toBeNull();
     expect(trySpawnHedgehogForTick(
       state,
-      createContext({ next: () => 0.001599 })
+      createContext({ next: () => 0.015999 })
     )).not.toBeNull();
     expect(state.enemies).toHaveLength(1);
 
@@ -123,7 +130,7 @@ describe('Hedgehog enemy', () => {
     expect(canHedgehogDetectPosition(enemy, { x: 10, y: 32 }, settings)).toBe(false);
   });
 
-  test('turns toward food on one tick and moves and consumes it on the next', () => {
+  test('turns before moving at the difficulty-based cadence', () => {
     const state = createState();
     const enemy = new HedgehogEntity('enemy-0', { x: 10, y: 10 }, 2, 2, 'left');
     const meat = MeatFoodEntity.newborn({ x: 12, y: 10 }, 'food-0');
@@ -132,6 +139,12 @@ describe('Hedgehog enemy', () => {
     state.targetHedgehogCount = 1;
     state.foods = [meat, apple];
     const ctx = createContext();
+
+    processEnemies(state, ctx, []);
+    processEnemies(state, ctx, []);
+
+    expect(enemy.pos).toEqual({ x: 10, y: 10 });
+    expect(enemy.plannedMove).toBeUndefined();
 
     processEnemies(state, ctx, []);
 
@@ -146,6 +159,8 @@ describe('Hedgehog enemy', () => {
     expect(state.foods).not.toContain(meat);
 
     apple.pos = { x: 13, y: 9 };
+    processEnemies(state, ctx, []);
+    processEnemies(state, ctx, []);
     processEnemies(state, ctx, []);
     processEnemies(state, ctx, []);
     expect(state.foods).not.toContain(apple);
@@ -188,6 +203,7 @@ describe('Hedgehog enemy', () => {
     };
     const engine = new GameEngine(ctx);
     const state = createState();
+    state.difficultyLevel = 8;
     const snake = new SnakeEntity(
       0,
       'P1',

@@ -112,10 +112,13 @@ describe('Smoke tests — project skeleton', () => {
     expect(settings.hedgehogSpawnStartLevel).toBe(4);
     expect(settings.hedgehogSecondSpawnStartLevel).toBe(7);
     expect(settings.hedgehogMoveInterval).toBe(2);
+    expect(settings.hedgehogEasyMoveInterval).toBe(4);
+    expect(settings.hedgehogMediumMoveInterval).toBe(3);
+    expect(settings.hedgehogHardMoveInterval).toBe(2);
     expect(settings.hedgehogFrontVisionRadius).toBe(20);
     expect(settings.hedgehogPopulationPercentPerLevel).toBe(20);
     expect(settings.hedgehogSpawnWindowTicks).toBe(100);
-    expect(settings.hedgehogSpawnChanceDivisor).toBe(100000);
+    expect(settings.hedgehogSpawnChanceDivisor).toBe(10000);
     expect(settings.hedgehogBotThreatRadius).toBe(20);
     expect(settings.levelSizeIncrement).toBe(2);
     expect(settings.survivalMaxBoardLevel).toBe(10);

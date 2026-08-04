@@ -47,6 +47,17 @@ export function getHedgehogSpawnChancePerTick(
   return Math.min(1, combinedPercent / divisor);
 }
 
+/** Resolve hedgehog movement cadence from the current game difficulty. */
+export function getHedgehogMoveInterval(difficulty: number, settings: GameSettings): number {
+  if (difficulty <= settings.hedgehogEasyDifficultyMax) {
+    return Math.max(1, settings.hedgehogEasyMoveInterval);
+  }
+  if (difficulty <= settings.hedgehogMediumDifficultyMax) {
+    return Math.max(1, settings.hedgehogMediumMoveInterval);
+  }
+  return Math.max(1, settings.hedgehogHardMoveInterval);
+}
+
 /** @deprecated The engine now rolls one spawn chance per tick instead of using a fixed target. */
 export function getTargetHedgehogCount(
   level: number,
@@ -115,7 +126,7 @@ export function processEnemies(
 
   for (const enemy of enemies) {
     enemy.movementClock++;
-    const interval = Math.max(1, ctx.settings.hedgehogMoveInterval);
+    const interval = getHedgehogMoveInterval(state.difficultyLevel, ctx.settings);
     const planningTick = Math.max(1, interval - 1);
 
     if (!enemy.plannedMove && enemy.movementClock >= planningTick) {
