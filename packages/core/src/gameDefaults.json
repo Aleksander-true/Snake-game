@@ -68,6 +68,9 @@
     "aboveVisionRadius": 5,
     "belowVisionRadius": 20,
     "foodVisionRadius": 20,
+    "populationPercentPerLevel": 20,
+    "botThreatRadius": 20,
+    "botEscapeWeight": 500,
     "extraChanceSlope": 15,
     "extraChanceIntercept": 15
   },

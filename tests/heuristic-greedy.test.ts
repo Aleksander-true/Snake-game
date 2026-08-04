@@ -4,6 +4,7 @@ import {
   chooseWiseDirection,
   createDefaultSettings,
   createEmptyBoard,
+  HedgehogEntity,
   rankDirectionsForDebug,
   resetSettings,
   SnakeEntity,
@@ -50,6 +51,23 @@ describe('greedy board heuristic', () => {
 
     const direction = chooseWiseDirection(state, snake, createDefaultSettings());
     expect(direction).toBe('right');
+  });
+
+  test('moves away from a nearby hedgehog footprint', () => {
+    const state = createState();
+    const snake = new SnakeEntity(
+      0,
+      'Bot',
+      [{ x: 5, y: 5 }, { x: 5, y: 6 }, { x: 5, y: 7 }],
+      'up',
+      true
+    );
+    state.snakes = [snake];
+    state.enemies = [new HedgehogEntity('enemy-0', { x: 7, y: 4 }, 2, 2, 'left')];
+
+    const direction = chooseWiseDirection(state, snake, createDefaultSettings());
+
+    expect(direction).toBe('left');
   });
 
   test('prefers higher-value food when paths are equally safe', () => {

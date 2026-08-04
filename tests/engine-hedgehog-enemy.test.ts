@@ -8,6 +8,7 @@ import {
   GameEngine,
   getEnemyCells,
   getHedgehogExtraPercent,
+  getHedgehogLevelPopulationPercent,
   getTargetHedgehogCount,
   HedgehogEntity,
   MeatFoodEntity,
@@ -56,10 +57,15 @@ describe('Hedgehog enemy', () => {
     expect(getHedgehogExtraPercent(3, settings)).toBe(60);
     expect(getHedgehogExtraPercent(7, settings)).toBe(120);
     expect(getHedgehogExtraPercent(10, settings)).toBe(165);
+    expect(getHedgehogLevelPopulationPercent(4, settings)).toBe(80);
+    expect(getHedgehogLevelPopulationPercent(5, settings)).toBe(100);
+    expect(getHedgehogLevelPopulationPercent(10, settings)).toBe(200);
 
     expect(getTargetHedgehogCount(3, 10, createContext())).toBe(0);
-    expect(getTargetHedgehogCount(4, 3, createContext({ next: () => 0.59 }))).toBe(2);
-    expect(getTargetHedgehogCount(4, 3, createContext({ next: () => 0.6 }))).toBe(1);
+    expect(getTargetHedgehogCount(5, 1, createContext())).toBe(1);
+    expect(getTargetHedgehogCount(10, 1, createContext())).toBe(2);
+    expect(getTargetHedgehogCount(5, 3, createContext({ next: () => 0.59 }))).toBe(2);
+    expect(getTargetHedgehogCount(5, 3, createContext({ next: () => 0.6 }))).toBe(1);
     expect(getTargetHedgehogCount(7, 7, createContext({ next: () => 0.19 }))).toBe(4);
 
     const state = createState();

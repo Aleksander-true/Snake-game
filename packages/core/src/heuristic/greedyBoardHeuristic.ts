@@ -100,6 +100,8 @@ function evaluateDirection(
   const nearestFoodDistance = getNearestFoodDistance(nextHead, state.foods);
   const nearestFoodReward = getNearestFoodReward(nextHead, state.foods, settings);
   const nearestSnakeDistance = getNearestOtherSnakeDistance(nextHead, state, snake.id);
+  const currentEnemyDistance = getNearestEnemyDistance(snake.head, state);
+  const nextEnemyDistance = getNearestEnemyDistance(nextHead, state);
   const headContestPenalty = isPotentialHeadContest(nextHead, state, snake.id)
     ? profile.trapPenalty * 2
     : 0;
@@ -112,12 +114,18 @@ function evaluateDirection(
   const fearPenalty = nearestSnakeDistance === Number.POSITIVE_INFINITY
     ? 0
     : profile.fearWeight / (nearestSnakeDistance + 1);
+  const enemyEscapeScore = getEnemyEscapeScore(
+    currentEnemyDistance,
+    nextEnemyDistance,
+    settings
+  );
 
   const areaScore = reachableArea * profile.areaWeight;
   const escapeScore = localEscapeRoutes * profile.escapeWeight;
   const immediateEatBonus = food ? getFoodReward(food, settings).points * profile.immediateEatWeight : 0;
 
-  return areaScore + escapeScore + (foodScore * (1 - foodSuppression)) + immediateEatBonus
+  return areaScore + escapeScore + enemyEscapeScore
+    + (foodScore * (1 - foodSuppression)) + immediateEatBonus
     - trapPenalty - fearPenalty - headContestPenalty;
 }
 
@@ -283,6 +291,39 @@ function getNearestOtherSnakeDistance(origin: Position, state: GameState, curren
     }
   }
   return nearest;
+}
+
+function getNearestEnemyDistance(origin: Position, state: GameState): number {
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const enemy of state.enemies) {
+    const deltaX = origin.x < enemy.pos.x
+      ? enemy.pos.x - origin.x
+      : origin.x >= enemy.pos.x + enemy.width
+        ? origin.x - (enemy.pos.x + enemy.width - 1)
+        : 0;
+    const deltaY = origin.y < enemy.pos.y
+      ? enemy.pos.y - origin.y
+      : origin.y >= enemy.pos.y + enemy.height
+        ? origin.y - (enemy.pos.y + enemy.height - 1)
+        : 0;
+    nearest = Math.min(nearest, Math.max(deltaX, deltaY));
+  }
+  return nearest;
+}
+
+function getEnemyEscapeScore(
+  currentDistance: number,
+  nextDistance: number,
+  settings: GameSettings
+): number {
+  const threatRadius = settings.hedgehogBotThreatRadius;
+  if (currentDistance > threatRadius && nextDistance > threatRadius) return 0;
+
+  const distanceChange = nextDistance - currentDistance;
+  const proximityPenalty = nextDistance <= threatRadius
+    ? (threatRadius - nextDistance + 1) * settings.hedgehogBotEscapeWeight
+    : 0;
+  return distanceChange * settings.hedgehogBotEscapeWeight * 2 - proximityPenalty;
 }
 
 function isPotentialHeadContest(target: Position, state: GameState, currentSnakeId: number): boolean {

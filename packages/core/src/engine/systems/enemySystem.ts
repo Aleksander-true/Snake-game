@@ -14,13 +14,18 @@ interface EnemyTarget {
   pos: Position;
 }
 
-/** Calculate the base number of hedgehogs for one game level. */
-export function getBaseHedgehogCount(level: number, settings: GameSettings): number {
+/** Calculate the main hedgehog population percentage for a game level. */
+export function getHedgehogLevelPopulationPercent(level: number, settings: GameSettings): number {
   if (level < settings.hedgehogSpawnStartLevel) return 0;
-  return level < settings.hedgehogSecondSpawnStartLevel ? 1 : 2;
+  return Math.max(0, settings.hedgehogPopulationPercentPerLevel * level);
 }
 
-/** Calculate the percentage used for extra hedgehogs at one difficulty. */
+/** Calculate the guaranteed part of the level-based population. */
+export function getBaseHedgehogCount(level: number, settings: GameSettings): number {
+  return Math.floor(getHedgehogLevelPopulationPercent(level, settings) / 100);
+}
+
+/** Calculate the separate extra hedgehog percentage granted by difficulty. */
 export function getHedgehogExtraPercent(difficulty: number, settings: GameSettings): number {
   if (difficulty <= 1) return 0;
   return Math.max(
@@ -35,14 +40,20 @@ export function getTargetHedgehogCount(
   difficulty: number,
   ctx: EngineContext
 ): number {
-  const baseCount = getBaseHedgehogCount(level, ctx.settings);
-  if (baseCount === 0) return 0;
+  if (level < ctx.settings.hedgehogSpawnStartLevel) return 0;
 
-  const extraPercent = getHedgehogExtraPercent(difficulty, ctx.settings);
-  const guaranteedExtra = Math.floor(extraPercent / 100);
-  const remainder = (extraPercent % 100) / 100;
-  const randomExtra = remainder > 0 && ctx.rng.next() < remainder ? 1 : 0;
-  return baseCount + guaranteedExtra + randomExtra;
+  const levelCount = rollPercentage(
+    getHedgehogLevelPopulationPercent(level, ctx.settings),
+    ctx
+  );
+  const difficultyCount = rollPercentage(getHedgehogExtraPercent(difficulty, ctx.settings), ctx);
+  return levelCount + difficultyCount;
+}
+
+function rollPercentage(percent: number, ctx: EngineContext): number {
+  const guaranteedCount = Math.floor(percent / 100);
+  const remainder = (percent % 100) / 100;
+  return guaranteedCount + (remainder > 0 && ctx.rng.next() < remainder ? 1 : 0);
 }
 
 /** Spawn missing hedgehogs at valid border positions. */
