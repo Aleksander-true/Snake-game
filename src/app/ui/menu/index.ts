@@ -15,7 +15,8 @@ let outsideClickHandler: ((event: MouseEvent) => void) | null = null;
  */
 export function renderMenu(
   container: HTMLElement,
-  onStart: (config: GameConfig) => void
+  onStart: (config: GameConfig) => void,
+  onMultiplayer: () => void = () => undefined
 ): void {
   const menuPreferences = getMenuPreferences();
   const defaults = getInitialMenuPreferences(menuPreferences);
@@ -67,6 +68,7 @@ export function renderMenu(
 
         <div class="menu-start-row">
           <button id="startBtn" class="btn btn-primary">СТАРТ</button>
+          <button id="multiplayerBtn" type="button" class="btn btn-secondary">СЕТЕВАЯ ИГРА</button>
         </div>
       </div>
     </div>
@@ -78,6 +80,8 @@ export function renderMenu(
 
   // --- Start button ---
   const startBtn = container.querySelector('#startBtn') as HTMLButtonElement;
+  const multiplayerBtn = container.querySelector('#multiplayerBtn') as HTMLButtonElement;
+  multiplayerBtn.addEventListener('click', onMultiplayer);
   startBtn.addEventListener('click', () => {
     const playerCount = parseInt((container.querySelector('#playerCount') as HTMLInputElement).value) || 0;
     const botCount = parseInt((container.querySelector('#botCount') as HTMLInputElement).value) || 0;

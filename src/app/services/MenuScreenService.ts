@@ -4,6 +4,7 @@ import { renderMenu } from '../ui/menu';
 
 export interface MenuScreenCallbacks {
   onStart: (config: GameConfig) => void;
+  onStartMultiplayer: () => void;
   onStartDevMode: () => void;
   onStartArena: (config: ArenaLaunchConfig) => void;
   /** Headless training lab: browser UI for arena metrics and future ML steps. */
@@ -49,7 +50,7 @@ export class MenuScreenService {
   constructor(private readonly appRoot: HTMLElement) {}
 
   show(callbacks: MenuScreenCallbacks): void {
-    renderMenu(this.appRoot, callbacks.onStart);
+    renderMenu(this.appRoot, callbacks.onStart, callbacks.onStartMultiplayer);
     if (typeof __DEV_MODE__ !== 'undefined' && __DEV_MODE__) {
       this.attachDevModeButton(callbacks.onStartDevMode);
       this.attachArenaButton(callbacks.onStartArena);

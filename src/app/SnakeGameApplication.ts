@@ -26,6 +26,7 @@ import { MenuScreenService } from './services/MenuScreenService';
 import { ArenaLaunchConfig, TrainingLaunchConfig } from './services/MenuScreenService';
 import { ResultsScreenService } from './services/ResultsScreenService';
 import { DevPanelLoader } from './services/DevPanelLoader';
+import { MultiplayerLobbyService } from './services/MultiplayerLobbyService';
 import { createArenaDemoController } from '../arena/ArenaDemoRunner';
 import type { ArenaDemoController } from '../arena/ArenaDemoRunner';
 
@@ -39,6 +40,7 @@ export class SnakeGameApplication {
   private readonly gameLayoutBuilder: GameLayoutBuilder;
   private readonly menuScreenService: MenuScreenService;
   private readonly resultsScreenService: ResultsScreenService;
+  private readonly multiplayerLobbyService: MultiplayerLobbyService;
   private readonly devPanelLoader = new DevPanelLoader();
   private readonly engineContext: EngineContext = {
     settings: gameSettings,
@@ -55,6 +57,7 @@ export class SnakeGameApplication {
     this.gameLayoutBuilder = new GameLayoutBuilder(appRoot);
     this.menuScreenService = new MenuScreenService(appRoot);
     this.resultsScreenService = new ResultsScreenService(appRoot);
+    this.multiplayerLobbyService = new MultiplayerLobbyService(appRoot);
   }
 
   init(): void {
@@ -67,7 +70,11 @@ export class SnakeGameApplication {
     if (this.globalKeydownHandler) return;
     this.globalKeydownHandler = (event: KeyboardEvent) => {
       // Escape on results screen always returns to main menu.
-      if (event.code === 'Escape' && this.router.getCurrentScreen() === 'results') {
+      if (
+        event.code === 'Escape'
+        && (this.router.getCurrentScreen() === 'results'
+          || this.router.getCurrentScreen() === 'multiplayer')
+      ) {
         event.preventDefault();
         this.router.navigate('menu');
       }
@@ -75,15 +82,19 @@ export class SnakeGameApplication {
     document.addEventListener('keydown', this.globalKeydownHandler);
   }
 
-  private handleScreenChange(screen: 'menu' | 'game' | 'results', data?: unknown): void {
+  private handleScreenChange(screen: 'menu' | 'multiplayer' | 'game' | 'results', data?: unknown): void {
     this.gameController?.stop();
     this.arenaDemoController?.stop();
     this.arenaDemoController = null;
+    this.multiplayerLobbyService.stop();
     hideModal();
 
     switch (screen) {
       case 'menu':
         this.showMenu();
+        break;
+      case 'multiplayer':
+        this.showMultiplayerLobby();
         break;
       case 'game':
         this.startGameFromNavigation(data);
@@ -105,6 +116,7 @@ export class SnakeGameApplication {
         this.currentConfig = config;
         this.router.navigate('game', config);
       },
+      onStartMultiplayer: () => this.router.navigate('multiplayer'),
       onStartDevMode: () => {
         // Dev mode restores persisted tuning from localStorage.
         resetSettings();
@@ -127,6 +139,14 @@ export class SnakeGameApplication {
         this.devModeActive = true;
         this.router.navigate('game', { mode: 'training', trainingConfig });
       },
+    });
+  }
+
+  private showMultiplayerLobby(): void {
+    this.inputHandler.stop();
+    this.devModeActive = false;
+    this.multiplayerLobbyService.show({
+      onBack: () => this.router.navigate('menu'),
     });
   }
 

@@ -1,4 +1,4 @@
-export type Screen = 'menu' | 'game' | 'results';
+export type Screen = 'menu' | 'multiplayer' | 'game' | 'results';
 
 export type ScreenChangeCallback = (screen: Screen, data?: unknown) => void;
 

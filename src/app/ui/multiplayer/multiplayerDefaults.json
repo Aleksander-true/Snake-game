@@ -1,0 +1,10 @@
+{
+  "playerName": "Игрок",
+  "roomName": "Новая комната",
+  "visibility": "public",
+  "humanSlots": 2,
+  "botCount": 0,
+  "replaceableBots": true,
+  "difficultyLevel": 5,
+  "gameMode": "classic"
+}

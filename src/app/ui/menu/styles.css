@@ -29,6 +29,9 @@
 }
 
 .menu-start-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
   text-align: center;
   margin-top: 24px;
 }

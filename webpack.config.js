@@ -60,6 +60,10 @@ module.exports = (env, argv) => {
       },
       proxy: [
         {
+          context: (pathname) => pathname.startsWith('/api/'),
+          target: 'http://127.0.0.1:3001',
+        },
+        {
           context: (pathname) => pathname === '/health',
           target: 'http://127.0.0.1:3001',
         },

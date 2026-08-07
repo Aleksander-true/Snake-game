@@ -1,0 +1,139 @@
+.multiplayer-screen {
+  width: min(1100px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+.multiplayer-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.multiplayer-header .btn:last-child {
+  justify-self: end;
+}
+
+.multiplayer-title {
+  color: var(--color-primary-bright);
+  text-align: center;
+}
+
+.multiplayer-status {
+  min-height: 24px;
+  margin: 14px 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.multiplayer-status--error {
+  color: var(--color-danger);
+}
+
+.multiplayer-browser {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 18px;
+}
+
+.multiplayer-panel {
+  padding: 20px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 12px;
+  background: var(--color-panel);
+}
+
+.multiplayer-panel h2 {
+  margin-bottom: 16px;
+}
+
+.multiplayer-field {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.multiplayer-field > span {
+  color: var(--color-text-muted);
+}
+
+.multiplayer-room-list,
+.multiplayer-create-form,
+.multiplayer-participants {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.multiplayer-room-row,
+.multiplayer-participant {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 8px;
+  background: var(--color-input-bg);
+}
+
+.multiplayer-room-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.multiplayer-room-row span,
+.multiplayer-participant span:last-child,
+.multiplayer-empty {
+  color: var(--color-text-muted);
+}
+
+.multiplayer-private-join {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-panel-border);
+}
+
+.multiplayer-checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--color-text-muted);
+}
+
+.multiplayer-current-room {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.multiplayer-current-room > .btn {
+  display: block;
+  margin: 18px auto 0;
+}
+
+.multiplayer-private-code {
+  color: var(--color-primary-bright);
+  font-weight: 700;
+}
+
+.multiplayer-hidden {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .multiplayer-browser {
+    grid-template-columns: 1fr;
+  }
+
+  .multiplayer-header {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .multiplayer-title {
+    font-size: 1.4rem;
+  }
+}
