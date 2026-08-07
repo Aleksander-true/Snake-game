@@ -1,5 +1,6 @@
 import type {
   CreateRoomResponseDTO,
+  NetworkDirection,
   PublicRoomSummaryDTO,
   RoomSnapshotDTO,
 } from '@snake-game/contracts';
@@ -9,6 +10,7 @@ import {
   type MultiplayerSessionIdentity,
 } from '../../multiplayer/MultiplayerClient';
 import { MultiplayerRoomApi } from '../../multiplayer/MultiplayerRoomApi';
+import { MultiplayerGamePresenter } from './MultiplayerGamePresenter';
 import {
   renderMultiplayerLobby,
   type MultiplayerLobbyView,
@@ -26,15 +28,19 @@ export class MultiplayerLobbyService {
   private client: MultiplayerClient | null = null;
   private view: MultiplayerLobbyView | null = null;
   private connectionPromise: Promise<void> | null = null;
+  private readonly gamePresenter: MultiplayerGamePresenter;
   private active = false;
   private privateCode: string | undefined;
+  private currentRoom: RoomSnapshotDTO | null = null;
 
   constructor(
     private readonly appRoot: HTMLElement,
     private readonly roomApi = new MultiplayerRoomApi(),
     private readonly createClient: MultiplayerClientFactory = (handlers) =>
       new MultiplayerClient({ handlers })
-  ) {}
+  ) {
+    this.gamePresenter = new MultiplayerGamePresenter(appRoot);
+  }
 
   show(callbacks: MultiplayerLobbyCallbacks): void {
     this.stop();
@@ -57,11 +63,13 @@ export class MultiplayerLobbyService {
 
   stop(): void {
     this.active = false;
+    this.gamePresenter.stop();
     this.client?.closeTransport();
     this.client = null;
     this.view = null;
     this.connectionPromise = null;
     this.privateCode = undefined;
+    this.currentRoom = null;
   }
 
   private async initialize(): Promise<void> {
@@ -144,28 +152,52 @@ export class MultiplayerLobbyService {
     return {
       onRoomJoined: (message) => {
         if (!this.active) return;
+        this.currentRoom = message.room;
         this.view?.showRoom(message.room, message.playerId, this.privateCode);
         this.view?.showStatus('Вы в комнате');
       },
       onRoomState: (message) => this.showRoomState(message.room),
       onGameState: (message) => {
-        if (this.active) this.view?.showGameTick(message.snapshot.tick);
+        if (!this.active) return;
+        const identity = this.client?.getSessionIdentity();
+        if (!identity) return;
+        this.gamePresenter.showSnapshot(
+          message.snapshot,
+          identity.playerId,
+          this.currentRoom?.config.gameMode ?? 'classic',
+          (direction) => this.sendDirection(direction)
+        );
       },
       onProtocolError: (message) => {
-        if (this.active) this.view?.showStatus(message.message, true);
+        if (!this.active) return;
+        this.view?.showStatus(message.message, true);
+        this.gamePresenter.showConnectionStatus(message.message, true);
       },
       onTransportError: (error) => this.showError(error),
       onDisconnected: () => {
-        if (this.active) this.view?.showStatus('Соединение с сервером потеряно', true);
+        if (!this.active) return;
+        const message = 'Соединение с сервером потеряно';
+        this.view?.showStatus(message, true);
+        this.gamePresenter.showConnectionStatus(message, true);
       },
     };
   }
 
   private showRoomState(room: RoomSnapshotDTO): void {
     if (!this.active) return;
+    this.currentRoom = room;
     const identity = this.client?.getSessionIdentity();
     if (identity?.roomId === room.roomId) {
       this.view?.showRoom(room, identity.playerId, this.privateCode);
+    }
+  }
+
+  private sendDirection(direction: NetworkDirection): void {
+    try {
+      const sequence = this.client?.sendDirection(direction);
+      if (sequence !== undefined) this.gamePresenter.predict(sequence, direction);
+    } catch (error) {
+      this.showError(error);
     }
   }
 
@@ -178,6 +210,7 @@ export class MultiplayerLobbyService {
     if (!this.active) return;
     const message = error instanceof Error ? error.message : 'Неизвестная ошибка сети';
     this.view?.showStatus(message, true);
+    this.gamePresenter.showConnectionStatus(message, true);
   }
 }
 

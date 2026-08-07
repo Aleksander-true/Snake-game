@@ -23,7 +23,6 @@ export interface MultiplayerLobbyView {
   showStatus(message: string, isError?: boolean): void;
   showRooms(rooms: PublicRoomSummaryDTO[]): void;
   showRoom(room: RoomSnapshotDTO, playerId: string, privateCode?: string): void;
-  showGameTick(tick: number): void;
 }
 
 /** Render the network lobby without owning HTTP or WebSocket state. */
@@ -174,10 +173,6 @@ export function renderMultiplayerLobby(
         || room.status === 'playing'
         || room.status === 'game-complete';
       readyButton.textContent = self?.status === 'ready' ? 'Готово' : 'Играть';
-    },
-    showGameTick(tick: number): void {
-      status.textContent = `Матч запущен, серверный тик ${tick}. Подключение игрового поля — следующий этап.`;
-      status.classList.remove('multiplayer-status--error');
     },
   };
 }
