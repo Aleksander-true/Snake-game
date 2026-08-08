@@ -1,8 +1,9 @@
-import type {
-  CreateRoomResponseDTO,
-  NetworkDirection,
-  PublicRoomSummaryDTO,
-  RoomSnapshotDTO,
+import {
+  RECONNECT_WINDOW_MS,
+  type CreateRoomResponseDTO,
+  type NetworkDirection,
+  type PublicRoomSummaryDTO,
+  type RoomSnapshotDTO,
 } from '@snake-game/contracts';
 import {
   MultiplayerClient,
@@ -22,6 +23,7 @@ export interface MultiplayerLobbyCallbacks {
 }
 
 type MultiplayerClientFactory = (handlers: MultiplayerClientHandlers) => MultiplayerClient;
+const RECONNECT_RETRY_INTERVAL_MS = 1000;
 
 /** Coordinates the room HTTP API, WebSocket transport and lobby UI. */
 export class MultiplayerLobbyService {
@@ -33,6 +35,12 @@ export class MultiplayerLobbyService {
   private privateCode: string | undefined;
   private currentRoom: RoomSnapshotDTO | null = null;
   private onBack: (() => void) | null = null;
+  private reconnecting = false;
+  private reconnectDeadline = 0;
+  private reconnectTimer: number | null = null;
+  private reconnectAttemptInProgress = false;
+  private reconnectRequestSent = false;
+  private reconnectDisabled = false;
 
   constructor(
     private readonly appRoot: HTMLElement,
@@ -65,6 +73,11 @@ export class MultiplayerLobbyService {
 
   stop(): void {
     this.active = false;
+    this.clearReconnectTimer();
+    this.reconnecting = false;
+    this.reconnectAttemptInProgress = false;
+    this.reconnectRequestSent = false;
+    this.reconnectDisabled = false;
     this.gamePresenter.stop();
     this.client?.closeTransport();
     this.client = null;
@@ -156,8 +169,19 @@ export class MultiplayerLobbyService {
       onRoomJoined: (message) => {
         if (!this.active) return;
         this.currentRoom = message.room;
-        this.view?.showRoom(message.room, message.playerId, this.privateCode);
-        this.view?.showStatus('Вы в комнате');
+        const wasReconnecting = this.reconnecting;
+        if (wasReconnecting) this.finishAutomaticReconnect();
+        if (this.gamePresenter.isActive()) {
+          this.gamePresenter.showRoomState(
+            message.room,
+            message.playerId,
+            () => this.setReady(),
+            () => this.onBack?.()
+          );
+        } else {
+          this.view?.showRoom(message.room, message.playerId, this.privateCode);
+          if (!wasReconnecting) this.view?.showStatus('Вы в комнате');
+        }
       },
       onRoomState: (message) => this.showRoomState(message.room),
       onGameState: (message) => {
@@ -175,15 +199,24 @@ export class MultiplayerLobbyService {
       },
       onProtocolError: (message) => {
         if (!this.active) return;
+        if (this.reconnecting && isTerminalReconnectError(message.code)) {
+          this.failAutomaticReconnect(message.message);
+          return;
+        }
         this.view?.showStatus(message.message, true);
         this.gamePresenter.showConnectionStatus(message.message, true);
       },
-      onTransportError: (error) => this.showError(error),
+      onTransportError: (error) => {
+        if (!this.reconnecting) this.showError(error);
+      },
       onDisconnected: () => {
         if (!this.active) return;
-        const message = 'Соединение с сервером потеряно';
-        this.view?.showStatus(message, true);
-        this.gamePresenter.showConnectionStatus(message, true);
+        if (this.reconnectDisabled) return;
+        if (this.reconnecting) {
+          this.reconnectRequestSent = false;
+          return;
+        }
+        this.beginAutomaticReconnect();
       },
     };
   }
@@ -215,6 +248,86 @@ export class MultiplayerLobbyService {
     }
   }
 
+  private beginAutomaticReconnect(): void {
+    const identity = this.client?.getSessionIdentity();
+    if (!identity || this.currentRoom?.status === 'game-complete') {
+      this.showError(new Error('Соединение с сервером потеряно'));
+      return;
+    }
+    this.reconnecting = true;
+    this.reconnectDisabled = false;
+    this.reconnectDeadline = Date.now() + RECONNECT_WINDOW_MS;
+    this.reconnectRequestSent = false;
+    this.updateReconnectStatus();
+    this.reconnectTimer = window.setInterval(() => {
+      if (!this.active || !this.reconnecting) return;
+      if (Date.now() >= this.reconnectDeadline) {
+        this.failAutomaticReconnect('Не удалось переподключиться за 10 секунд. Управление передано боту.');
+        return;
+      }
+      this.updateReconnectStatus();
+      void this.attemptAutomaticReconnect(identity);
+    }, RECONNECT_RETRY_INTERVAL_MS);
+    void this.attemptAutomaticReconnect(identity);
+  }
+
+  private async attemptAutomaticReconnect(identity: MultiplayerSessionIdentity): Promise<void> {
+    if (
+      !this.active
+      || !this.reconnecting
+      || this.reconnectAttemptInProgress
+      || this.reconnectRequestSent
+    ) return;
+    this.reconnectAttemptInProgress = true;
+    try {
+      const connection = this.client?.connect();
+      if (!connection) throw new Error('Сетевой клиент не запущен');
+      this.connectionPromise = connection;
+      await connection;
+      if (!this.active || !this.reconnecting) return;
+      this.client?.reconnect(identity);
+      this.reconnectRequestSent = true;
+    } catch {
+      this.reconnectRequestSent = false;
+    } finally {
+      this.reconnectAttemptInProgress = false;
+    }
+  }
+
+  private updateReconnectStatus(): void {
+    const secondsLeft = Math.max(0, Math.ceil((this.reconnectDeadline - Date.now()) / 1000));
+    const message = `Переподключение к серверу: ${secondsLeft} с`;
+    this.view?.showStatus(message, true);
+    this.gamePresenter.showReconnectCountdown(secondsLeft);
+  }
+
+  private finishAutomaticReconnect(): void {
+    this.clearReconnectTimer();
+    this.reconnecting = false;
+    this.reconnectAttemptInProgress = false;
+    this.reconnectRequestSent = false;
+    this.reconnectDisabled = false;
+    this.view?.showStatus('Соединение восстановлено');
+    this.gamePresenter.showConnectionStatus('Соединение восстановлено');
+  }
+
+  private failAutomaticReconnect(message: string): void {
+    this.clearReconnectTimer();
+    this.reconnecting = false;
+    this.reconnectAttemptInProgress = false;
+    this.reconnectRequestSent = false;
+    this.reconnectDisabled = true;
+    this.client?.closeTransport();
+    this.view?.showStatus(message, true);
+    this.gamePresenter.showConnectionStatus(message, true);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer === null) return;
+    window.clearInterval(this.reconnectTimer);
+    this.reconnectTimer = null;
+  }
+
   private requireConnection(): Promise<void> {
     if (!this.connectionPromise) return Promise.reject(new Error('Сетевой клиент не запущен'));
     return this.connectionPromise;
@@ -226,6 +339,12 @@ export class MultiplayerLobbyService {
     this.view?.showStatus(message, true);
     this.gamePresenter.showConnectionStatus(message, true);
   }
+}
+
+function isTerminalReconnectError(code: string): boolean {
+  return code === 'INVALID_RECONNECT_TOKEN'
+    || code === 'RECONNECT_WINDOW_EXPIRED'
+    || code === 'PLAYER_CONTROL_UNAVAILABLE';
 }
 
 function toSessionIdentity(created: CreateRoomResponseDTO): MultiplayerSessionIdentity {

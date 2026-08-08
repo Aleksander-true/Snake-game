@@ -126,6 +126,11 @@ export class MultiplayerGamePresenter {
     bar.appendChild(status);
   }
 
+  showReconnectCountdown(secondsLeft: number): void {
+    this.inputEnabled = false;
+    this.showConnectionStatus(`Переподключение к серверу: ${secondsLeft} с`, true);
+  }
+
   stop(): void {
     if (this.keydownHandler) document.removeEventListener('keydown', this.keydownHandler);
     this.touchCleanup?.();

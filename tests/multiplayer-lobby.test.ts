@@ -131,6 +131,87 @@ describe('multiplayer lobby', () => {
       }),
     }));
   });
+
+  test('reconnects with the in-memory token after a technical disconnect', async () => {
+    const root = document.createElement('div');
+    const api = {
+      listPublicRooms: jest.fn().mockResolvedValue([publicRoom]),
+      createRoom: jest.fn(),
+    };
+    const identity = { roomId: publicRoom.roomId, playerId: 'player-1', reconnectToken: 'token-1' };
+    let handlers: MultiplayerClientHandlers = {};
+    const client = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      joinRoom: jest.fn(),
+      reconnect: jest.fn(),
+      setReady: jest.fn(),
+      leaveMatch: jest.fn(),
+      closeTransport: jest.fn(),
+      getSessionIdentity: jest.fn(() => identity),
+    };
+    const service = new MultiplayerLobbyService(
+      root,
+      api as unknown as MultiplayerRoomApi,
+      (createdHandlers) => {
+        handlers = createdHandlers;
+        return client as unknown as MultiplayerClient;
+      }
+    );
+    service.show({ onBack: jest.fn() });
+    await flushPromises();
+    handlers.onRoomJoined?.(createRoomJoinedMessage());
+
+    handlers.onDisconnected?.(new CloseEvent('close'));
+    expect(root.querySelector('#multiplayerStatus')?.textContent).toContain('10 с');
+    await flushPromises();
+
+    expect(client.connect).toHaveBeenCalledTimes(2);
+    expect(client.reconnect).toHaveBeenCalledWith(identity);
+    handlers.onRoomJoined?.(createRoomJoinedMessage());
+    expect(root.querySelector('#multiplayerStatus')?.textContent).toBe('Соединение восстановлено');
+    service.stop();
+  });
+
+  test('stops reconnecting after ten seconds and reports bot takeover', async () => {
+    jest.useFakeTimers();
+    const root = document.createElement('div');
+    const identity = { roomId: publicRoom.roomId, playerId: 'player-1', reconnectToken: 'token-1' };
+    let handlers: MultiplayerClientHandlers = {};
+    const client = {
+      connect: jest.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValue(new Error('offline')),
+      reconnect: jest.fn(),
+      closeTransport: jest.fn(),
+      getSessionIdentity: jest.fn(() => identity),
+    };
+    const service = new MultiplayerLobbyService(
+      root,
+      {
+        listPublicRooms: jest.fn().mockResolvedValue([publicRoom]),
+        createRoom: jest.fn(),
+      } as unknown as MultiplayerRoomApi,
+      (createdHandlers) => {
+        handlers = createdHandlers;
+        return client as unknown as MultiplayerClient;
+      }
+    );
+
+    try {
+      service.show({ onBack: jest.fn() });
+      await flushPromises();
+      handlers.onRoomJoined?.(createRoomJoinedMessage());
+      handlers.onDisconnected?.(new CloseEvent('close'));
+      await flushPromises();
+      jest.advanceTimersByTime(10_000);
+
+      expect(root.querySelector('#multiplayerStatus')?.textContent).toContain('Управление передано боту');
+      expect(client.closeTransport).toHaveBeenCalled();
+    } finally {
+      service.stop();
+      jest.useRealTimers();
+    }
+  });
 });
 
 function createRoomJoinedMessage(): RoomJoinedMessage {
