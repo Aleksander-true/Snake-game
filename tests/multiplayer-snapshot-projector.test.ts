@@ -1,8 +1,18 @@
-import { NETWORK_PROTOCOL_VERSION, type GameSnapshotDTO } from '@snake-game/contracts';
+import {
+  NETWORK_PROTOCOL_VERSION,
+  type GameSnapshotDTO,
+  type RoomSnapshotDTO,
+} from '@snake-game/contracts';
+import { MultiplayerGamePresenter } from '../src/app/services/MultiplayerGamePresenter';
 import {
   MultiplayerSnapshotProjector,
   snapshotToGameState,
 } from '../src/multiplayer/MultiplayerSnapshotProjector';
+
+jest.mock('../src/renderer/canvasRenderer', () => ({
+  calculateCellSize: jest.fn(() => 10),
+  renderGame: jest.fn(),
+}));
 
 describe('multiplayer snapshot projection', () => {
   test('converts the complete server snapshot into renderer state', () => {
@@ -53,7 +63,73 @@ describe('multiplayer snapshot projection', () => {
     expect(reconciled.snakes[0].head).toEqual({ x: 3, y: 3 });
     expect(reconciled.snakes[0].segments).toHaveLength(2);
   });
+
+  test('shows round readiness and a separate final-game action over the last board', () => {
+    const root = document.createElement('div');
+    const contextSpy = jest.spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue({} as CanvasRenderingContext2D);
+    const presenter = new MultiplayerGamePresenter(root);
+    const onReady = jest.fn();
+    const onExit = jest.fn();
+    const roundSnapshot = createSnapshot();
+    roundSnapshot.status = 'round-complete';
+
+    presenter.showSnapshot(
+      roundSnapshot,
+      'player-1',
+      'classic',
+      jest.fn(),
+      onReady,
+      onExit
+    );
+    presenter.showRoomState(createRoomSnapshot('round-complete', 'connected'), 'player-1', onReady, onExit);
+
+    const action = root.querySelector('.multiplayer-round-panel .btn') as HTMLButtonElement;
+    expect(root.querySelector('.multiplayer-round-panel')?.textContent).toContain('Раунд 1 завершён');
+    expect(action.textContent).toBe('Играть следующий раунд');
+    action.click();
+    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(action.disabled).toBe(true);
+
+    const finalSnapshot = createSnapshot();
+    finalSnapshot.status = 'game-complete';
+    finalSnapshot.snakes[0].levelsWon = 6;
+    presenter.showSnapshot(finalSnapshot, 'player-1', 'classic', jest.fn(), onReady, onExit);
+    expect(root.querySelector('.multiplayer-round-panel')?.textContent).toContain('Победитель: Игрок');
+    expect(action.textContent).toBe('Вернуться в меню');
+    action.click();
+    expect(onExit).toHaveBeenCalledTimes(1);
+
+    presenter.stop();
+    contextSpy.mockRestore();
+  });
 });
+
+function createRoomSnapshot(
+  status: RoomSnapshotDTO['status'],
+  participantStatus: RoomSnapshotDTO['participants'][number]['status']
+): RoomSnapshotDTO {
+  return {
+    roomId: 'room-1',
+    config: {
+      name: 'Комната',
+      visibility: 'public',
+      humanSlots: 1,
+      bots: [],
+      difficultyLevel: 4,
+      gameMode: 'classic',
+    },
+    status,
+    participants: [{
+      playerId: 'player-1',
+      name: 'Игрок',
+      slotIndex: 0,
+      isCreator: true,
+      status: participantStatus,
+    }],
+    currentRound: 1,
+  };
+}
 
 function createSnapshot(): GameSnapshotDTO {
   return {

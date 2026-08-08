@@ -32,6 +32,7 @@ export class MultiplayerLobbyService {
   private active = false;
   private privateCode: string | undefined;
   private currentRoom: RoomSnapshotDTO | null = null;
+  private onBack: (() => void) | null = null;
 
   constructor(
     private readonly appRoot: HTMLElement,
@@ -45,6 +46,7 @@ export class MultiplayerLobbyService {
   show(callbacks: MultiplayerLobbyCallbacks): void {
     this.stop();
     this.active = true;
+    this.onBack = callbacks.onBack;
     this.view = renderMultiplayerLobby(this.appRoot, {
       onRefresh: () => void this.refreshRooms().catch((error) => this.showError(error)),
       onJoinPublic: (roomId, playerName) => void this.joinPublicRoom(roomId, playerName),
@@ -70,6 +72,7 @@ export class MultiplayerLobbyService {
     this.connectionPromise = null;
     this.privateCode = undefined;
     this.currentRoom = null;
+    this.onBack = null;
   }
 
   private async initialize(): Promise<void> {
@@ -165,7 +168,9 @@ export class MultiplayerLobbyService {
           message.snapshot,
           identity.playerId,
           this.currentRoom?.config.gameMode ?? 'classic',
-          (direction) => this.sendDirection(direction)
+          (direction) => this.sendDirection(direction),
+          () => this.setReady(),
+          () => this.onBack?.()
         );
       },
       onProtocolError: (message) => {
@@ -188,7 +193,16 @@ export class MultiplayerLobbyService {
     this.currentRoom = room;
     const identity = this.client?.getSessionIdentity();
     if (identity?.roomId === room.roomId) {
-      this.view?.showRoom(room, identity.playerId, this.privateCode);
+      if (this.gamePresenter.isActive()) {
+        this.gamePresenter.showRoomState(
+          room,
+          identity.playerId,
+          () => this.setReady(),
+          () => this.onBack?.()
+        );
+      } else {
+        this.view?.showRoom(room, identity.playerId, this.privateCode);
+      }
     }
   }
 

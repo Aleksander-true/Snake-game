@@ -206,7 +206,13 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     socket.on('close', () => {
       connectionStates.delete(socket);
       if (!shuttingDown && !state.departureHandled && state.roomId && state.playerId) {
-        beginReconnectWindow(state.roomId, state.playerId);
+        try {
+          if (rooms.getSnapshot(state.roomId).status !== 'game-complete') {
+            beginReconnectWindow(state.roomId, state.playerId);
+          }
+        } catch {
+          // The room may already have been removed while the socket was closing.
+        }
       }
     });
   });

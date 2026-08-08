@@ -1,7 +1,12 @@
-import type { GameSnapshotDTO, NetworkDirection } from '@snake-game/contracts';
+import type {
+  GameSnapshotDTO,
+  NetworkDirection,
+  RoomSnapshotDTO,
+} from '@snake-game/contracts';
 import {
   createDefaultSettings,
   getCumulativeTargetScore,
+  getOverallWinner,
   type GameMode,
   type GameState,
   type Snake,
@@ -34,6 +39,14 @@ export class MultiplayerGamePresenter {
   private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
   private touchCleanup: (() => void) | null = null;
   private dimensions = '';
+  private lastState: GameState | null = null;
+  private roundPanel: HTMLElement | null = null;
+  private roundTitle: HTMLElement | null = null;
+  private roundSummary: HTMLElement | null = null;
+  private roundParticipants: HTMLElement | null = null;
+  private roundAction: HTMLButtonElement | null = null;
+  private readyHandler: (() => void) | null = null;
+  private exitHandler: (() => void) | null = null;
 
   constructor(private readonly appRoot: HTMLElement) {}
 
@@ -41,9 +54,13 @@ export class MultiplayerGamePresenter {
     snapshot: GameSnapshotDTO,
     playerId: string,
     gameMode: GameMode,
-    onDirection: (direction: NetworkDirection) => void
+    onDirection: (direction: NetworkDirection) => void,
+    onReady: () => void,
+    onExit: () => void
   ): void {
     if (!this.canvas) this.build(onDirection);
+    this.readyHandler = onReady;
+    this.exitHandler = onExit;
     this.inputEnabled = snapshot.status === 'playing';
     this.localSnakeId = snapshot.snakes.find(
       (snake) => snake.controller.controllerId === playerId
@@ -55,6 +72,45 @@ export class MultiplayerGamePresenter {
   predict(sequence: number, direction: NetworkDirection): void {
     const state = this.projector.predict(sequence, direction);
     if (state) this.render(state, 'playing');
+  }
+
+  isActive(): boolean {
+    return this.canvas !== null;
+  }
+
+  showRoomState(
+    room: RoomSnapshotDTO,
+    playerId: string,
+    onReady: () => void,
+    onExit: () => void
+  ): void {
+    if (!this.roundPanel) return;
+    this.readyHandler = onReady;
+    this.exitHandler = onExit;
+    if (room.status === 'playing' || room.status === 'waiting') {
+      this.hideRoundPanel();
+      return;
+    }
+    if (room.status === 'game-complete') {
+      this.showGameCompletePanel();
+      return;
+    }
+
+    this.roundPanel.classList.remove('multiplayer-hidden');
+    if (this.roundTitle) this.roundTitle.textContent = `Раунд ${room.currentRound} завершён`;
+    if (this.roundSummary) {
+      this.roundSummary.textContent = 'Следующий раунд начнётся, когда все игроки будут готовы.';
+    }
+    this.renderParticipantReadiness(room, playerId);
+    const self = room.participants.find((participant) => participant.playerId === playerId);
+    if (this.roundAction) {
+      this.roundAction.hidden = false;
+      this.roundAction.disabled = self?.status === 'ready';
+      this.roundAction.textContent = self?.status === 'ready'
+        ? 'Готово — ожидаем остальных'
+        : 'Играть следующий раунд';
+      if (!this.roundAction.disabled) this.roundAction.focus();
+    }
   }
 
   showConnectionStatus(message: string, isError = false): void {
@@ -82,6 +138,14 @@ export class MultiplayerGamePresenter {
     this.keydownHandler = null;
     this.touchCleanup = null;
     this.dimensions = '';
+    this.lastState = null;
+    this.roundPanel = null;
+    this.roundTitle = null;
+    this.roundSummary = null;
+    this.roundParticipants = null;
+    this.roundAction = null;
+    this.readyHandler = null;
+    this.exitHandler = null;
   }
 
   private build(onDirection: (direction: NetworkDirection) => void): void {
@@ -91,6 +155,7 @@ export class MultiplayerGamePresenter {
     this.context = layout.canvas.getContext('2d');
     if (!this.context) throw new Error('Не удалось открыть Canvas для сетевой игры');
     this.directionHandler = onDirection;
+    this.buildRoundPanel(layout.gameArea);
     this.bindKeyboard();
     this.bindTouch(layout.gameArea);
   }
@@ -128,7 +193,99 @@ export class MultiplayerGamePresenter {
     this.resizeCanvas(state);
     const cellSize = Number(this.canvas.dataset.cellSize) || 10;
     renderGame(this.context, state, cellSize, this.settings);
+    this.lastState = state;
     this.renderHud(state, status);
+    if (status === 'round-complete') this.showRoundSnapshotPlaceholder(state.level);
+    if (status === 'game-complete') this.showGameCompletePanel();
+  }
+
+  private buildRoundPanel(gameArea: HTMLElement): void {
+    const panel = document.createElement('section');
+    panel.className = 'multiplayer-round-panel multiplayer-hidden';
+    panel.setAttribute('aria-live', 'polite');
+    const title = document.createElement('h2');
+    const summary = document.createElement('p');
+    const participants = document.createElement('div');
+    participants.className = 'multiplayer-round-participants';
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'btn btn-primary';
+    action.addEventListener('click', () => {
+      if (action.dataset.action === 'exit') {
+        this.exitHandler?.();
+        return;
+      }
+      action.disabled = true;
+      action.textContent = 'Готово — ожидаем остальных';
+      this.readyHandler?.();
+    });
+    panel.append(title, summary, participants, action);
+    gameArea.appendChild(panel);
+    this.roundPanel = panel;
+    this.roundTitle = title;
+    this.roundSummary = summary;
+    this.roundParticipants = participants;
+    this.roundAction = action;
+  }
+
+  private showRoundSnapshotPlaceholder(level: number): void {
+    if (!this.roundPanel || !this.roundAction) return;
+    this.roundPanel.classList.remove('multiplayer-hidden');
+    if (this.roundTitle) this.roundTitle.textContent = `Раунд ${level} завершён`;
+    if (this.roundSummary) this.roundSummary.textContent = 'Получаем статусы игроков…';
+    this.roundParticipants?.replaceChildren();
+    this.roundAction.dataset.action = 'ready';
+    this.roundAction.hidden = false;
+    this.roundAction.disabled = true;
+    this.roundAction.textContent = 'Подождите…';
+  }
+
+  private showGameCompletePanel(): void {
+    if (!this.roundPanel || !this.roundAction) return;
+    this.roundPanel.classList.remove('multiplayer-hidden');
+    if (this.roundTitle) this.roundTitle.textContent = 'Сетевая игра завершена';
+    if (this.roundSummary) this.roundSummary.textContent = buildWinnerSummary(this.lastState);
+    if (this.roundParticipants) {
+      this.roundParticipants.replaceChildren();
+      const ranking = [...(this.lastState?.snakes ?? [])].sort(compareSnakes);
+      ranking.forEach((snake, index) => {
+        const row = document.createElement('div');
+        row.className = 'multiplayer-round-participant';
+        const name = document.createElement('span');
+        name.textContent = `${index + 1}. ${snake.name}`;
+        const score = document.createElement('span');
+        score.textContent = `${snake.levelsWon} побед · ${snake.score} очков`;
+        row.append(name, score);
+        this.roundParticipants?.appendChild(row);
+      });
+    }
+    this.roundAction.dataset.action = 'exit';
+    this.roundAction.hidden = false;
+    this.roundAction.disabled = false;
+    this.roundAction.textContent = 'Вернуться в меню';
+    this.roundAction.focus();
+  }
+
+  private renderParticipantReadiness(room: RoomSnapshotDTO, playerId: string): void {
+    if (!this.roundParticipants || !this.roundAction) return;
+    this.roundParticipants.replaceChildren();
+    for (const participant of [...room.participants].sort((left, right) => left.slotIndex - right.slotIndex)) {
+      const row = document.createElement('div');
+      row.className = 'multiplayer-round-participant';
+      const name = document.createElement('span');
+      name.textContent = `${participant.name}${participant.playerId === playerId ? ' (вы)' : ''}`;
+      const status = document.createElement('span');
+      status.textContent = participant.status === 'ready'
+        ? 'Готов'
+        : participant.status === 'replaced-by-bot' ? 'Бот готов' : 'Ожидаем';
+      row.append(name, status);
+      this.roundParticipants.appendChild(row);
+    }
+    this.roundAction.dataset.action = 'ready';
+  }
+
+  private hideRoundPanel(): void {
+    this.roundPanel?.classList.add('multiplayer-hidden');
   }
 
   private resizeCanvas(state: GameState): void {
@@ -234,8 +391,25 @@ function matchStatusLabel(status: GameSnapshotDTO['status']): string {
   }
 }
 
+function compareSnakes(left: Snake, right: Snake): number {
+  return right.levelsWon - left.levelsWon || right.score - left.score || left.id - right.id;
+}
+
+function buildWinnerSummary(state: GameState | null): string {
+  if (!state || state.snakes.length === 0) return 'Итоговый результат получен от сервера.';
+  const winner = getOverallWinner(state.snakes);
+  if (winner) {
+    return `Победитель: ${winner.name} — ${winner.levelsWon} побед и ${winner.score} очков.`;
+  }
+  const ranking = [...state.snakes].sort(compareSnakes);
+  const leaders = ranking.filter(
+    (snake) => snake.levelsWon === ranking[0].levelsWon && snake.score === ranking[0].score
+  );
+  return `Ничья: ${leaders.map((snake) => snake.name).join(', ')}.`;
+}
+
 function isTouchDevice(): boolean {
   return 'ontouchstart' in window
     || navigator.maxTouchPoints > 0
-    || window.matchMedia('(pointer: coarse)').matches;
+    || (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches);
 }

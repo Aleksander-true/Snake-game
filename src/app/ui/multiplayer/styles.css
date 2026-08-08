@@ -124,6 +124,52 @@
   display: none;
 }
 
+.multiplayer-round-panel {
+  position: absolute;
+  z-index: 4;
+  top: 58px;
+  left: 50%;
+  width: min(420px, calc(100% - 32px));
+  padding: 18px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 12px;
+  background: var(--color-panel);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.multiplayer-round-panel h2 {
+  margin: 0 0 8px;
+  color: var(--color-primary-bright);
+}
+
+.multiplayer-round-panel > p {
+  margin: 0 0 12px;
+  color: var(--color-text-muted);
+}
+
+.multiplayer-round-participants {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.multiplayer-round-participant {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--color-input-bg);
+  text-align: left;
+}
+
+.multiplayer-round-participant span:last-child {
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
 @media (max-width: 760px) {
   .multiplayer-browser {
     grid-template-columns: 1fr;
