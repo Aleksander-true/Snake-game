@@ -14,22 +14,19 @@ Build output is generated in the `dist/` directory.
 
 ## Server requirements
 
-Предварительные требования для одного небольшого multiplayer-инстанса до проведения нагрузочных тестов:
+Preliminary requirements for a small multiplayer instance before load testing:
 
-- Linux VPS, архитектура x86-64 или ARM64;
-- минимум 1 vCPU, 1 GB RAM и 2 GB свободного диска;
-- рекомендуется 2 vCPU и 2 GB RAM;
-- публичный IPv4/IPv6 и домен с настроенными DNS-записями;
-- Node.js 24 LTS и npm;
-- Nginx с поддержкой HTTPS и WebSocket reverse proxy;
-- TLS-сертификат для HTTPS/WSS;
-- systemd или другой process manager для Node.js;
-- публичные порты `80` и `443`;
-- закрытый для внешней сети внутренний порт Node.js `3000`;
-- отдельный постоянный каталог для будущей SQLite-базы и резервного копирования.
-
-Фактические требования к CPU и RAM должны быть уточнены после реализации матчей и нагрузочного теста на
-максимальное число одновременных комнат.
+- Linux VPS with an x86-64 or ARM64 architecture;
+- at least 1 vCPU, 1 GB of RAM, and 2 GB of free disk space;
+- 2 vCPUs and 2 GB of RAM recommended;
+- a public IPv4/IPv6 address and a domain with configured DNS records;
+- Node.js 24 LTS and npm;
+- Nginx with HTTPS and WebSocket reverse proxy support;
+- a TLS certificate for HTTPS/WSS;
+- systemd or another process manager for Node.js;
+- public ports `80` and `443`;
+- internal Node.js port `3000`, closed to external traffic;
+- a dedicated persistent directory for the future SQLite database and backups.
 
 Current static deployment:
 [https://aleksander-true.github.io/Snake-game/](https://aleksander-true.github.io/Snake-game/).
