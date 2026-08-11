@@ -74,15 +74,10 @@ Eating food awards the listed points, grows the snake by the listed number of se
 | Chicken 🐔 | ticks 100–149 | +3 | +3 | Moves once every two ticks, seeks apples, and avoids snakes |
 | Meat 🍖 | ticks 0–49 | +1 | +1 | Does not move |
 
-- Level 1 normally spawns apples only. Eggs can spawn from level 2 onward.
-- Apples can reproduce, while adult chickens can lay up to three eggs. Food disappears after its lifetime expires; an expired chicken becomes meat.
-- A snake killed by a wall or snake collision creates one piece of meat per three body segments, rounded up, when enough free cells exist. A snake that dies from hunger leaves no meat.
-- One new food item is added every 100 ticks when a free cell is available, even when the normal food population limit has been reached.
-- Legacy rabbit food remains supported by the engine for experiments, but it is not part of normal level spawning.
 
 ### Enemies and difficulty
 
-- Hedgehogs 🦔 can appear from level 4. A hedgehog occupies a 2×2-cell area, hunts visible snakes, apples, and meat, and kills a snake on contact.
+- Hedgehogs 🦔 hunts visible snakes, apples, and meat, and kills a snake on contact.
 - Higher difficulty produces harder maps, less initial food, more dangerous hedgehogs, and stronger AI behaviour.
 
 ### Winning
