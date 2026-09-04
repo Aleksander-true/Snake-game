@@ -85,6 +85,14 @@ describe('MultiplayerClient', () => {
       expect.objectContaining({ type: 'direction', sequence: 1, direction: 'down' }),
     ]);
 
+    client.fastForwardRound();
+    expect(socket.sentMessages[socket.sentMessages.length - 1]).toEqual({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'fast-forward-round',
+      matchId: 'match-1',
+      playerId: 'player-1',
+    });
+
     socket.receive(createGameStateMessage(5));
     expect(client.sendDirection('up')).toBe(6);
   });

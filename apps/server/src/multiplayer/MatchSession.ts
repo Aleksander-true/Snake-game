@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import {
   NETWORK_PROTOCOL_VERSION,
   type DirectionCommandMessage,
+  type FastForwardRoundMessage,
   type GameSnapshotDTO,
   type RoomParticipantDTO,
   type RoomSnapshotDTO,
@@ -15,6 +17,9 @@ import {
   GameEngine,
   type GameState,
 } from '@snake-game/core';
+
+const FAST_FORWARD_BATCH_BUDGET_MS = 40;
+const FAST_FORWARD_FINAL_FRAME_MS = 1000;
 
 export interface MatchSessionOptions {
   room: RoomSnapshotDTO;
@@ -44,6 +49,9 @@ export class MatchSession {
   private readonly tickIntervalMs: number;
   private readonly now: () => number;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private fastForwardHandle: ReturnType<typeof setImmediate> | null = null;
+  private completionDelayTimer: ReturnType<typeof setTimeout> | null = null;
+  private fastForwarding = false;
   private levelSecondAccumulatorMs = 0;
   private roundStartScores = new Map<number, number>();
   private foodsEatenThisRound = new Map<number, number>();
@@ -83,16 +91,26 @@ export class MatchSession {
   }
 
   start(): void {
-    if (this.timer) return;
+    if (this.timer || this.fastForwarding) return;
     this.options.onSnapshot(this.createSnapshot());
     this.timer = setInterval(() => this.processTick(), this.tickIntervalMs);
     this.timer.unref();
   }
 
   stop(): void {
-    if (!this.timer) return;
-    clearInterval(this.timer);
-    this.timer = null;
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    if (this.fastForwardHandle) {
+      clearImmediate(this.fastForwardHandle);
+      this.fastForwardHandle = null;
+    }
+    if (this.completionDelayTimer) {
+      clearTimeout(this.completionDelayTimer);
+      this.completionDelayTimer = null;
+    }
+    this.fastForwarding = false;
   }
 
   startNextRound(room: RoomSnapshotDTO): void {
@@ -139,6 +157,44 @@ export class MatchSession {
     this.pendingInputs.set(playerId, command);
   }
 
+  fastForwardRound(playerId: string, command: FastForwardRoundMessage): void {
+    if (command.matchId !== this.matchId) {
+      throw new MatchSessionError('MATCH_NOT_FOUND', 'Fast-forward command targets another match');
+    }
+    const participant = this.room.participants.find((item) => item.playerId === playerId);
+    if (!participant || command.playerId !== playerId || participant.status === 'replaced-by-bot') {
+      throw new MatchSessionError('PLAYER_MISMATCH', 'Fast-forward command does not belong to this connection');
+    }
+    if (this.fastForwarding) return;
+
+    const humanSnakes = this.room.participants
+      .filter((item) => item.status !== 'replaced-by-bot')
+      .map((item) => this.state.snakes[item.slotIndex])
+      .filter((snake) => snake !== undefined);
+    const hasAliveBot = this.state.snakes.some((snake) => snake.isBot && snake.alive);
+    if (
+      this.state.levelComplete
+      || this.state.gameOver
+      || humanSnakes.length === 0
+      || humanSnakes.some((snake) => snake.alive)
+      || !hasAliveBot
+    ) {
+      throw new MatchSessionError(
+        'FAST_FORWARD_UNAVAILABLE',
+        'Fast-forward requires all human snakes to be dead and at least one bot to be alive'
+      );
+    }
+
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    this.pendingInputs.clear();
+    this.fastForwarding = true;
+    const startedAt = performance.now();
+    this.runFastForwardBatch(startedAt, 1000);
+  }
+
   pausePlayer(room: RoomSnapshotDTO, playerId: string): void {
     this.room = room;
     const snake = this.requireParticipantSnake(playerId);
@@ -165,6 +221,12 @@ export class MatchSession {
   }
 
   processTick(): GameSnapshotDTO {
+    const snapshot = this.advanceState();
+    this.publishSnapshot(snapshot);
+    return snapshot;
+  }
+
+  private advanceState(): GameSnapshotDTO {
     this.applyBotDirections();
     for (const [playerId, command] of this.pendingInputs) {
       const participant = this.participantsById.get(playerId);
@@ -190,13 +252,52 @@ export class MatchSession {
       const completionEvent = tickResult.events.find((event) => event.type === 'LEVEL_COMPLETED');
       this.recordRoundResult(completionEvent?.type === 'LEVEL_COMPLETED' ? completionEvent.winnerId ?? null : null);
     }
-    const snapshot = this.createSnapshot();
+    return this.createSnapshot();
+  }
+
+  private publishSnapshot(snapshot: GameSnapshotDTO): void {
     this.options.onSnapshot(snapshot);
-    if (snapshot.status !== 'playing') {
-      this.stop();
+    if (snapshot.status === 'playing') return;
+    const completedByFastForward = this.fastForwarding;
+    this.stop();
+    if (!completedByFastForward) {
       this.options.onComplete?.(snapshot);
+      return;
     }
-    return snapshot;
+    this.completionDelayTimer = setTimeout(() => {
+      this.completionDelayTimer = null;
+      this.options.onComplete?.(snapshot);
+    }, FAST_FORWARD_FINAL_FRAME_MS);
+    this.completionDelayTimer.unref();
+  }
+
+  private runFastForwardBatch(startedAt: number, nextDifficultyIncreaseAt: number): void {
+    const batchStartedAt = performance.now();
+    let snapshot = this.createSnapshot();
+    while (
+      snapshot.status === 'playing'
+      && performance.now() - batchStartedAt < FAST_FORWARD_BATCH_BUDGET_MS
+    ) {
+      snapshot = this.advanceState();
+    }
+
+    if (snapshot.status !== 'playing') {
+      this.publishSnapshot(snapshot);
+      return;
+    }
+
+    const elapsedMs = performance.now() - startedAt;
+    let nextRenderAt = nextDifficultyIncreaseAt;
+    while (elapsedMs >= nextRenderAt) {
+      this.options.onSnapshot(snapshot);
+      this.state.difficultyLevel = Math.min(10, this.state.difficultyLevel + 1);
+      nextRenderAt += 1000;
+    }
+
+    this.fastForwardHandle = setImmediate(() => {
+      this.fastForwardHandle = null;
+      if (this.fastForwarding) this.runFastForwardBatch(startedAt, nextRenderAt);
+    });
   }
 
   private applyBotDirections(): void {
@@ -244,6 +345,7 @@ export class MatchSession {
       serverTimeMs: this.now(),
       tick: this.state.tickCount,
       tickIntervalMs: this.tickIntervalMs,
+      fastForwarding: this.fastForwarding,
       acknowledgedInputByPlayer: { ...this.acknowledgedInputs },
       status,
       level: this.state.level,

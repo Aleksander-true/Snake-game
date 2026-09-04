@@ -42,6 +42,12 @@ export interface DirectionCommandMessage extends ProtocolMessage {
   direction: NetworkDirection;
 }
 
+export interface FastForwardRoundMessage extends ProtocolMessage {
+  type: 'fast-forward-round';
+  matchId: string;
+  playerId: string;
+}
+
 export interface LeaveMatchMessage extends ProtocolMessage {
   type: 'leave-match';
 }
@@ -52,6 +58,7 @@ export type ClientMessage =
   | ReconnectMessage
   | SetReadyMessage
   | DirectionCommandMessage
+  | FastForwardRoundMessage
   | LeaveMatchMessage;
 
 export interface ConnectedMessage extends ProtocolMessage {

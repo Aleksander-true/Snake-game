@@ -198,6 +198,15 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
           session.enqueueDirection(state.playerId, parsed.message);
           return;
         }
+        if (parsed.message.type === 'fast-forward-round') {
+          if (!state.roomId || !state.playerId) {
+            throw new RoomRegistryError('ROOM_JOIN_REQUIRED', 'Join a room before fast-forwarding a round');
+          }
+          const session = matchSessions.get(state.roomId);
+          if (!session) throw new MatchSessionError('MATCH_NOT_FOUND', 'No active match exists for this room');
+          session.fastForwardRound(state.playerId, parsed.message);
+          return;
+        }
       } catch (error) {
         sendRoomError(socket, error);
         return;

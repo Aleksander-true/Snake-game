@@ -194,7 +194,8 @@ export class MultiplayerLobbyService {
           this.currentRoom?.config.gameMode ?? 'classic',
           (direction) => this.sendDirection(direction),
           () => this.setReady(),
-          () => this.onBack?.()
+          () => this.onBack?.(),
+          () => this.fastForwardRound()
         );
       },
       onProtocolError: (message) => {
@@ -243,6 +244,15 @@ export class MultiplayerLobbyService {
     try {
       const sequence = this.client?.sendDirection(direction);
       if (sequence !== undefined) this.gamePresenter.predict(sequence, direction);
+    } catch (error) {
+      this.showError(error);
+    }
+  }
+
+  private fastForwardRound(): void {
+    try {
+      this.client?.fastForwardRound();
+      this.gamePresenter.showConnectionStatus('Сервер быстро доигрывает раунд');
     } catch (error) {
       this.showError(error);
     }

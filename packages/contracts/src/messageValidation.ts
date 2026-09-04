@@ -75,6 +75,11 @@ export function parseClientMessageText(text: string): ClientMessageParseResult {
         return failure('INVALID_MESSAGE', 'Direction command fields are invalid');
       }
       return success(value as unknown as ClientMessage);
+    case 'fast-forward-round':
+      if (!isNonEmptyString(value.matchId) || !isNonEmptyString(value.playerId)) {
+        return failure('INVALID_MESSAGE', 'Fast-forward command fields are invalid');
+      }
+      return success(value as unknown as ClientMessage);
     case 'leave-match':
       return success(value as unknown as ClientMessage);
     default:
@@ -184,6 +189,7 @@ function isGameSnapshot(value: unknown): boolean {
     && isFiniteNumber(value.serverTimeMs)
     && isNonNegativeInteger(value.tick)
     && isFiniteNumber(value.tickIntervalMs)
+    && (value.fastForwarding === undefined || typeof value.fastForwarding === 'boolean')
     && isRecord(value.acknowledgedInputByPlayer)
     && Object.values(value.acknowledgedInputByPlayer).every(isSafeInteger)
     && isRoomStatus(value.status)

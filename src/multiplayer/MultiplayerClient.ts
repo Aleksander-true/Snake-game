@@ -2,6 +2,7 @@ import {
   NETWORK_PROTOCOL_VERSION,
   parseServerMessageText,
   type DirectionCommandMessage,
+  type FastForwardRoundMessage,
   type GameStateMessage,
   type JoinRoomMessage,
   type NetworkDirection,
@@ -117,6 +118,18 @@ export class MultiplayerClient {
     };
     this.send(message);
     return sequence;
+  }
+
+  fastForwardRound(): void {
+    const identity = this.requireSessionIdentity();
+    if (!this.matchId) throw new Error('Матч ещё не начался');
+    const message: FastForwardRoundMessage = {
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'fast-forward-round',
+      matchId: this.matchId,
+      playerId: identity.playerId,
+    };
+    this.send(message);
   }
 
   leaveMatch(): void {

@@ -53,6 +53,7 @@ export interface GameSnapshotDTO {
   serverTimeMs: number;
   tick: number;
   tickIntervalMs: number;
+  fastForwarding?: boolean;
   acknowledgedInputByPlayer: Record<string, number>;
   status: RoomLifecycleStatus;
   level: number;

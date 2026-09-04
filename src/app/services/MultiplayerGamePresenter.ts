@@ -47,6 +47,9 @@ export class MultiplayerGamePresenter {
   private roundAction: HTMLButtonElement | null = null;
   private readyHandler: (() => void) | null = null;
   private exitHandler: (() => void) | null = null;
+  private fastForwardHandler: (() => void) | null = null;
+  private fastForwardRequested = false;
+  private lastLevel: number | null = null;
 
   constructor(private readonly appRoot: HTMLElement) {}
 
@@ -56,17 +59,23 @@ export class MultiplayerGamePresenter {
     gameMode: GameMode,
     onDirection: (direction: NetworkDirection) => void,
     onReady: () => void,
-    onExit: () => void
+    onExit: () => void,
+    onFastForward?: () => void
   ): void {
     if (!this.canvas) this.build(onDirection);
+    if (this.lastLevel !== snapshot.level) {
+      this.lastLevel = snapshot.level;
+      this.fastForwardRequested = false;
+    }
     this.readyHandler = onReady;
     this.exitHandler = onExit;
+    this.fastForwardHandler = onFastForward ?? null;
     this.inputEnabled = snapshot.status === 'playing';
     this.localSnakeId = snapshot.snakes.find(
       (snake) => snake.controller.controllerId === playerId
     )?.snakeId ?? null;
     const state = this.projector.reconcile(snapshot, playerId, gameMode);
-    this.render(state, snapshot.status);
+    this.render(state, snapshot.status, snapshot.fastForwarding === true);
   }
 
   predict(sequence: number, direction: NetworkDirection): void {
@@ -151,6 +160,9 @@ export class MultiplayerGamePresenter {
     this.roundAction = null;
     this.readyHandler = null;
     this.exitHandler = null;
+    this.fastForwardHandler = null;
+    this.fastForwardRequested = false;
+    this.lastLevel = null;
   }
 
   private build(onDirection: (direction: NetworkDirection) => void): void {
@@ -193,15 +205,19 @@ export class MultiplayerGamePresenter {
     this.touchCleanup = () => listeners.forEach((dispose) => dispose());
   }
 
-  private render(state: GameState, status: GameSnapshotDTO['status']): void {
+  private render(
+    state: GameState,
+    status: GameSnapshotDTO['status'],
+    fastForwarding = false
+  ): void {
     if (!this.canvas || !this.context) return;
     this.resizeCanvas(state);
     const cellSize = Number(this.canvas.dataset.cellSize) || 10;
     renderGame(this.context, state, cellSize, this.settings);
     this.lastState = state;
-    this.renderHud(state, status);
-    if (status === 'round-complete') this.showRoundSnapshotPlaceholder(state.level);
-    if (status === 'game-complete') this.showGameCompletePanel();
+    this.renderHud(state, status, fastForwarding);
+    if (status === 'round-complete' && !fastForwarding) this.showRoundSnapshotPlaceholder(state.level);
+    if (status === 'game-complete' && !fastForwarding) this.showGameCompletePanel();
   }
 
   private buildRoundPanel(gameArea: HTMLElement): void {
@@ -313,7 +329,11 @@ export class MultiplayerGamePresenter {
     this.canvas.dataset.cellSize = String(cellSize);
   }
 
-  private renderHud(state: GameState, status: GameSnapshotDTO['status']): void {
+  private renderHud(
+    state: GameState,
+    status: GameSnapshotDTO['status'],
+    fastForwarding: boolean
+  ): void {
     const topBar = document.getElementById('hud-top');
     const localPanel = document.getElementById('hud-left');
     const secondLocalSection = document.getElementById('hud-right')
@@ -332,6 +352,45 @@ export class MultiplayerGamePresenter {
     topBar.replaceChildren(createHudBar(state, status, this.settings));
     renderSnakeCards(localPanel, localSnake ? [localSnake] : [], this.settings.snakeColors);
     renderSnakeCards(othersPanel, others, this.settings.snakeColors);
+    this.renderFastForwardControl(state, status, fastForwarding);
+  }
+
+  private renderFastForwardControl(
+    state: GameState,
+    status: GameSnapshotDTO['status'],
+    fastForwarding: boolean
+  ): void {
+    const slot = document.getElementById('hud-fast-forward');
+    if (!slot) return;
+    const humanSnakes = state.snakes.filter((snake) => !snake.isBot);
+    const canFastForward = status === 'playing'
+      && humanSnakes.length > 0
+      && humanSnakes.every((snake) => !snake.alive)
+      && state.snakes.some((snake) => snake.isBot && snake.alive);
+    if (!canFastForward) {
+      slot.replaceChildren();
+      return;
+    }
+
+    let button = slot.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    if (!button) {
+      const newButton = document.createElement('button');
+      newButton.type = 'button';
+      newButton.className = 'btn btn-primary hud-fast-forward-button';
+      newButton.addEventListener('click', () => {
+        if (this.fastForwardRequested) return;
+        this.fastForwardRequested = true;
+        newButton.disabled = true;
+        newButton.textContent = 'Доигрываем…';
+        this.fastForwardHandler?.();
+      });
+      slot.appendChild(newButton);
+      button = newButton;
+    }
+    const requestInProgress = this.fastForwardRequested || fastForwarding;
+    button.disabled = requestInProgress;
+    button.textContent = requestInProgress ? 'Доигрываем…' : 'Быстро доиграть';
+    if (!requestInProgress) button.focus();
   }
 }
 

@@ -242,7 +242,8 @@ describe('multiplayer room lobby', () => {
     const emittedSnapshots: Array<Extract<ServerMessage, { type: 'game-state' }>['snapshot']> = [];
     const session = new MatchSession({
       room: firstRoom,
-      seed: 17,
+      seed: 1,
+      tickIntervalMs: 500,
       now: () => 1000,
       onSnapshot: (snapshot) => emittedSnapshots.push(snapshot),
     });
@@ -300,6 +301,49 @@ describe('multiplayer room lobby', () => {
     const enemies = session.createSnapshot().enemies;
 
     expect(enemies).toHaveLength(0);
+  });
+
+  test('fast-forwards bots on the authoritative server after the human snake dies', async () => {
+    const room = createMixedPlayingRoomSnapshot();
+    const emittedSnapshots: Array<Extract<ServerMessage, { type: 'game-state' }>['snapshot']> = [];
+    let resolveCompletion!: (snapshot: Extract<ServerMessage, { type: 'game-state' }>['snapshot']) => void;
+    const completion = new Promise<Extract<ServerMessage, { type: 'game-state' }>['snapshot']>((resolve) => {
+      resolveCompletion = resolve;
+    });
+    const session = new MatchSession({
+      room,
+      seed: 17,
+      onSnapshot: (snapshot) => emittedSnapshots.push(snapshot),
+      onComplete: resolveCompletion,
+    });
+
+    let requestSnapshot = session.createSnapshot();
+    for (let tick = 0; tick < 500 && requestSnapshot.status === 'playing'; tick++) {
+      requestSnapshot = session.processTick();
+      const human = requestSnapshot.snakes.find((snake) => snake.controller.type === 'human');
+      const hasAliveBot = requestSnapshot.snakes.some(
+        (snake) => snake.controller.type === 'bot' && snake.alive
+      );
+      if (human && !human.alive && hasAliveBot) break;
+    }
+
+    expect(requestSnapshot.status).toBe('playing');
+    expect(requestSnapshot.snakes.find((snake) => snake.controller.type === 'human')?.alive).toBe(false);
+    expect(requestSnapshot.snakes.some((snake) => snake.controller.type === 'bot' && snake.alive)).toBe(true);
+    const snapshotsBeforeFastForward = emittedSnapshots.length;
+    session.fastForwardRound(room.participants[0].playerId, {
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'fast-forward-round',
+      matchId: session.matchId,
+      playerId: room.participants[0].playerId,
+    });
+
+    const finalSnapshot = await completion;
+    expect(finalSnapshot.status).toBe('round-complete');
+    expect(finalSnapshot.fastForwarding).toBe(true);
+    expect(finalSnapshot.tick).toBeGreaterThan(requestSnapshot.tick);
+    expect(emittedSnapshots.length).toBeGreaterThan(snapshotsBeforeFastForward);
+    expect(emittedSnapshots[emittedSnapshots.length - 1]).toEqual(finalSnapshot);
   });
 });
 
@@ -376,6 +420,22 @@ function createPlayingRoomSnapshot(currentRound: number): RoomSnapshotDTO {
     participants: [
       { playerId: 'player-1', name: 'Первый', slotIndex: 0, isCreator: true, status: 'ready' },
       { playerId: 'player-2', name: 'Второй', slotIndex: 1, isCreator: false, status: 'ready' },
+    ],
+  };
+}
+
+function createMixedPlayingRoomSnapshot(): RoomSnapshotDTO {
+  return {
+    roomId: 'mixed-room',
+    config: {
+      ...baseConfig,
+      humanSlots: 1,
+      bots: Array.from({ length: 2 }, () => ({ replaceableByPlayerBetweenRounds: false })),
+    },
+    status: 'playing',
+    currentRound: 1,
+    participants: [
+      { playerId: 'player-1', name: 'Игрок', slotIndex: 0, isCreator: true, status: 'ready' },
     ],
   };
 }

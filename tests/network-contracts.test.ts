@@ -1,5 +1,7 @@
 import {
   MAX_NETWORK_PARTICIPANTS,
+  NETWORK_PROTOCOL_VERSION,
+  parseClientMessageText,
   validateRoomConfig,
   type RoomConfigDTO,
 } from '../packages/contracts/src';
@@ -40,5 +42,20 @@ describe('network contracts', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('Every bot slot must define replaceableByPlayerBetweenRounds');
+  });
+
+  test('validates fast-forward commands from untrusted clients', () => {
+    expect(parseClientMessageText(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'fast-forward-round',
+      matchId: 'match-1',
+      playerId: 'player-1',
+    }))).toMatchObject({ ok: true });
+    expect(parseClientMessageText(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'fast-forward-round',
+      matchId: '',
+      playerId: 'player-1',
+    }))).toMatchObject({ ok: false, code: 'INVALID_MESSAGE' });
   });
 });

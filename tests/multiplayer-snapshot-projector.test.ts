@@ -103,6 +103,52 @@ describe('multiplayer snapshot projection', () => {
     presenter.stop();
     contextSpy.mockRestore();
   });
+
+  test('offers server fast-forward after every human snake has died', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    const contextSpy = jest.spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue({} as CanvasRenderingContext2D);
+    const presenter = new MultiplayerGamePresenter(root);
+    const snapshot = createSnapshot();
+    snapshot.snakes[0].alive = false;
+    snapshot.snakes[0].deathReason = 'Врезалась в стену';
+    snapshot.snakes.push({
+      ...snapshot.snakes[0],
+      snakeId: 1,
+      slotIndex: 1,
+      alive: true,
+      deathReason: undefined,
+      controller: {
+        type: 'bot',
+        controllerId: 'bot:1',
+        displayName: 'Бот',
+        connected: true,
+      },
+    });
+    const onFastForward = jest.fn();
+
+    presenter.showSnapshot(
+      snapshot,
+      'player-1',
+      'classic',
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      onFastForward
+    );
+
+    const button = root.querySelector<HTMLButtonElement>('.hud-fast-forward-button');
+    expect(button?.textContent).toBe('Быстро доиграть');
+    expect(document.activeElement).toBe(button);
+    button?.click();
+    expect(onFastForward).toHaveBeenCalledTimes(1);
+    expect(button?.disabled).toBe(true);
+    expect(button?.textContent).toBe('Доигрываем…');
+
+    presenter.stop();
+    contextSpy.mockRestore();
+  });
 });
 
 function createRoomSnapshot(
