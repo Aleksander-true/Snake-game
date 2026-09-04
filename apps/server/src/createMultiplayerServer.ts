@@ -13,11 +13,16 @@ import {
   type CreateRoomRequestDTO,
   type ClientMessage,
   type GameStateMessage,
+  type MatchHistoryDTO,
   type ProtocolErrorMessage,
   type RoomStateMessage,
 } from '@snake-game/contracts';
 import { RoomRegistry, RoomRegistryError } from './multiplayer/RoomRegistry';
 import { MatchSession, MatchSessionError } from './multiplayer/MatchSession';
+import {
+  InMemoryMatchHistoryRepository,
+  type MatchHistoryRepository,
+} from './multiplayer/MatchHistoryRepository';
 
 export interface ClientConnection {
   connectionId: string;
@@ -29,6 +34,8 @@ export interface MultiplayerServerOptions {
   heartbeatIntervalMs?: number;
   heartbeatTimeoutMs?: number;
   reconnectWindowMs?: number;
+  historyRepository?: MatchHistoryRepository;
+  onHistoryPersistenceError?: (error: unknown, history: MatchHistoryDTO) => void;
 }
 
 export interface MultiplayerServer {
@@ -36,6 +43,7 @@ export interface MultiplayerServer {
   httpServer: HttpServer;
   webSocketServer: WebSocketServer;
   rooms: RoomRegistry;
+  historyRepository: MatchHistoryRepository;
   start(port?: number, host?: string): Promise<AddressInfo>;
   close(): Promise<void>;
 }
@@ -54,6 +62,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   app.disable('x-powered-by');
   app.use(express.json({ limit: MAX_INCOMING_WEBSOCKET_MESSAGE_BYTES }));
   const rooms = new RoomRegistry();
+  const historyRepository = options.historyRepository ?? new InMemoryMatchHistoryRepository();
   app.get('/health', (_request, response) => {
     response.json({ status: 'ok', protocolVersion: NETWORK_PROTOCOL_VERSION });
   });
@@ -77,6 +86,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   const connectionStates = new Map<WebSocket, ConnectionState>();
   const matchSessions = new Map<string, MatchSession>();
   const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const pendingHistorySaves = new Set<Promise<void>>();
   let shuttingDown = false;
 
   httpServer.on('upgrade', (request, socket, head) => {
@@ -243,6 +253,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     httpServer,
     webSocketServer,
     rooms,
+    historyRepository,
     start: (port = 3000, host = '127.0.0.1') => listen(httpServer, port, host),
     close: async () => {
       shuttingDown = true;
@@ -251,6 +262,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       reconnectTimers.clear();
       for (const session of matchSessions.values()) session.stop();
       matchSessions.clear();
+      await Promise.all(pendingHistorySaves);
       for (const socket of webSocketServer.clients) {
         socket.terminate();
       }
@@ -293,9 +305,17 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
         if (snapshot.status === 'game-complete') matchSessions.delete(roomId);
         broadcastRoomState(roomId, rooms.completeRound(roomId, snapshot.status === 'game-complete'));
       },
+      onHistoryReady: saveMatchHistory,
     });
     matchSessions.set(roomId, session);
     session.start();
+  }
+
+  function saveMatchHistory(history: MatchHistoryDTO): void {
+    const save = historyRepository.save(history)
+      .catch((error: unknown) => options.onHistoryPersistenceError?.(error, history))
+      .finally(() => pendingHistorySaves.delete(save));
+    pendingHistorySaves.add(save);
   }
 
   function beginReconnectWindow(roomId: string, playerId: string): void {

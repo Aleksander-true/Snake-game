@@ -12,6 +12,7 @@ import {
 } from '@snake-game/contracts';
 import { createMultiplayerServer, type MultiplayerServer } from '../apps/server/src/createMultiplayerServer';
 import { MatchSession } from '../apps/server/src/multiplayer/MatchSession';
+import { InMemoryMatchHistoryRepository } from '../apps/server/src/multiplayer/MatchHistoryRepository';
 
 const baseConfig = {
   name: 'Тестовая комната',
@@ -317,16 +318,20 @@ describe('multiplayer room lobby', () => {
     expect(processUntilComplete(finalSession).status).toBe('game-complete');
   });
 
-  test('turns a replaceable bot slot into a controllable human slot next round', () => {
+  test('turns a replaceable bot slot into a controllable human slot next round', async () => {
     const firstRoom = createMixedPlayingRoomSnapshot();
     firstRoom.currentRound = 9;
     firstRoom.config.bots[0].replaceableByPlayerBetweenRounds = true;
+    const historyRepository = new InMemoryMatchHistoryRepository();
     let history: MatchHistoryDTO | undefined;
     const session = new MatchSession({
       room: firstRoom,
       seed: 3,
       onSnapshot: () => undefined,
-      onHistoryReady: (completedHistory) => { history = completedHistory; },
+      onHistoryReady: (completedHistory) => {
+        history = completedHistory;
+        void historyRepository.save(completedHistory);
+      },
     });
     const firstFinal = processUntilComplete(session);
     const newcomer = {
@@ -382,6 +387,7 @@ describe('multiplayer room lobby', () => {
       finalSnapshot.snakes[1].score - firstFinal.snakes[1].score
     );
     expect(session.getHistory()).toEqual(history);
+    expect(await historyRepository.getByMatchId(session.matchId)).toEqual(history);
   });
 
   test('pauses a reconnecting snake and resumes the same slot under bot control', () => {
