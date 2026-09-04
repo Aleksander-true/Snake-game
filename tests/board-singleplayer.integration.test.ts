@@ -214,6 +214,7 @@ describe('Board integration - single player mode', () => {
 
     const result = engine.processTick(state);
     expect(state.levelComplete).toBe(true);
+    expect(snake.score).toBe(5);
     expect(result.events.some(event => event.type === 'LEVEL_COMPLETED')).toBe(true);
   });
 

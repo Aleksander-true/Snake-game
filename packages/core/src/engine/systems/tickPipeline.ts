@@ -186,6 +186,9 @@ function levelCheckSystem(state: GameState, ctx: EngineContext, events: DomainEv
 
   state.levelComplete = true;
   const aliveSnakes = state.snakes.filter(snake => snake.alive);
+  for (const snake of aliveSnakes) {
+    snake.incrementScore(snake.segments.length);
+  }
   const maxLevel = getMaxLevel(state);
   const reachedLastLevel = state.level >= maxLevel;
 

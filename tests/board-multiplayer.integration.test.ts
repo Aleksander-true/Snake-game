@@ -156,12 +156,19 @@ describe('Board integration - multiplayer and edge cases', () => {
     const state = createState(8, 8);
     const survivor = new SnakeEntity(10, 'Survivor', [{ x: 2, y: 2 }, { x: 2, y: 3 }], 'right', false);
     const doomed = new SnakeEntity(11, 'Doomed', [{ x: 7, y: 4 }, { x: 6, y: 4 }], 'right', false);
+    survivor.score = 10;
+    doomed.score = 7;
     state.snakes = [survivor, doomed];
 
     const result = engine.processTick(state);
     expect(doomed.alive).toBe(false);
     expect(state.levelComplete).toBe(true);
     expect(survivor.levelsWon).toBe(1);
+    expect(survivor.score).toBe(12);
+    expect(doomed.score).toBe(7);
+
+    engine.processTick(state);
+    expect(survivor.score).toBe(12);
 
     const levelEvent = result.events.find(event => event.type === 'LEVEL_COMPLETED');
     expect(levelEvent && 'winnerId' in levelEvent ? levelEvent.winnerId : undefined).toBe(survivor.id);
@@ -180,6 +187,8 @@ describe('Board integration - multiplayer and edge cases', () => {
     expect(state.levelComplete).toBe(true);
     expect(s1.levelsWon).toBe(0);
     expect(s2.levelsWon).toBe(0);
+    expect(s1.score).toBe(2);
+    expect(s2.score).toBe(2);
 
     const levelEvent = result.events.find(event => event.type === 'LEVEL_COMPLETED');
     expect(levelEvent && 'reason' in levelEvent ? levelEvent.reason : '').toBe('Время вышло');
