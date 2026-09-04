@@ -4,6 +4,7 @@ import WebSocket, { type RawData } from 'ws';
 import {
   NETWORK_PROTOCOL_VERSION,
   type CreateRoomResponseDTO,
+  type MatchHistoryDTO,
   type PublicRoomSummaryDTO,
   type RoomConfigDTO,
   type RoomSnapshotDTO,
@@ -318,8 +319,15 @@ describe('multiplayer room lobby', () => {
 
   test('turns a replaceable bot slot into a controllable human slot next round', () => {
     const firstRoom = createMixedPlayingRoomSnapshot();
+    firstRoom.currentRound = 9;
     firstRoom.config.bots[0].replaceableByPlayerBetweenRounds = true;
-    const session = new MatchSession({ room: firstRoom, seed: 3, onSnapshot: () => undefined });
+    let history: MatchHistoryDTO | undefined;
+    const session = new MatchSession({
+      room: firstRoom,
+      seed: 3,
+      onSnapshot: () => undefined,
+      onHistoryReady: (completedHistory) => { history = completedHistory; },
+    });
     const firstFinal = processUntilComplete(session);
     const newcomer = {
       playerId: 'player-2',
@@ -332,7 +340,7 @@ describe('multiplayer room lobby', () => {
     session.startNextRound({
       ...firstRoom,
       status: 'playing',
-      currentRound: 2,
+      currentRound: 10,
       participants: [...firstRoom.participants, newcomer],
     });
     session.stop();
@@ -357,6 +365,23 @@ describe('multiplayer room lobby', () => {
       direction: 'down',
     });
     expect(session.processTick().acknowledgedInputByPlayer[newcomer.playerId]).toBe(0);
+    const finalSnapshot = processUntilComplete(session);
+    expect(finalSnapshot.status).toBe('game-complete');
+
+    const replacedBot = history?.participants.find((participant) => participant.controllerId === 'bot:1');
+    const newcomerHistory = history?.participants.find(
+      (participant) => participant.controllerId === newcomer.playerId
+    );
+    expect(replacedBot?.controlPeriods).toHaveLength(1);
+    expect(newcomerHistory?.controlPeriods).toHaveLength(1);
+    expect(replacedBot?.controlPeriods[0].endedAtTick).toBe(
+      newcomerHistory?.controlPeriods[0].startedAtTick
+    );
+    expect(replacedBot?.personalScore).toBe(firstFinal.snakes[1].score);
+    expect(newcomerHistory?.personalScore).toBe(
+      finalSnapshot.snakes[1].score - firstFinal.snakes[1].score
+    );
+    expect(session.getHistory()).toEqual(history);
   });
 
   test('pauses a reconnecting snake and resumes the same slot under bot control', () => {

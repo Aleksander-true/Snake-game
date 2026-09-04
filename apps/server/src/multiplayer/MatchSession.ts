@@ -5,9 +5,11 @@ import {
   type DirectionCommandMessage,
   type FastForwardRoundMessage,
   type GameSnapshotDTO,
+  type MatchHistoryDTO,
   type RoomParticipantDTO,
   type RoomSnapshotDTO,
   type SnakeControllerDTO,
+  type SnakeControllerType,
 } from '@snake-game/contracts';
 import {
   applyDirection,
@@ -21,10 +23,24 @@ import {
 const FAST_FORWARD_BATCH_BUDGET_MS = 40;
 const FAST_FORWARD_FINAL_FRAME_MS = 1000;
 
+interface ActiveControlPeriod {
+  controllerType: SnakeControllerType;
+  controllerId: string;
+  displayName: string;
+  startedAtTick: number;
+  scoreAtStart: number;
+}
+
+interface ControllerHistory {
+  displayName: string;
+  controlPeriods: MatchHistoryDTO['participants'][number]['controlPeriods'];
+}
+
 export interface MatchSessionOptions {
   room: RoomSnapshotDTO;
   onSnapshot: (snapshot: GameSnapshotDTO) => void;
   onComplete?: (snapshot: GameSnapshotDTO) => void;
+  onHistoryReady?: (history: MatchHistoryDTO) => void;
   seed?: number;
   now?: () => number;
   tickIntervalMs?: number;
@@ -56,6 +72,11 @@ export class MatchSession {
   private roundStartScores = new Map<number, number>();
   private foodsEatenThisRound = new Map<number, number>();
   private readonly replacementBotSnakeIds = new Set<number>();
+  private readonly startedAt: string;
+  private totalTicks = 0;
+  private readonly activeControlPeriods = new Map<number, ActiveControlPeriod>();
+  private readonly controllerHistories = new Map<string, ControllerHistory>();
+  private completedHistory: MatchHistoryDTO | null = null;
 
   constructor(private readonly options: MatchSessionOptions) {
     if (options.room.status !== 'playing') {
@@ -66,6 +87,7 @@ export class MatchSession {
     const settings = createDefaultSettings();
     this.tickIntervalMs = options.tickIntervalMs ?? settings.tickIntervalMs;
     this.now = options.now ?? Date.now;
+    this.startedAt = new Date(this.now()).toISOString();
     this.engine = new GameEngine({
       settings,
       rng: createSeededRng(options.seed ?? hashSeed(options.room.roomId)),
@@ -75,6 +97,7 @@ export class MatchSession {
     this.engine.initLevel(this.state, gameConfig);
     this.syncParticipants();
     this.applyParticipantControllerStates();
+    this.openMissingControlPeriods();
     this.resetRoundTracking();
   }
 
@@ -122,6 +145,7 @@ export class MatchSession {
       throw new MatchSessionError('INVALID_NEXT_ROUND', 'Room does not describe the next playing round');
     }
     const previousState = this.state;
+    this.closeChangedControlPeriods(room);
     this.room = room;
     this.state = this.engine.createGameState(this.createGameConfig(), room.currentRound);
     this.engine.initLevel(this.state, this.createGameConfig());
@@ -134,6 +158,7 @@ export class MatchSession {
       nextSnake.score = previousSnake.score;
       nextSnake.levelsWon = previousSnake.levelsWon;
     }
+    this.openMissingControlPeriods();
     this.state.roundResults = [...previousState.roundResults];
     this.pendingInputs.clear();
     this.levelSecondAccumulatorMs = 0;
@@ -198,8 +223,9 @@ export class MatchSession {
   }
 
   pausePlayer(room: RoomSnapshotDTO, playerId: string): void {
-    this.room = room;
     const snake = this.requireParticipantSnake(playerId);
+    this.closeControlPeriod(snake.id);
+    this.room = room;
     if (!snake.isBot && snake.alive) snake.movementPaused = true;
     this.pendingInputs.delete(playerId);
   }
@@ -211,15 +237,18 @@ export class MatchSession {
       throw new MatchSessionError('PLAYER_CONTROL_UNAVAILABLE', 'Player control has already passed to a bot');
     }
     snake.movementPaused = false;
+    this.openControlPeriod(snake.id, 'human', playerId, snake.name);
   }
 
   replacePlayerWithBot(room: RoomSnapshotDTO, playerId: string): void {
-    this.room = room;
     const snake = this.requireParticipantSnake(playerId);
+    this.closeControlPeriod(snake.id);
+    this.room = room;
     snake.isBot = true;
     snake.movementPaused = false;
     this.replacementBotSnakeIds.add(snake.id);
     this.pendingInputs.delete(playerId);
+    this.openControlPeriod(snake.id, 'bot', `bot:${snake.id}`, snake.name);
   }
 
   processTick(): GameSnapshotDTO {
@@ -239,6 +268,7 @@ export class MatchSession {
     this.pendingInputs.clear();
 
     const tickResult = this.engine.processTick(this.state);
+    this.totalTicks++;
     for (const event of tickResult.events) {
       if (event.type === 'FOOD_EATEN') {
         this.foodsEatenThisRound.set(event.snakeId, (this.foodsEatenThisRound.get(event.snakeId) ?? 0) + 1);
@@ -260,6 +290,7 @@ export class MatchSession {
   private publishSnapshot(snapshot: GameSnapshotDTO): void {
     this.options.onSnapshot(snapshot);
     if (snapshot.status === 'playing') return;
+    if (snapshot.status === 'game-complete') this.completeHistory();
     const completedByFastForward = this.fastForwarding;
     this.stop();
     if (!completedByFastForward) {
@@ -328,6 +359,105 @@ export class MatchSession {
         snake.movementPaused = participant.status === 'reconnecting';
       }
     }
+  }
+
+  private closeChangedControlPeriods(nextRoom: RoomSnapshotDTO): void {
+    for (const [slotIndex, activePeriod] of this.activeControlPeriods) {
+      const nextParticipant = nextRoom.participants.find((participant) =>
+        participant.slotIndex === slotIndex && participant.status !== 'replaced-by-bot'
+      );
+      const nextControllerId = nextParticipant?.playerId ?? `bot:${slotIndex}`;
+      const nextControllerType: SnakeControllerType = nextParticipant ? 'human' : 'bot';
+      if (
+        activePeriod.controllerId !== nextControllerId
+        || activePeriod.controllerType !== nextControllerType
+      ) {
+        this.closeControlPeriod(slotIndex);
+      }
+    }
+  }
+
+  private openMissingControlPeriods(): void {
+    for (const snake of this.state.snakes) {
+      if (this.activeControlPeriods.has(snake.id)) continue;
+      const controller = this.createController(snake.id, snake.name, snake.isBot);
+      this.openControlPeriod(
+        snake.id,
+        controller.type,
+        controller.controllerId,
+        controller.displayName
+      );
+    }
+  }
+
+  private openControlPeriod(
+    slotIndex: number,
+    controllerType: SnakeControllerType,
+    controllerId: string,
+    displayName: string
+  ): void {
+    if (this.activeControlPeriods.has(slotIndex)) return;
+    const snake = this.state.snakes[slotIndex];
+    if (!snake) return;
+    this.activeControlPeriods.set(slotIndex, {
+      controllerType,
+      controllerId,
+      displayName,
+      startedAtTick: this.totalTicks,
+      scoreAtStart: snake.score,
+    });
+  }
+
+  private closeControlPeriod(slotIndex: number): void {
+    const activePeriod = this.activeControlPeriods.get(slotIndex);
+    const snake = this.state.snakes[slotIndex];
+    if (!activePeriod || !snake) return;
+    const history = this.controllerHistories.get(activePeriod.controllerId) ?? {
+      displayName: activePeriod.displayName,
+      controlPeriods: [],
+    };
+    history.displayName = activePeriod.displayName;
+    history.controlPeriods.push({
+      controllerType: activePeriod.controllerType,
+      controllerId: activePeriod.controllerId,
+      startedAtTick: activePeriod.startedAtTick,
+      endedAtTick: this.totalTicks,
+      scoreGained: snake.score - activePeriod.scoreAtStart,
+    });
+    this.controllerHistories.set(activePeriod.controllerId, history);
+    this.activeControlPeriods.delete(slotIndex);
+  }
+
+  private completeHistory(): void {
+    if (this.completedHistory) return;
+    for (const slotIndex of [...this.activeControlPeriods.keys()]) {
+      this.closeControlPeriod(slotIndex);
+    }
+    this.completedHistory = {
+      matchId: this.matchId,
+      roomName: this.room.config.name,
+      startedAt: this.startedAt,
+      finishedAt: new Date(this.now()).toISOString(),
+      participants: [...this.controllerHistories.entries()].map(([controllerId, history]) => ({
+        controllerId,
+        displayName: history.displayName,
+        personalScore: history.controlPeriods.reduce((sum, period) => sum + period.scoreGained, 0),
+        controlPeriods: history.controlPeriods.map((period) => ({ ...period })),
+      })),
+    };
+    const history = this.getHistory();
+    if (history) this.options.onHistoryReady?.(history);
+  }
+
+  getHistory(): MatchHistoryDTO | null {
+    if (!this.completedHistory) return null;
+    return {
+      ...this.completedHistory,
+      participants: this.completedHistory.participants.map((participant) => ({
+        ...participant,
+        controlPeriods: participant.controlPeriods.map((period) => ({ ...period })),
+      })),
+    };
   }
 
   private syncParticipants(): void {
