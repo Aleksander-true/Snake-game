@@ -237,6 +237,47 @@ describe('multiplayer room lobby', () => {
     expect(replacedState.room.participants[0].status).toBe('replaced-by-bot');
   });
 
+  test('allows a new player to take a replaceable bot slot between rounds', async () => {
+    server = createMultiplayerServer();
+    const address = await server.start(0);
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const webSocketUrl = `ws://127.0.0.1:${address.port}/ws`;
+    const created = await createRoom(baseUrl, {
+      ...baseConfig,
+      humanSlots: 1,
+      bots: [
+        { replaceableByPlayerBetweenRounds: true },
+        { replaceableByPlayerBetweenRounds: false },
+      ],
+    });
+    server.rooms.setReady(created.room.roomId, created.playerId, true);
+    server.rooms.startRound(created.room.roomId);
+    server.rooms.completeRound(created.room.roomId, false);
+
+    const availableRooms = await (await fetch(`${baseUrl}/api/rooms`)).json() as PublicRoomSummaryDTO[];
+    expect(availableRooms[0]).toMatchObject({ connectedHumans: 1, canJoin: true });
+
+    const socket = await connectAndHandshake(webSocketUrl);
+    const joinedPromise = readUntilType(socket, 'room-joined');
+    socket.send(JSON.stringify({
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'join-room',
+      roomId: created.room.roomId,
+      playerName: 'Новый игрок',
+    }));
+    const joined = await joinedPromise;
+
+    expect(joined.room.status).toBe('round-complete');
+    expect(joined.room.participants).toEqual(expect.arrayContaining([
+      expect.objectContaining({ playerId: created.playerId, slotIndex: 0, status: 'connected' }),
+      expect.objectContaining({ playerId: joined.playerId, slotIndex: 1, status: 'connected' }),
+    ]));
+    expect(server.rooms.isReadyToStart(created.room.roomId)).toBe(false);
+    const roomsAfterJoin = await (await fetch(`${baseUrl}/api/rooms`)).json() as PublicRoomSummaryDTO[];
+    expect(roomsAfterJoin[0]).toMatchObject({ connectedHumans: 2, canJoin: false });
+    socket.close();
+  });
+
   test('carries progress into the next round and completes the series after round 10', () => {
     const firstRoom = createPlayingRoomSnapshot(1);
     const emittedSnapshots: Array<Extract<ServerMessage, { type: 'game-state' }>['snapshot']> = [];
@@ -273,6 +314,49 @@ describe('multiplayer room lobby', () => {
       onSnapshot: () => undefined,
     });
     expect(processUntilComplete(finalSession).status).toBe('game-complete');
+  });
+
+  test('turns a replaceable bot slot into a controllable human slot next round', () => {
+    const firstRoom = createMixedPlayingRoomSnapshot();
+    firstRoom.config.bots[0].replaceableByPlayerBetweenRounds = true;
+    const session = new MatchSession({ room: firstRoom, seed: 3, onSnapshot: () => undefined });
+    const firstFinal = processUntilComplete(session);
+    const newcomer = {
+      playerId: 'player-2',
+      name: 'Новый игрок',
+      slotIndex: 1,
+      isCreator: false,
+      status: 'ready' as const,
+    };
+
+    session.startNextRound({
+      ...firstRoom,
+      status: 'playing',
+      currentRound: 2,
+      participants: [...firstRoom.participants, newcomer],
+    });
+    session.stop();
+    const nextRound = session.createSnapshot();
+
+    expect(nextRound.snakes).toHaveLength(firstFinal.snakes.length);
+    expect(nextRound.snakes.map((snake) => snake.controller.type)).toEqual(['human', 'human', 'bot']);
+    expect(nextRound.snakes[1].controller).toMatchObject({
+      controllerId: newcomer.playerId,
+      displayName: newcomer.name,
+    });
+    expect(nextRound.snakes.map((snake) => snake.score)).toEqual(
+      firstFinal.snakes.map((snake) => snake.score)
+    );
+
+    session.enqueueDirection(newcomer.playerId, {
+      protocolVersion: NETWORK_PROTOCOL_VERSION,
+      type: 'direction',
+      matchId: session.matchId,
+      playerId: newcomer.playerId,
+      sequence: 0,
+      direction: 'down',
+    });
+    expect(session.processTick().acknowledgedInputByPlayer[newcomer.playerId]).toBe(0);
   });
 
   test('pauses a reconnecting snake and resumes the same slot under bot control', () => {

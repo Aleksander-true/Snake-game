@@ -94,6 +94,7 @@ describe('multiplayer lobby', () => {
 
     service.show({ onBack: jest.fn() });
     await flushPromises();
+    expect(root.querySelector('.multiplayer-room-row')?.textContent).toContain('1/3 игроков');
     (root.querySelector('.multiplayer-room-row .btn') as HTMLButtonElement).click();
     await flushPromises();
 
@@ -104,6 +105,7 @@ describe('multiplayer lobby', () => {
     (root.querySelector('#multiplayerReadyBtn') as HTMLButtonElement).click();
 
     expect(root.querySelector('#multiplayerParticipants')?.textContent).toContain('Игрок (вы)');
+    expect(root.querySelector('#multiplayerRoomSummary')?.textContent).toContain('1/3 игроков');
     expect(client.setReady).toHaveBeenCalledWith(true);
     service.stop();
   });

@@ -87,6 +87,7 @@ Eating food awards the listed points, grows the snake by the listed number of se
 - At the end of each round, every surviving snake receives a one-time score bonus equal to its current length.
 - In multiplayer, the only surviving snake wins the round. If every snake dies, or the timer expires with multiple survivors, the round is a draw.
 - In a mixed match, after every human snake dies, a player may ask the server to fast-forward the remaining bot turns.
+- Between rounds, a new player may join an available room and replace a bot slot that the room creator marked as replaceable.
 - After round 10, the participant with the most round victories wins the match. Total score breaks a victory tie; equal victories and equal score result in a draw.
 
 ## Controls

@@ -62,8 +62,7 @@ export class MatchSession {
       throw new MatchSessionError('ROOM_NOT_PLAYING', 'Match requires a room in playing state');
     }
     this.room = options.room;
-    const participants = [...options.room.participants].sort((left, right) => left.slotIndex - right.slotIndex);
-    this.participantsById = new Map(participants.map((participant) => [participant.playerId, participant]));
+    this.participantsById = new Map();
     const settings = createDefaultSettings();
     this.tickIntervalMs = options.tickIntervalMs ?? settings.tickIntervalMs;
     this.now = options.now ?? Date.now;
@@ -74,17 +73,19 @@ export class MatchSession {
     const gameConfig = this.createGameConfig();
     this.state = this.engine.createGameState(gameConfig, this.room.currentRound);
     this.engine.initLevel(this.state, gameConfig);
+    this.syncParticipants();
     this.applyParticipantControllerStates();
     this.resetRoundTracking();
-    for (const participant of participants) this.acknowledgedInputs[participant.playerId] = -1;
   }
 
   private createGameConfig() {
-    const participants = [...this.room.participants].sort((left, right) => left.slotIndex - right.slotIndex);
     return {
-      playerCount: participants.length,
+      playerCount: this.room.config.humanSlots,
       botCount: this.room.config.bots.length,
-      playerNames: participants.map((participant) => participant.name),
+      playerNames: Array.from({ length: this.room.config.humanSlots }, (_, slotIndex) =>
+        this.room.participants.find((participant) => participant.slotIndex === slotIndex)?.name
+        ?? `Игрок ${slotIndex + 1}`
+      ),
       difficultyLevel: this.room.config.difficultyLevel,
       gameMode: this.room.config.gameMode,
     };
@@ -124,6 +125,7 @@ export class MatchSession {
     this.room = room;
     this.state = this.engine.createGameState(this.createGameConfig(), room.currentRound);
     this.engine.initLevel(this.state, this.createGameConfig());
+    this.syncParticipants();
     this.applyParticipantControllerStates();
     for (let snakeIndex = 0; snakeIndex < this.state.snakes.length; snakeIndex++) {
       const previousSnake = previousState.snakes[snakeIndex];
@@ -320,9 +322,26 @@ export class MatchSession {
         snake.isBot = true;
         snake.movementPaused = false;
         this.replacementBotSnakeIds.add(snake.id);
-      } else if (participant.status === 'reconnecting') {
-        snake.movementPaused = true;
+      } else {
+        snake.name = participant.name;
+        snake.isBot = false;
+        snake.movementPaused = participant.status === 'reconnecting';
       }
+    }
+  }
+
+  private syncParticipants(): void {
+    this.participantsById.clear();
+    const currentPlayerIds = new Set<string>();
+    for (const participant of this.room.participants) {
+      this.participantsById.set(participant.playerId, participant);
+      currentPlayerIds.add(participant.playerId);
+      if (this.acknowledgedInputs[participant.playerId] === undefined) {
+        this.acknowledgedInputs[participant.playerId] = -1;
+      }
+    }
+    for (const playerId of Object.keys(this.acknowledgedInputs)) {
+      if (!currentPlayerIds.has(playerId)) delete this.acknowledgedInputs[playerId];
     }
   }
 

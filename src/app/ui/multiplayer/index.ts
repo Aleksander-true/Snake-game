@@ -126,7 +126,8 @@ export function renderMultiplayerLobby(
         const title = document.createElement('strong');
         title.textContent = room.name;
         const details = document.createElement('span');
-        details.textContent = `${room.connectedHumans}/${room.humanSlots} игроков · ${room.botSlots} ботов · ${roomStatusLabel(room.status)}`;
+        const maximumHumans = room.humanSlots + room.replaceableBotSlots;
+        details.textContent = `${room.connectedHumans}/${maximumHumans} игроков · ${room.botSlots} ботов · ${roomStatusLabel(room.status)}`;
         description.append(title, details);
         const joinButton = document.createElement('button');
         joinButton.type = 'button';
@@ -148,7 +149,13 @@ export function renderMultiplayerLobby(
       const title = document.createElement('h2');
       title.textContent = room.config.name;
       const meta = document.createElement('p');
-      meta.textContent = `Раунд ${room.currentRound || 1} · ${room.participants.length}/${room.config.humanSlots} игроков · ${room.config.bots.length} ботов · ${room.config.gameMode === 'survival' ? 'Выживание' : 'Классика'} · сложность ${room.config.difficultyLevel}`;
+      const connectedHumans = room.participants.filter(
+        (participant) => participant.status !== 'replaced-by-bot'
+      ).length;
+      const maximumHumans = room.config.humanSlots + room.config.bots.filter(
+        (bot) => bot.replaceableByPlayerBetweenRounds
+      ).length;
+      meta.textContent = `Раунд ${room.currentRound || 1} · ${connectedHumans}/${maximumHumans} игроков · ${room.config.bots.length} игровых бот-слотов · ${room.config.gameMode === 'survival' ? 'Выживание' : 'Классика'} · сложность ${room.config.difficultyLevel}`;
       roomSummary.append(title, meta);
       if (privateCode) {
         const code = document.createElement('p');

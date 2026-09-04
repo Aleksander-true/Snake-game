@@ -73,23 +73,31 @@ export class RoomRegistry {
         roomId: room.roomId,
         name: room.config.name,
         humanSlots: room.config.humanSlots,
-        connectedHumans: room.participants.length,
+        connectedHumans: room.participants.filter((participant) =>
+          participant.status !== 'replaced-by-bot'
+        ).length,
         botSlots: room.config.bots.length,
         replaceableBotSlots: room.config.bots.filter((bot) => bot.replaceableByPlayerBetweenRounds).length,
         status: room.status,
-        canJoin: room.status === 'waiting' && room.participants.length < room.config.humanSlots,
+        canJoin: this.findAvailableJoinSlot(room) !== null,
       }));
   }
 
   joinRoom(options: { roomId?: string; privateCode?: string; playerName: string }): JoinRoomResponseDTO {
     const room = this.findRoom(options.roomId, options.privateCode);
-    if (room.status !== 'waiting') {
+    if (room.status !== 'waiting' && room.status !== 'round-complete') {
       throw new RoomRegistryError('ROOM_ALREADY_STARTED', 'Room has already started');
     }
-    if (room.participants.length >= room.config.humanSlots) {
-      throw new RoomRegistryError('ROOM_FULL', 'All human slots are occupied');
+    const slotIndex = this.findAvailableJoinSlot(room);
+    if (slotIndex === null) throw new RoomRegistryError('ROOM_FULL', 'No replaceable player slot is available');
+
+    room.participants = room.participants.filter((participant) =>
+      participant.slotIndex !== slotIndex || participant.status !== 'replaced-by-bot'
+    );
+    for (const existingParticipant of room.participants) {
+      if (existingParticipant.status !== 'replaced-by-bot') existingParticipant.status = 'connected';
     }
-    const participant = createParticipant(validatePlayerName(options.playerName), room.participants.length, false);
+    const participant = createParticipant(validatePlayerName(options.playerName), slotIndex, false);
     room.participants.push(participant);
     return {
       room: toSnapshot(room),
@@ -151,8 +159,12 @@ export class RoomRegistry {
 
   isReadyToStart(roomId: string): boolean {
     const room = this.requireRoom(roomId);
+    const baseHumanSlotsAreFilled = Array.from(
+      { length: room.config.humanSlots },
+      (_, slotIndex) => room.participants.some((participant) => participant.slotIndex === slotIndex)
+    ).every(Boolean);
     return (room.status === 'waiting' || room.status === 'round-complete')
-      && room.participants.length === room.config.humanSlots
+      && baseHumanSlotsAreFilled
       && room.participants.every((participant) =>
         participant.status === 'ready' || participant.status === 'replaced-by-bot'
       );
@@ -192,6 +204,28 @@ export class RoomRegistry {
       if (room) return room;
     }
     throw new RoomRegistryError('ROOM_NOT_FOUND', 'Room was not found');
+  }
+
+  private findAvailableJoinSlot(room: StoredRoom): number | null {
+    if (room.status === 'waiting') {
+      for (let slotIndex = 0; slotIndex < room.config.humanSlots; slotIndex++) {
+        const occupied = room.participants.some((participant) =>
+          participant.slotIndex === slotIndex && participant.status !== 'replaced-by-bot'
+        );
+        if (!occupied) return slotIndex;
+      }
+      return null;
+    }
+    if (room.status !== 'round-complete') return null;
+
+    const botIndex = room.config.bots.findIndex((bot, index) => {
+      if (!bot.replaceableByPlayerBetweenRounds) return false;
+      const slotIndex = room.config.humanSlots + index;
+      return !room.participants.some((participant) =>
+        participant.slotIndex === slotIndex && participant.status !== 'replaced-by-bot'
+      );
+    });
+    return botIndex === -1 ? null : room.config.humanSlots + botIndex;
   }
 
   private requireRoom(roomId: string): StoredRoom {
