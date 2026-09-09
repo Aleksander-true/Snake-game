@@ -15,6 +15,7 @@ import {
   type GameStateMessage,
   type MatchHistoryDTO,
   type ProtocolErrorMessage,
+  type RoomSnapshotDTO,
   type RoomStateMessage,
 } from '@snake-game/contracts';
 import { RoomRegistry, RoomRegistryError } from './multiplayer/RoomRegistry';
@@ -23,6 +24,9 @@ import {
   InMemoryMatchHistoryRepository,
   type MatchHistoryRepository,
 } from './multiplayer/MatchHistoryRepository';
+
+const EMPTY_WAITING_ROOM_RETENTION_MS = 10 * 60 * 1000;
+const COMPLETED_MATCH_RETENTION_MS = 5 * 60 * 1000;
 
 export interface ClientConnection {
   connectionId: string;
@@ -36,6 +40,8 @@ export interface MultiplayerServerOptions {
   reconnectWindowMs?: number;
   historyRepository?: MatchHistoryRepository;
   onHistoryPersistenceError?: (error: unknown, history: MatchHistoryDTO) => void;
+  emptyWaitingRoomRetentionMs?: number;
+  completedMatchRetentionMs?: number;
 }
 
 export interface MultiplayerServer {
@@ -86,6 +92,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   const connectionStates = new Map<WebSocket, ConnectionState>();
   const matchSessions = new Map<string, MatchSession>();
   const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const emptyRoomTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const completedMatchTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingHistorySaves = new Set<Promise<void>>();
   let shuttingDown = false;
 
@@ -148,6 +156,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       try {
         if (parsed.message.type === 'join-room') {
           const joined = rooms.joinRoom(parsed.message);
+          clearEmptyRoomTimer(joined.room.roomId);
           state.roomId = joined.room.roomId;
           state.playerId = joined.playerId;
           sendJson(socket, {
@@ -176,7 +185,14 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
           if (!state.roomId || !state.playerId) {
             throw new RoomRegistryError('ROOM_JOIN_REQUIRED', 'Join a room before leaving a match');
           }
-          replacePlayerWithBot(state.roomId, state.playerId);
+          const room = rooms.getSnapshot(state.roomId);
+          if (room.status === 'waiting') {
+            const updatedRoom = rooms.removeWaitingParticipant(state.roomId, state.playerId);
+            broadcastRoomState(state.roomId, updatedRoom);
+            scheduleEmptyRoomRemoval(updatedRoom);
+          } else {
+            replacePlayerWithBot(state.roomId, state.playerId);
+          }
           state.departureHandled = true;
           socket.close(1000, 'PLAYER_LEFT');
           return;
@@ -260,6 +276,10 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       clearInterval(heartbeatTimer);
       for (const timer of reconnectTimers.values()) clearTimeout(timer);
       reconnectTimers.clear();
+      for (const timer of emptyRoomTimers.values()) clearTimeout(timer);
+      emptyRoomTimers.clear();
+      for (const timer of completedMatchTimers.values()) clearTimeout(timer);
+      completedMatchTimers.clear();
       for (const session of matchSessions.values()) session.stop();
       matchSessions.clear();
       await Promise.all(pendingHistorySaves);
@@ -287,6 +307,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   }
 
   function startRoomMatch(roomId: string): void {
+    clearEmptyRoomTimer(roomId);
     const room = rooms.startRound(roomId);
     broadcastRoomState(roomId, room);
     const session = new MatchSession({
@@ -302,7 +323,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
         }
       },
       onComplete: (snapshot) => {
-        if (snapshot.status === 'game-complete') matchSessions.delete(roomId);
+        if (snapshot.status === 'game-complete') scheduleCompletedMatchRemoval(roomId);
         broadcastRoomState(roomId, rooms.completeRound(roomId, snapshot.status === 'game-complete'));
       },
       onHistoryReady: saveMatchHistory,
@@ -329,7 +350,18 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     }
     const timer = setTimeout(() => {
       reconnectTimers.delete(reconnectTimerKey(roomId, playerId));
-      replacePlayerWithBot(roomId, playerId);
+      try {
+        const room = rooms.getSnapshot(roomId);
+        if (room.status === 'waiting') {
+          const updatedRoom = rooms.removeWaitingParticipant(roomId, playerId);
+          broadcastRoomState(roomId, updatedRoom);
+          scheduleEmptyRoomRemoval(updatedRoom);
+        } else {
+          replacePlayerWithBot(roomId, playerId);
+        }
+      } catch {
+        // The room or participant may have been removed before the timer fired.
+      }
     }, options.reconnectWindowMs ?? RECONNECT_WINDOW_MS);
     timer.unref();
     reconnectTimers.set(reconnectTimerKey(roomId, playerId), timer);
@@ -347,6 +379,34 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     const timer = reconnectTimers.get(key);
     if (timer) clearTimeout(timer);
     reconnectTimers.delete(key);
+  }
+
+  function scheduleEmptyRoomRemoval(room: RoomSnapshotDTO): void {
+    if (room.status !== 'waiting' || room.participants.length > 0) return;
+    clearEmptyRoomTimer(room.roomId);
+    const timer = setTimeout(() => {
+      emptyRoomTimers.delete(room.roomId);
+      rooms.removeIfEmptyWaiting(room.roomId);
+    }, options.emptyWaitingRoomRetentionMs ?? EMPTY_WAITING_ROOM_RETENTION_MS);
+    timer.unref();
+    emptyRoomTimers.set(room.roomId, timer);
+  }
+
+  function clearEmptyRoomTimer(roomId: string): void {
+    const timer = emptyRoomTimers.get(roomId);
+    if (timer) clearTimeout(timer);
+    emptyRoomTimers.delete(roomId);
+  }
+
+  function scheduleCompletedMatchRemoval(roomId: string): void {
+    const existingTimer = completedMatchTimers.get(roomId);
+    if (existingTimer) clearTimeout(existingTimer);
+    const timer = setTimeout(() => {
+      completedMatchTimers.delete(roomId);
+      matchSessions.delete(roomId);
+    }, options.completedMatchRetentionMs ?? COMPLETED_MATCH_RETENTION_MS);
+    timer.unref();
+    completedMatchTimers.set(roomId, timer);
   }
 }
 

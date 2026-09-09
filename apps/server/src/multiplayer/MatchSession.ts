@@ -170,6 +170,9 @@ export class MatchSession {
     if (command.matchId !== this.matchId) {
       throw new MatchSessionError('MATCH_NOT_FOUND', 'Direction command targets another match');
     }
+    if (this.state.levelComplete || this.state.gameOver) {
+      throw new MatchSessionError('MATCH_NOT_ACTIVE', 'Direction commands require an active round');
+    }
     const participant = this.participantsById.get(playerId);
     if (!participant || command.playerId !== playerId) {
       throw new MatchSessionError('PLAYER_MISMATCH', 'Direction command does not belong to this connection');

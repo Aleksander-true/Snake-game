@@ -97,7 +97,10 @@ export class RoomRegistry {
     for (const existingParticipant of room.participants) {
       if (existingParticipant.status !== 'replaced-by-bot') existingParticipant.status = 'connected';
     }
-    const participant = createParticipant(validatePlayerName(options.playerName), slotIndex, false);
+    const isCreator = !room.participants.some((existingParticipant) =>
+      existingParticipant.status !== 'replaced-by-bot'
+    );
+    const participant = createParticipant(validatePlayerName(options.playerName), slotIndex, isCreator);
     room.participants.push(participant);
     return {
       room: toSnapshot(room),
@@ -140,6 +143,23 @@ export class RoomRegistry {
     return toSnapshot(room);
   }
 
+  removeWaitingParticipant(roomId: string, playerId: string): RoomSnapshotDTO {
+    const room = this.requireRoom(roomId);
+    if (room.status !== 'waiting') {
+      throw new RoomRegistryError('ROOM_ALREADY_STARTED', 'Only waiting-room participants can be removed');
+    }
+    const participant = requireParticipant(room, playerId);
+    transferCreator(room, participant);
+    room.participants = room.participants.filter((item) => item.playerId !== playerId);
+    return toSnapshot(room);
+  }
+
+  removeIfEmptyWaiting(roomId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room || room.status !== 'waiting' || room.participants.length > 0) return false;
+    return this.rooms.delete(roomId);
+  }
+
   setReady(roomId: string, playerId: string, ready: boolean): RoomSnapshotDTO {
     const room = this.requireRoom(roomId);
     if (room.status !== 'waiting' && room.status !== 'round-complete') {
@@ -161,7 +181,9 @@ export class RoomRegistry {
     const room = this.requireRoom(roomId);
     const baseHumanSlotsAreFilled = Array.from(
       { length: room.config.humanSlots },
-      (_, slotIndex) => room.participants.some((participant) => participant.slotIndex === slotIndex)
+      (_, slotIndex) => room.participants.some((participant) =>
+        participant.slotIndex === slotIndex && participant.status !== 'replaced-by-bot'
+      )
     ).every(Boolean);
     return (room.status === 'waiting' || room.status === 'round-complete')
       && baseHumanSlotsAreFilled
