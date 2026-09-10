@@ -1,0 +1,18 @@
+import { renderTrainingGuide } from '../src/training/TrainingGuideWindow';
+
+describe('genetic training guide', () => {
+  test('renders actionable instructions and closes from its own button', () => {
+    const guideDocument = document.implementation.createHTMLDocument();
+    const onClose = jest.fn();
+
+    renderTrainingGuide(guideDocument, onClose);
+
+    expect(guideDocument.title).toBe('Инструкция по генетическому обучению');
+    expect(guideDocument.body.textContent).toContain('Как обучать нейросеть');
+    expect(guideDocument.body.textContent).toContain('Нажмите «Сохранить»');
+    expect(guideDocument.body.textContent).toContain('пока не реализован');
+
+    guideDocument.querySelector<HTMLButtonElement>('#trainingGuideClose')?.click();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

@@ -16,6 +16,7 @@ import type { ArenaDemoController, ArenaSpeedMultiplier } from '../arena/ArenaDe
 import type { TrainingLaunchConfig } from '../app/services/MenuScreenService';
 import { BrowserGeneticTrainingRunner } from './BrowserGeneticTrainingRunner';
 import { LocalModelRepository, parseModelArtifact } from './LocalModelRepository';
+import { openTrainingGuide } from './TrainingGuideWindow';
 
 export interface TrainingLabControllerOptions {
   canvas: HTMLCanvasElement;
@@ -78,6 +79,9 @@ export class TrainingLabController {
     });
     this.button('trainingCsv').addEventListener('click', () => this.downloadCsv());
     this.button('trainingImport').addEventListener('click', () => this.fileInput().click());
+    this.button('trainingGuide').addEventListener('click', () => {
+      if (!openTrainingGuide()) this.setStatus('Браузер заблокировал окно инструкции');
+    });
     this.fileInput().addEventListener('change', () => this.importSelectedModel());
     this.button('trainingMenu').addEventListener('click', this.options.onBack);
     this.select('trainingReplaySpeed').addEventListener('change', () => {
@@ -479,6 +483,7 @@ const trainingLabMarkup = `
       <button id="trainingCsv" type="button" class="btn btn-secondary btn-small" disabled>CSV отчёт</button>
       <button id="trainingImport" type="button" class="btn btn-secondary btn-small">Импорт</button>
       <input id="trainingFile" class="training-file-input" type="file" accept="application/json,.json">
+      <button id="trainingGuide" type="button" class="btn btn-secondary btn-small">Инструкция</button>
       <button id="trainingMenu" type="button" class="btn btn-secondary btn-small">Меню</button>
     </div>
     <div id="trainingStatus" class="training-status" aria-live="polite">Настройте параметры и начните обучение.</div>
