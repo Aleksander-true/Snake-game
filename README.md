@@ -26,7 +26,7 @@ Preliminary requirements for a small multiplayer instance before load testing:
 - systemd or another process manager for Node.js;
 - public ports `80` and `443`;
 - internal Node.js port `3000`, closed to external traffic;
-- a dedicated persistent directory for the future SQLite database and backups.
+- a dedicated persistent directory for the SQLite match-history database and backups.
 
 Current static deployment:
 [https://aleksander-true.github.io/Snake-game/](https://aleksander-true.github.io/Snake-game/).
