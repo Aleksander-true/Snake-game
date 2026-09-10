@@ -233,6 +233,6 @@ describe('neuralArenaAlgorithm', () => {
       network,
     } as NeuralArenaAlgorithmOptions;
 
-    expect(() => chooseNeuralDecision(input, settings, options)).toThrow(`Neural network input size mismatch: encoded observation has length 3, but hiddenLayer.inputSize is ${NETWORK_INPUT_SIZE}`);
+    expect(() => chooseNeuralDecision(input, settings, options)).toThrow(`Neural network input size mismatch: encoded observation has length 3, but network input size is ${NETWORK_INPUT_SIZE}`);
   });
 });

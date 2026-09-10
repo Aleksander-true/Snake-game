@@ -5,6 +5,10 @@ import {
     applyTanh,
     forwardDense,
     createSimpleNetwork,
+    createDenseNetwork,
+    createDenseNetworkFromGenome,
+    flattenNetwork,
+    runNeuralNetwork,
     runSimpleNetwork,
     type DenseLayer,
     type SimpleNetwork,
@@ -118,5 +122,27 @@ import {
       expect(result.scores.length).toBe(3);
       expect(result.actionIndex).toBe(0);
       expect(result.action).toBe('left');
+    });
+
+    test('runs a configurable multilayer network', () => {
+      const network = createDenseNetwork(6, [5, 4], 3, createSeededRng(7));
+      const result = runNeuralNetwork(new Float32Array(6), network);
+
+      expect(network.layers.map((layer) => [layer.inputSize, layer.outputSize])).toEqual([
+        [6, 5],
+        [5, 4],
+        [4, 3],
+      ]);
+      expect(result.scores).toHaveLength(3);
+    });
+
+    test('restores the same network from its flat genome', () => {
+      const network = createDenseNetwork(3, [4, 2], 3, createSeededRng(11));
+      const genome = flattenNetwork(network);
+      const restored = createDenseNetworkFromGenome([3, 4, 2, 3], genome);
+
+      expect(flattenNetwork(restored)).toEqual(genome);
+      expect(runNeuralNetwork(new Float32Array([1, 2, 3]), restored))
+        .toEqual(runNeuralNetwork(new Float32Array([1, 2, 3]), network));
     });
   });

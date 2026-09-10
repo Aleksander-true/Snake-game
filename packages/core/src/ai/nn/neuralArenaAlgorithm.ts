@@ -1,16 +1,16 @@
 import type { ArenaAlgorithm } from '../../arena/types';
 import type { GameState, Snake, BotInput, BotDecision, Direction } from '../../engine/types';
 import type { GameSettings } from '../../engine/settings';
-import type { SimpleNetwork } from './simpleNetwork';
+import type { NeuralNetwork } from './simpleNetwork';
 
 import { generateVision } from '../vision';
 import { getBotDirection } from '../botController';
 import { encodeObservation } from '../encodeObservation';
-import { runSimpleNetwork } from './simpleNetwork';
+import { getNetworkInputSize, runNeuralNetwork } from './simpleNetwork';
 
 export interface NeuralArenaAlgorithmOptions {
   id?: string;
-  network: SimpleNetwork;
+  network: NeuralNetwork;
   maxSnakeLengthForEncoding?: number;
   visionValueScale?: number;
 }
@@ -47,10 +47,11 @@ export function chooseNeuralDecision(
             maxSnakeLengthForEncoding,
             visionValueScale
         })
-    if (network.hiddenLayer.inputSize !== netInput.length) {
-      throw new Error(`Neural network input size mismatch: encoded observation has length ${netInput.length}, but hiddenLayer.inputSize is ${network.hiddenLayer.inputSize}`)
+    const networkInputSize = getNetworkInputSize(network);
+    if (networkInputSize !== netInput.length) {
+      throw new Error(`Neural network input size mismatch: encoded observation has length ${netInput.length}, but network input size is ${networkInputSize}`)
     }
-    const botDecision = runSimpleNetwork(netInput, network);
+    const botDecision = runNeuralNetwork(netInput, network);
     return botDecision.action;
   }
 
