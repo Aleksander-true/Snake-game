@@ -33,6 +33,7 @@ interface ChampionPreview {
   id: string;
   generation: number | null;
   fitness: number;
+  recordFitness: number;
   genome: Float32Array;
   config: GeneticTrainingConfig;
   metrics: TrainingEvaluationMetrics;
@@ -47,7 +48,6 @@ export class TrainingLabController {
   private replay: ArenaDemoController | null = null;
   private activePreview: ChampionPreview | null = null;
   private queuedChampion: ChampionPreview | null = null;
-  private bestPreviewFitness = Number.NEGATIVE_INFINITY;
   private previewRun = 0;
 
   constructor(private readonly options: TrainingLabControllerOptions) {}
@@ -121,7 +121,6 @@ export class TrainingLabController {
       this.replay = null;
       this.activePreview = null;
       this.queuedChampion = null;
-      this.bestPreviewFitness = Number.NEGATIVE_INFINITY;
       this.previewRun = 0;
       this.clearReport();
       this.renderPreviewHeader();
@@ -132,7 +131,12 @@ export class TrainingLabController {
           if (message.type === 'generation') {
             this.reports.push(message.report);
             this.renderGeneration(message.report, config.generations);
-            this.queueChampionPreview(message.champion, message.report.generation, config);
+            this.queueChampionPreview(
+              message.generationBest,
+              message.report.generation,
+              message.recordFitness,
+              config,
+            );
           } else if (message.type === 'completed') {
             this.result = message.result;
             this.setRunning(false);
@@ -275,6 +279,7 @@ export class TrainingLabController {
       id: model.id,
       generation: null,
       fitness: model.trainingFitness,
+      recordFitness: model.trainingFitness,
       genome: new Float32Array(model.genome),
       config: model.trainingConfig,
       metrics: model.metrics,
@@ -285,14 +290,14 @@ export class TrainingLabController {
   private queueChampionPreview(
     champion: TrainingCandidateResult,
     generation: number,
+    recordFitness: number,
     config: GeneticTrainingConfig,
   ): void {
-    if (champion.fitness <= this.bestPreviewFitness) return;
-    this.bestPreviewFitness = champion.fitness;
     this.queuedChampion = {
       id: champion.id,
       generation,
       fitness: champion.fitness,
+      recordFitness,
       genome: champion.genome.slice(),
       config,
       metrics: champion.metrics,
@@ -365,11 +370,15 @@ export class TrainingLabController {
       : 'Игра запускается…';
     panel.textContent = [
       generation,
-      `Рекорд fitness: ${format(preview.fitness)}`,
+      `Fitness: ${format(preview.fitness)}`,
+      `Рекорд обучения: ${format(preview.recordFitness)}`,
       `Средние очки: ${format(preview.metrics.averageScore)}`,
       `Еда: ${format(preview.metrics.averageFoodEaten)}`,
       `Выживание: ${format(preview.metrics.averageSurvivedTicks)} тиков`,
       currentGame,
+      ...(this.queuedChampion?.generation === null || this.queuedChampion?.generation === undefined
+        ? []
+        : [`Ожидает показа: поколение ${this.queuedChampion.generation}`]),
     ].join(' · ');
   }
 
@@ -564,7 +573,7 @@ function scaleY(value: number, min: number, range: number, height: number): numb
 const trainingLabMarkup = `
   <div class="dev-panel training-lab-panel">
     <h2 class="dev-panel-title">Генетическое обучение</h2>
-    <p class="training-lab-about-text">Популяции нейросетей обучаются в отдельном Web Worker. На Canvas показывается validation replay чемпиона.</p>
+    <p class="training-lab-about-text">Популяции нейросетей обучаются в отдельном Web Worker. На Canvas показывается лучший кандидат самого свежего завершённого поколения.</p>
     <div class="dev-section training-config-grid">
       <div class="dev-section-title">Популяция и сеть</div>
       <label class="dev-row"><span class="dev-row-label">Поколения</span><input id="trainingGenerations" class="dev-input" type="number" min="1" max="1000"></label>

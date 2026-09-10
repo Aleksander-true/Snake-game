@@ -46,4 +46,37 @@ describe('genetic training', () => {
       .toEqual(second.reports.map((report) => report.bestFitness));
     expect(first.model.genome).toEqual(second.model.genome);
   });
+
+  test('reports the best candidate of each generation separately from the record holder', () => {
+    const config = createDefaultGeneticTrainingConfig(402);
+    Object.assign(config, {
+      populationSize: 4,
+      generations: 2,
+      eliteCount: 1,
+      tournamentSize: 2,
+      maxTicks: 20,
+      trainingSeeds: [3],
+      validationSeeds: [5],
+      validationEvery: 1,
+      topology: [402, 4, 3],
+      scenarioWeights: { solo: 1, heuristic: 0, cohort: 0 },
+    });
+    const generations: Array<{ best: number; record: number; reportBest: number }> = [];
+
+    new GeneticTrainer(config).run({
+      onGenerationCompleted: (report, generationBest, champion) => {
+        generations.push({
+          best: generationBest.fitness,
+          record: champion.fitness,
+          reportBest: report.bestFitness,
+        });
+      },
+    });
+
+    expect(generations).toHaveLength(2);
+    for (const generation of generations) {
+      expect(generation.best).toBe(generation.reportBest);
+      expect(generation.record).toBeGreaterThanOrEqual(generation.best);
+    }
+  });
 });

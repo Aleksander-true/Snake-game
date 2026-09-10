@@ -11,6 +11,11 @@ export type TrainingWorkerRequest = {
 };
 
 export type TrainingWorkerResponse =
-  | { type: 'generation'; report: GenerationReport; champion: TrainingCandidateResult }
+  | {
+      type: 'generation';
+      report: GenerationReport;
+      generationBest: TrainingCandidateResult;
+      recordFitness: number;
+    }
   | { type: 'completed'; result: GeneticTrainingResult }
   | { type: 'failed'; message: string };

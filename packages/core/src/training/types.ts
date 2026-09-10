@@ -87,6 +87,10 @@ export interface GeneticTrainingResult {
 }
 
 export interface GeneticTrainingCallbacks {
-  onGenerationCompleted?: (report: GenerationReport, champion: TrainingCandidateResult) => void;
+  onGenerationCompleted?: (
+    report: GenerationReport,
+    generationBest: TrainingCandidateResult,
+    champion: TrainingCandidateResult,
+  ) => void;
   shouldCancel?: () => boolean;
 }

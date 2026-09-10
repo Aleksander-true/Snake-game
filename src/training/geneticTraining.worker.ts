@@ -13,8 +13,13 @@ workerScope.onmessage = (event: MessageEvent<TrainingWorkerRequest>) => {
   try {
     const trainer = new GeneticTrainer(event.data.config);
     const result = trainer.run({
-      onGenerationCompleted: (report, champion) => {
-        post({ type: 'generation', report, champion });
+      onGenerationCompleted: (report, generationBest, champion) => {
+        post({
+          type: 'generation',
+          report,
+          generationBest,
+          recordFitness: champion.fitness,
+        });
       },
     });
     post({ type: 'completed', result });

@@ -70,7 +70,11 @@ export class GeneticTrainer {
         simulations,
       );
       reports.push(report);
-      callbacks.onGenerationCompleted?.(report, cloneCandidate(champion));
+      callbacks.onGenerationCompleted?.(
+        report,
+        cloneCandidate(evaluated[0]),
+        cloneCandidate(champion),
+      );
       if (generation < this.config.generations) population = this.createNextPopulation(evaluated, generation);
     }
 
