@@ -58,6 +58,7 @@ export interface CreateRoomResponseDTO {
   playerId: string;
   reconnectToken: string;
   privateCode?: string;
+  historyToken?: string;
 }
 
 export interface JoinRoomResponseDTO {

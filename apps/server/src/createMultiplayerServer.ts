@@ -19,7 +19,11 @@ import {
   type RoomSnapshotDTO,
   type RoomStateMessage,
 } from '@snake-game/contracts';
-import { RoomRegistry, RoomRegistryError } from './multiplayer/RoomRegistry';
+import {
+  hashAccessToken,
+  RoomRegistry,
+  RoomRegistryError,
+} from './multiplayer/RoomRegistry';
 import { MatchSession, MatchSessionError } from './multiplayer/MatchSession';
 import {
   InMemoryMatchHistoryRepository,
@@ -28,6 +32,7 @@ import {
 
 const EMPTY_WAITING_ROOM_RETENTION_MS = 10 * 60 * 1000;
 const COMPLETED_MATCH_RETENTION_MS = 5 * 60 * 1000;
+const PUBLIC_MATCH_HISTORY_LIMIT = 50;
 
 export interface ClientConnection {
   connectionId: string;
@@ -83,6 +88,46 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       response.status(201).json(created);
     } catch (error) {
       sendHttpError(response, error);
+    }
+  });
+  app.get('/api/matches', async (_request, response) => {
+    try {
+      response.json(await historyRepository.listPublic(PUBLIC_MATCH_HISTORY_LIMIT));
+    } catch {
+      response.status(500).json({ code: 'HISTORY_READ_FAILED', message: 'Could not read match history' });
+    }
+  });
+  app.get('/api/matches/:matchId', async (request, response) => {
+    try {
+      const record = await historyRepository.getByMatchId(request.params.matchId);
+      if (!record) {
+        response.status(404).json({ code: 'MATCH_HISTORY_NOT_FOUND', message: 'Match history was not found' });
+        return;
+      }
+      const token = readBearerToken(request.headers.authorization);
+      if (!token) {
+        response.status(401).json({ code: 'HISTORY_TOKEN_REQUIRED', message: 'History access token is required' });
+        return;
+      }
+      const tokenHash = hashAccessToken(token);
+      if (record.historyTokenHash === tokenHash) {
+        response.json(record.history);
+        return;
+      }
+      const participantId = Object.entries(record.participantTokenHashes)
+        .find(([, participantTokenHash]) => participantTokenHash === tokenHash)?.[0];
+      if (!participantId) {
+        response.status(403).json({ code: 'HISTORY_ACCESS_DENIED', message: 'History access token is invalid' });
+        return;
+      }
+      response.json({
+        ...record.history,
+        participants: record.history.participants.filter((participant) =>
+          participant.controllerId === participantId
+        ),
+      });
+    } catch {
+      response.status(500).json({ code: 'HISTORY_READ_FAILED', message: 'Could not read match history' });
     }
   });
   const staticDirectory = options.staticDirectory === false
@@ -339,7 +384,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   }
 
   function saveMatchHistory(history: MatchHistoryDTO): void {
-    const save = historyRepository.save(history)
+    const access = rooms.getMatchHistoryAccess(history.roomId);
+    const save = historyRepository.save({ history, ...access })
       .catch((error: unknown) => options.onHistoryPersistenceError?.(error, history))
       .finally(() => pendingHistorySaves.delete(save));
     pendingHistorySaves.add(save);
@@ -414,6 +460,12 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
     timer.unref();
     completedMatchTimers.set(roomId, timer);
   }
+}
+
+function readBearerToken(authorization: string | undefined): string | null {
+  if (!authorization?.startsWith('Bearer ')) return null;
+  const token = authorization.slice('Bearer '.length).trim();
+  return token.length > 0 ? token : null;
 }
 
 function reconnectTimerKey(roomId: string, playerId: string): string {

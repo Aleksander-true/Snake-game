@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
   MAX_PLAYER_NAME_LENGTH,
   type CreateRoomRequestDTO,
@@ -17,10 +17,17 @@ interface StoredParticipant extends RoomParticipantDTO {
 interface StoredRoom {
   roomId: string;
   privateCode?: string;
+  historyToken?: string;
   config: CreateRoomRequestDTO['config'];
   status: RoomSnapshotDTO['status'];
   participants: StoredParticipant[];
+  historyAccessTokensByPlayerId: Record<string, string>;
   currentRound: number;
+}
+
+export interface MatchHistoryAccess {
+  historyTokenHash?: string;
+  participantTokenHashes: Record<string, string>;
 }
 
 export class RoomRegistryError extends Error {
@@ -44,10 +51,12 @@ export class RoomRegistry {
     const creatorName = validatePlayerName(request.creatorName);
     const roomId = randomUUID();
     const privateCode = request.config.visibility === 'private' ? createPrivateCode() : undefined;
+    const historyToken = request.config.visibility === 'private' ? createAccessToken() : undefined;
     const creator = createParticipant(creatorName, 0, true);
     const room: StoredRoom = {
       roomId,
       privateCode,
+      historyToken,
       config: {
         ...request.config,
         name: request.config.name.trim(),
@@ -55,6 +64,7 @@ export class RoomRegistry {
       },
       status: 'waiting',
       participants: [creator],
+      historyAccessTokensByPlayerId: { [creator.playerId]: creator.reconnectToken },
       currentRound: 0,
     };
     this.rooms.set(roomId, room);
@@ -63,6 +73,7 @@ export class RoomRegistry {
       playerId: creator.playerId,
       reconnectToken: creator.reconnectToken,
       privateCode,
+      historyToken,
     };
   }
 
@@ -102,6 +113,7 @@ export class RoomRegistry {
     );
     const participant = createParticipant(validatePlayerName(options.playerName), slotIndex, isCreator);
     room.participants.push(participant);
+    room.historyAccessTokensByPlayerId[participant.playerId] = participant.reconnectToken;
     return {
       room: toSnapshot(room),
       playerId: participant.playerId,
@@ -175,6 +187,19 @@ export class RoomRegistry {
 
   getSnapshot(roomId: string): RoomSnapshotDTO {
     return toSnapshot(this.requireRoom(roomId));
+  }
+
+  getMatchHistoryAccess(roomId: string): MatchHistoryAccess {
+    const room = this.requireRoom(roomId);
+    return {
+      historyTokenHash: room.historyToken ? hashAccessToken(room.historyToken) : undefined,
+      participantTokenHashes: Object.fromEntries(
+        Object.entries(room.historyAccessTokensByPlayerId).map(([playerId, token]) => [
+          playerId,
+          hashAccessToken(token),
+        ])
+      ),
+    };
   }
 
   isReadyToStart(roomId: string): boolean {
@@ -298,6 +323,14 @@ function validatePlayerName(value: unknown): string {
 
 function createPrivateCode(): string {
   return randomBytes(4).toString('hex').toUpperCase();
+}
+
+function createAccessToken(): string {
+  return randomBytes(24).toString('base64url');
+}
+
+export function hashAccessToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }
 
 function toSnapshot(room: StoredRoom): RoomSnapshotDTO {

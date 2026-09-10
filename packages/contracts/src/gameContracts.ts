@@ -1,4 +1,4 @@
-import type { RoomLifecycleStatus } from './roomContracts';
+import type { RoomLifecycleStatus, RoomVisibility } from './roomContracts';
 
 export type NetworkDirection = 'up' | 'down' | 'left' | 'right';
 export type NetworkFoodKind = 'apple' | 'rabbit' | 'chicken' | 'meat';
@@ -84,8 +84,24 @@ export interface MatchHistoryParticipantDTO {
 
 export interface MatchHistoryDTO {
   matchId: string;
+  roomId: string;
   roomName: string;
+  visibility: RoomVisibility;
   startedAt: string;
   finishedAt: string;
   participants: MatchHistoryParticipantDTO[];
+}
+
+export interface PublicMatchHistoryParticipantDTO {
+  displayName: string;
+  personalScore: number;
+  controllerType: SnakeControllerType;
+}
+
+export interface PublicMatchHistorySummaryDTO {
+  matchId: string;
+  roomName: string;
+  startedAt: string;
+  finishedAt: string;
+  participants: PublicMatchHistoryParticipantDTO[];
 }

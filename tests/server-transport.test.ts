@@ -7,6 +7,8 @@ import {
   createMultiplayerServer,
   type MultiplayerServer,
 } from '../apps/server/src/createMultiplayerServer';
+import { InMemoryMatchHistoryRepository } from '../apps/server/src/multiplayer/MatchHistoryRepository';
+import { hashAccessToken } from '../apps/server/src/multiplayer/RoomRegistry';
 
 describe('multiplayer server transport', () => {
   let server: MultiplayerServer;
@@ -42,6 +44,46 @@ describe('multiplayer server transport', () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toContain('<div id="app"></div>');
+  });
+
+  test('exposes public summaries and protects full match history with bearer tokens', async () => {
+    const historyRepository = new InMemoryMatchHistoryRepository();
+    const publicHistory = createHistory('public-match', 'public');
+    const privateHistory = createHistory('private-match', 'private');
+    await historyRepository.save({
+      history: publicHistory,
+      participantTokenHashes: {
+        'player-1': hashAccessToken('player-reconnect-token'),
+      },
+    });
+    await historyRepository.save({
+      history: privateHistory,
+      historyTokenHash: hashAccessToken('private-history-token'),
+      participantTokenHashes: {},
+    });
+    server = createMultiplayerServer({ historyRepository });
+    const address = await server.start(0);
+    baseUrl = `http://127.0.0.1:${address.port}`;
+
+    const publicResponse = await fetch(`${baseUrl}/api/matches`);
+    const publicMatches = await publicResponse.json() as Array<{ matchId: string; participants: unknown[] }>;
+    expect(publicMatches).toHaveLength(1);
+    expect(publicMatches[0].matchId).toBe(publicHistory.matchId);
+    expect(publicMatches[0].participants).toHaveLength(2);
+    expect(publicMatches[0].participants[0]).not.toHaveProperty('controlPeriods');
+
+    const participantResponse = await fetch(`${baseUrl}/api/matches/${publicHistory.matchId}`, {
+      headers: { authorization: 'Bearer player-reconnect-token' },
+    });
+    const participantHistory = await participantResponse.json() as typeof publicHistory;
+    expect(participantHistory.participants).toHaveLength(1);
+    expect(participantHistory.participants[0].controllerId).toBe('player-1');
+
+    const privateResponse = await fetch(`${baseUrl}/api/matches/${privateHistory.matchId}`, {
+      headers: { authorization: 'Bearer private-history-token' },
+    });
+    const fullPrivateHistory = await privateResponse.json() as typeof privateHistory;
+    expect(fullPrivateHistory.participants).toHaveLength(2);
   });
 
   test('completes handshake and dispatches a validated client message', async () => {
@@ -113,4 +155,41 @@ async function waitFor(predicate: () => boolean): Promise<void> {
     }
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
+}
+
+function createHistory(matchId: string, visibility: 'public' | 'private') {
+  return {
+    matchId,
+    roomId: `${matchId}-room`,
+    roomName: `${matchId} room`,
+    visibility,
+    startedAt: '2026-09-10T10:00:00.000Z',
+    finishedAt: '2026-09-10T10:10:00.000Z',
+    participants: [
+      {
+        controllerId: 'player-1',
+        displayName: 'Игрок',
+        personalScore: 15,
+        controlPeriods: [{
+          controllerType: 'human' as const,
+          controllerId: 'player-1',
+          startedAtTick: 0,
+          endedAtTick: 50,
+          scoreGained: 15,
+        }],
+      },
+      {
+        controllerId: 'bot:1',
+        displayName: 'Бот',
+        personalScore: 10,
+        controlPeriods: [{
+          controllerType: 'bot' as const,
+          controllerId: 'bot:1',
+          startedAtTick: 0,
+          endedAtTick: 50,
+          scoreGained: 10,
+        }],
+      },
+    ],
+  };
 }

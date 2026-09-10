@@ -438,7 +438,9 @@ export class MatchSession {
     }
     this.completedHistory = {
       matchId: this.matchId,
+      roomId: this.room.roomId,
       roomName: this.room.config.name,
+      visibility: this.room.config.visibility,
       startedAt: this.startedAt,
       finishedAt: new Date(this.now()).toISOString(),
       participants: [...this.controllerHistories.entries()].map(([controllerId, history]) => ({

@@ -13,6 +13,7 @@ import {
 import { createMultiplayerServer, type MultiplayerServer } from '../apps/server/src/createMultiplayerServer';
 import { MatchSession } from '../apps/server/src/multiplayer/MatchSession';
 import { InMemoryMatchHistoryRepository } from '../apps/server/src/multiplayer/MatchHistoryRepository';
+import { hashAccessToken } from '../apps/server/src/multiplayer/RoomRegistry';
 
 const baseConfig = {
   name: 'Тестовая комната',
@@ -45,7 +46,9 @@ describe('multiplayer room lobby', () => {
     const rooms = await response.json() as PublicRoomSummaryDTO[];
 
     expect(publicRoom.privateCode).toBeUndefined();
+    expect(publicRoom.historyToken).toBeUndefined();
     expect(privateRoom.privateCode).toMatch(/^[A-F0-9]{8}$/);
+    expect(privateRoom.historyToken).toMatch(/^[A-Za-z0-9_-]{32}$/);
     expect(rooms).toEqual([
       expect.objectContaining({
         roomId: publicRoom.room.roomId,
@@ -332,6 +335,11 @@ describe('multiplayer room lobby', () => {
     expect(server.rooms.isReadyToStart(created.room.roomId)).toBe(false);
     const roomsAfterJoin = await (await fetch(`${baseUrl}/api/rooms`)).json() as PublicRoomSummaryDTO[];
     expect(roomsAfterJoin[0]).toMatchObject({ connectedHumans: 2, canJoin: false });
+
+    server.rooms.replaceParticipantWithBot(created.room.roomId, joined.playerId);
+    server.rooms.joinRoom({ roomId: created.room.roomId, playerName: 'Следующий игрок' });
+    expect(server.rooms.getMatchHistoryAccess(created.room.roomId).participantTokenHashes[joined.playerId])
+      .toBe(hashAccessToken(joined.reconnectToken));
     socket.close();
   });
 
@@ -393,7 +401,10 @@ describe('multiplayer room lobby', () => {
       onSnapshot: () => undefined,
       onHistoryReady: (completedHistory) => {
         history = completedHistory;
-        void historyRepository.save(completedHistory);
+        void historyRepository.save({
+          history: completedHistory,
+          participantTokenHashes: {},
+        });
       },
     });
     const firstFinal = processUntilComplete(session);
@@ -450,7 +461,7 @@ describe('multiplayer room lobby', () => {
       finalSnapshot.snakes[1].score - firstFinal.snakes[1].score
     );
     expect(session.getHistory()).toEqual(history);
-    expect(await historyRepository.getByMatchId(session.matchId)).toEqual(history);
+    expect((await historyRepository.getByMatchId(session.matchId))?.history).toEqual(history);
   });
 
   test('pauses a reconnecting snake and resumes the same slot under bot control', () => {
