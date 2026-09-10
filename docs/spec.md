@@ -2259,6 +2259,7 @@ continueAfterLevelEnd()
 | Общий environment-independent пакет Engine/Arena/AI | ✅ |
 | Перенос браузерного приложения в `apps/web` | ⏳ |
 | Express HTTP server и WebSocket gateway | ✅ |
+| Раздача production-сборки браузерной игры тем же Express-сервером | ✅ |
 | Handshake версии протокола, лимит 16 КБ и heartbeat 2/5 секунд | ✅ |
 | Реестр публичных/приватных комнат, создание, список и подключение | ✅ |
 | Ready-статусы игроков и проверка готовности комнаты | ✅ |

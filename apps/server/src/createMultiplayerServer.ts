@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import path from 'node:path';
 import express, { type Express } from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
 import {
@@ -42,6 +43,7 @@ export interface MultiplayerServerOptions {
   onHistoryPersistenceError?: (error: unknown, history: MatchHistoryDTO) => void;
   emptyWaitingRoomRetentionMs?: number;
   completedMatchRetentionMs?: number;
+  staticDirectory?: string | false;
 }
 
 export interface MultiplayerServer {
@@ -83,6 +85,10 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       sendHttpError(response, error);
     }
   });
+  const staticDirectory = options.staticDirectory === false
+    ? null
+    : options.staticDirectory ?? path.resolve(process.cwd(), 'dist');
+  if (staticDirectory) app.use(express.static(staticDirectory));
 
   const httpServer = createServer(app);
   const webSocketServer = new WebSocketServer({

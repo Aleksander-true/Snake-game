@@ -1,5 +1,6 @@
 /** @jest-environment node */
 
+import path from 'node:path';
 import WebSocket, { type RawData } from 'ws';
 import { NETWORK_PROTOCOL_VERSION, type ServerMessage } from '@snake-game/contracts';
 import {
@@ -28,6 +29,19 @@ describe('multiplayer server transport', () => {
       status: 'ok',
       protocolVersion: NETWORK_PROTOCOL_VERSION,
     });
+  });
+
+  test('serves the browser application from the configured static directory', async () => {
+    server = createMultiplayerServer({
+      staticDirectory: path.resolve(__dirname, '../src'),
+    });
+    const address = await server.start(0);
+    baseUrl = `http://127.0.0.1:${address.port}`;
+
+    const response = await fetch(`${baseUrl}/index.html`);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<div id="app"></div>');
   });
 
   test('completes handshake and dispatches a validated client message', async () => {

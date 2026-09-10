@@ -1,7 +1,9 @@
 import { createMultiplayerServer } from './createMultiplayerServer';
 
 const port = Number(process.env.PORT ?? 3000);
-const server = createMultiplayerServer();
+const server = createMultiplayerServer({
+  staticDirectory: process.env.STATIC_DIR,
+});
 
 server.start(port, '0.0.0.0')
   .then((address) => {
