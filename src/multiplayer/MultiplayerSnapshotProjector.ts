@@ -22,13 +22,19 @@ interface PendingDirection {
 
 /** Converts authoritative snapshots into render state and reapplies unacknowledged local input. */
 export class MultiplayerSnapshotProjector {
+  private previousSnapshot: GameSnapshotDTO | null = null;
   private snapshot: GameSnapshotDTO | null = null;
   private playerId = '';
   private gameMode: GameMode = 'classic';
   private pendingDirections: PendingDirection[] = [];
 
   reconcile(snapshot: GameSnapshotDTO, playerId: string, gameMode: GameMode): GameState {
-    if (this.snapshot?.matchId !== snapshot.matchId) this.pendingDirections = [];
+    if (this.snapshot?.matchId !== snapshot.matchId) {
+      this.previousSnapshot = null;
+      this.pendingDirections = [];
+    } else {
+      this.previousSnapshot = this.snapshot;
+    }
     this.snapshot = snapshot;
     this.playerId = playerId;
     this.gameMode = gameMode;
@@ -39,6 +45,34 @@ export class MultiplayerSnapshotProjector {
     return this.project();
   }
 
+  projectInterpolated(progress: number): GameState {
+    const state = this.project();
+    const snapshot = this.requireSnapshot();
+    const previousSnapshot = this.previousSnapshot;
+    if (
+      !previousSnapshot
+      || previousSnapshot.matchId !== snapshot.matchId
+      || previousSnapshot.status !== 'playing'
+      || snapshot.status !== 'playing'
+      || snapshot.tick !== previousSnapshot.tick + 1
+    ) {
+      return state;
+    }
+
+    const interpolationProgress = Math.max(0, Math.min(1, progress));
+    for (const snake of state.snakes) {
+      const currentSource = snapshot.snakes.find((source) => source.snakeId === snake.id);
+      if (!currentSource || currentSource.controller.controllerId === this.playerId) continue;
+      const previousSource = previousSnapshot.snakes.find((source) => source.snakeId === snake.id);
+      if (!canInterpolateSnake(previousSource, currentSource)) continue;
+      snake.segments = currentSource.segments.map((segment, index) => ({
+        x: interpolate(previousSource.segments[index].x, segment.x, interpolationProgress),
+        y: interpolate(previousSource.segments[index].y, segment.y, interpolationProgress),
+      }));
+    }
+    return state;
+  }
+
   predict(sequence: number, direction: NetworkDirection): GameState | null {
     if (!this.snapshot || this.snapshot.status !== 'playing') return null;
     this.pendingDirections.push({ sequence, direction });
@@ -46,6 +80,7 @@ export class MultiplayerSnapshotProjector {
   }
 
   reset(): void {
+    this.previousSnapshot = null;
     this.snapshot = null;
     this.playerId = '';
     this.pendingDirections = [];
@@ -70,6 +105,22 @@ export class MultiplayerSnapshotProjector {
     if (!this.snapshot) throw new Error('Server snapshot is not available');
     return this.snapshot;
   }
+}
+
+function canInterpolateSnake(
+  previous: GameSnapshotDTO['snakes'][number] | undefined,
+  current: GameSnapshotDTO['snakes'][number]
+): previous is GameSnapshotDTO['snakes'][number] {
+  if (!previous || !previous.alive || !current.alive) return false;
+  if (previous.segments.length !== current.segments.length) return false;
+  return current.segments.every((segment, index) => {
+    const previousSegment = previous.segments[index];
+    return Math.abs(segment.x - previousSegment.x) + Math.abs(segment.y - previousSegment.y) <= 1;
+  });
+}
+
+function interpolate(from: number, to: number, progress: number): number {
+  return from + (to - from) * progress;
 }
 
 /** Creates domain-shaped data for existing renderers without advancing the client-side Engine. */

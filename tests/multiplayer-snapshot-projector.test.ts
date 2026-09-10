@@ -64,6 +64,39 @@ describe('multiplayer snapshot projection', () => {
     expect(reconciled.snakes[0].segments).toHaveLength(2);
   });
 
+  test('interpolates only safe consecutive movement of remote snakes', () => {
+    const projector = new MultiplayerSnapshotProjector();
+    const previous = createSnapshot();
+    previous.snakes.push(createRemoteSnake());
+    projector.reconcile(previous, 'player-1', 'classic');
+
+    const current = createSnapshot();
+    current.tick = previous.tick + 1;
+    current.snakes[0].segments = [{ x: 4, y: 2 }, { x: 3, y: 2 }];
+    current.snakes.push({
+      ...createRemoteSnake(),
+      segments: [{ x: 6, y: 5 }, { x: 5, y: 5 }],
+    });
+    projector.reconcile(current, 'player-1', 'classic');
+
+    const halfway = projector.projectInterpolated(0.5);
+    expect(halfway.snakes[0].head).toEqual({ x: 4, y: 2 });
+    expect(halfway.snakes[1].segments).toEqual([
+      { x: 5.5, y: 5 },
+      { x: 4.5, y: 5 },
+    ]);
+
+    const dead = createSnapshot();
+    dead.tick = current.tick + 1;
+    dead.snakes.push({
+      ...createRemoteSnake(),
+      alive: false,
+      segments: [{ x: 6, y: 5 }, { x: 5, y: 5 }],
+    });
+    projector.reconcile(dead, 'player-1', 'classic');
+    expect(projector.projectInterpolated(0).snakes[1].head).toEqual({ x: 6, y: 5 });
+  });
+
   test('shows round readiness and a separate final-game action over the last board', () => {
     const root = document.createElement('div');
     const contextSpy = jest.spyOn(HTMLCanvasElement.prototype, 'getContext')
@@ -221,5 +254,24 @@ function createSnapshot(): GameSnapshotDTO {
       facing: 'left',
     }],
     walls: [{ x: 0, y: 0 }],
+  };
+}
+
+function createRemoteSnake(): GameSnapshotDTO['snakes'][number] {
+  return {
+    snakeId: 1,
+    slotIndex: 1,
+    segments: [{ x: 5, y: 5 }, { x: 4, y: 5 }],
+    direction: 'right',
+    alive: true,
+    score: 3,
+    levelsWon: 0,
+    ticksWithoutFood: 1,
+    controller: {
+      type: 'bot',
+      controllerId: 'bot:1',
+      displayName: 'Бот',
+      connected: true,
+    },
   };
 }

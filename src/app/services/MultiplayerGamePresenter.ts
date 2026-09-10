@@ -50,6 +50,9 @@ export class MultiplayerGamePresenter {
   private fastForwardHandler: (() => void) | null = null;
   private fastForwardRequested = false;
   private lastLevel: number | null = null;
+  private animationFrame: number | null = null;
+  private snapshotReceivedAt = 0;
+  private snapshotTickIntervalMs = 0;
 
   constructor(private readonly appRoot: HTMLElement) {}
 
@@ -74,8 +77,10 @@ export class MultiplayerGamePresenter {
     this.localSnakeId = snapshot.snakes.find(
       (snake) => snake.controller.controllerId === playerId
     )?.snakeId ?? null;
-    const state = this.projector.reconcile(snapshot, playerId, gameMode);
+    this.projector.reconcile(snapshot, playerId, gameMode);
+    const state = this.projector.projectInterpolated(0);
     this.render(state, snapshot.status, snapshot.fastForwarding === true);
+    this.startSnapshotAnimation(snapshot);
   }
 
   predict(sequence: number, direction: NetworkDirection): void {
@@ -141,6 +146,7 @@ export class MultiplayerGamePresenter {
   }
 
   stop(): void {
+    this.cancelSnapshotAnimation();
     if (this.keydownHandler) document.removeEventListener('keydown', this.keydownHandler);
     this.touchCleanup?.();
     this.projector.reset();
@@ -163,6 +169,8 @@ export class MultiplayerGamePresenter {
     this.fastForwardHandler = null;
     this.fastForwardRequested = false;
     this.lastLevel = null;
+    this.snapshotReceivedAt = 0;
+    this.snapshotTickIntervalMs = 0;
   }
 
   private build(onDirection: (direction: NetworkDirection) => void): void {
@@ -210,14 +218,44 @@ export class MultiplayerGamePresenter {
     status: GameSnapshotDTO['status'],
     fastForwarding = false
   ): void {
+    this.renderCanvas(state);
+    this.renderHud(state, status, fastForwarding);
+    if (status === 'round-complete' && !fastForwarding) this.showRoundSnapshotPlaceholder(state.level);
+    if (status === 'game-complete' && !fastForwarding) this.showGameCompletePanel();
+  }
+
+  private renderCanvas(state: GameState): void {
     if (!this.canvas || !this.context) return;
     this.resizeCanvas(state);
     const cellSize = Number(this.canvas.dataset.cellSize) || 10;
     renderGame(this.context, state, cellSize, this.settings);
     this.lastState = state;
-    this.renderHud(state, status, fastForwarding);
-    if (status === 'round-complete' && !fastForwarding) this.showRoundSnapshotPlaceholder(state.level);
-    if (status === 'game-complete' && !fastForwarding) this.showGameCompletePanel();
+  }
+
+  private startSnapshotAnimation(snapshot: GameSnapshotDTO): void {
+    this.cancelSnapshotAnimation();
+    if (snapshot.status !== 'playing' || typeof window.requestAnimationFrame !== 'function') return;
+    this.snapshotReceivedAt = performance.now();
+    this.snapshotTickIntervalMs = snapshot.tickIntervalMs;
+    const renderFrame = (timestamp: number): void => {
+      const progress = this.snapshotTickIntervalMs > 0
+        ? (timestamp - this.snapshotReceivedAt) / this.snapshotTickIntervalMs
+        : 1;
+      this.renderCanvas(this.projector.projectInterpolated(progress));
+      if (progress < 1) {
+        this.animationFrame = window.requestAnimationFrame(renderFrame);
+      } else {
+        this.animationFrame = null;
+      }
+    };
+    this.animationFrame = window.requestAnimationFrame(renderFrame);
+  }
+
+  private cancelSnapshotAnimation(): void {
+    if (this.animationFrame !== null && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(this.animationFrame);
+    }
+    this.animationFrame = null;
   }
 
   private buildRoundPanel(gameArea: HTMLElement): void {
