@@ -217,6 +217,10 @@
   height: 100%;
 }
 
+.training-lab-mode .training-canvas-hidden {
+  display: none;
+}
+
 .training-lab-mode .game-players-panel,
 .training-lab-mode .game-bots-panel,
 .training-lab-mode .touch-controls-single,

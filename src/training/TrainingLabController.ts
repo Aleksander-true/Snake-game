@@ -20,6 +20,7 @@ import type { TrainingLaunchConfig } from '../app/services/MenuScreenService';
 import { BrowserGeneticTrainingRunner } from './BrowserGeneticTrainingRunner';
 import { LocalModelRepository, parseModelArtifact } from './LocalModelRepository';
 import { openTrainingGuide } from './TrainingGuideWindow';
+import { TrainingWakeLock } from './TrainingWakeLock';
 
 export interface TrainingLabControllerOptions {
   canvas: HTMLCanvasElement;
@@ -40,24 +41,30 @@ interface ChampionPreview {
   source: 'training' | 'saved';
 }
 
+type TrainingDisplayMode = 'visual' | 'background';
+
 export class TrainingLabController {
   private readonly runner = new BrowserGeneticTrainingRunner();
   private readonly repository = new LocalModelRepository();
+  private readonly wakeLock: TrainingWakeLock;
   private reports: GenerationReport[] = [];
   private result: GeneticTrainingResult | null = null;
   private replay: ArenaDemoController | null = null;
   private activePreview: ChampionPreview | null = null;
   private queuedChampion: ChampionPreview | null = null;
   private previewRun = 0;
+  private displayMode: TrainingDisplayMode = 'visual';
 
-  constructor(private readonly options: TrainingLabControllerOptions) {}
+  constructor(private readonly options: TrainingLabControllerOptions) {
+    this.wakeLock = new TrainingWakeLock((message) => this.setPowerStatus(message));
+  }
 
   mount(): void {
     this.options.panel.innerHTML = trainingLabMarkup;
     this.writeInitialValues();
     this.bindActions();
+    this.applyDisplayMode();
     this.renderModels();
-    this.renderPreviewHeader();
   }
 
   stop(): void {
@@ -66,6 +73,7 @@ export class TrainingLabController {
     this.replay = null;
     this.activePreview = null;
     this.queuedChampion = null;
+    this.wakeLock.stop();
   }
 
   private writeInitialValues(): void {
@@ -105,6 +113,7 @@ export class TrainingLabController {
     });
     this.fileInput().addEventListener('change', () => this.importSelectedModel());
     this.button('trainingMenu').addEventListener('click', this.options.onBack);
+    this.select('trainingDisplayMode').addEventListener('change', () => this.applyDisplayMode());
     this.select('trainingReplaySpeed').addEventListener('change', () => {
       const speed = Number(this.select('trainingReplaySpeed').value) as ArenaSpeedMultiplier;
       this.replay?.setSpeedMultiplier(speed);
@@ -123,32 +132,41 @@ export class TrainingLabController {
       this.queuedChampion = null;
       this.previewRun = 0;
       this.clearReport();
-      this.renderPreviewHeader();
+      this.displayMode = this.readDisplayMode();
+      this.applyDisplayMode();
+      if (this.displayMode === 'background') {
+        this.wakeLock.start();
+      } else {
+        this.wakeLock.stop();
+      }
       this.setRunning(true);
       this.setStatus('Подготовка популяции…');
       this.runner.start(config, {
         onMessage: (message) => {
           if (message.type === 'generation') {
             this.reports.push(message.report);
-            this.renderGeneration(message.report, config.generations);
-            this.queueChampionPreview(
-              message.generationBest,
-              message.report.generation,
-              message.recordFitness,
-              config,
-            );
+            if (this.displayMode === 'background') {
+              this.renderBackgroundProgress(message.report, config.generations);
+            } else {
+              this.renderGeneration(message.report, config.generations);
+              this.queueChampionPreview(
+                message.generationBest,
+                message.report.generation,
+                message.recordFitness,
+                config,
+              );
+            }
           } else if (message.type === 'completed') {
-            this.result = message.result;
-            this.setRunning(false);
-            this.setStatus(`Обучение завершено: ${message.result.completedGenerations} поколений`);
-            this.renderSummary(message.result.model);
+            void this.completeTraining(message.result);
           } else {
+            this.wakeLock.stop();
             this.setRunning(false);
             this.setStatus(`Ошибка: ${message.message}`);
           }
         },
       });
     } catch (error) {
+      this.wakeLock.stop();
       this.setRunning(false);
       this.setStatus(`Ошибка конфигурации: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -157,6 +175,8 @@ export class TrainingLabController {
   private cancelTraining(): void {
     if (!this.runner.isRunning()) return;
     this.runner.stop();
+    this.wakeLock.stop();
+    this.setPowerStatus('Wake Lock выключен: обучение отменено.');
     this.setRunning(false);
     this.setStatus('Обучение отменено');
   }
@@ -173,7 +193,7 @@ export class TrainingLabController {
     }
     const seed = this.integer('trainingSeed', 1, 2_000_000_000);
     config.populationSize = this.integer('trainingPopulation', 4, 256);
-    config.generations = this.integer('trainingGenerations', 1, 1000);
+    config.generations = this.integer('trainingGenerations', 1);
     config.eliteCount = this.integer('trainingElite', 1, config.populationSize - 1);
     config.tournamentSize = this.integer('trainingTournament', 2, config.populationSize);
     config.crossoverRate = this.decimal('trainingCrossover', 0, 1);
@@ -198,10 +218,51 @@ export class TrainingLabController {
     return config;
   }
 
+  private readDisplayMode(): TrainingDisplayMode {
+    return this.select('trainingDisplayMode').value === 'background' ? 'background' : 'visual';
+  }
+
+  private applyDisplayMode(): void {
+    this.displayMode = this.readDisplayMode();
+    const background = this.displayMode === 'background';
+    this.options.canvas.classList.toggle('training-canvas-hidden', background);
+    this.element('trainingReplaySection').classList.toggle('training-control-hidden', background);
+    if (background) {
+      this.replay?.stop();
+      this.replay = null;
+      this.activePreview = null;
+      this.queuedChampion = null;
+      this.options.previewPanel.classList.add('training-preview-header');
+      this.options.previewPanel.textContent = 'Фоновый режим: Canvas и анимация отключены.';
+      this.setPowerStatus('Wake Lock включится после запуска обучения.');
+    } else {
+      this.renderPreviewHeader();
+      this.setPowerStatus('Визуальный режим не блокирует переход компьютера в сон.');
+    }
+  }
+
   private renderGeneration(report: GenerationReport, totalGenerations: number): void {
     this.setStatus(
       `Поколение ${report.generation}/${totalGenerations}; лучший fitness ${format(report.bestFitness)}`,
     );
+    this.appendGenerationRow(report);
+    this.renderChart();
+  }
+
+  private renderBackgroundProgress(report: GenerationReport, totalGenerations: number): void {
+    const updateInterval = Math.max(1, Math.floor(totalGenerations / 100));
+    if (
+      report.generation === 1
+      || report.generation === totalGenerations
+      || report.generation % updateInterval === 0
+    ) {
+      this.setStatus(
+        `Фоновое обучение: ${report.generation}/${totalGenerations}; лучший fitness ${format(report.bestFitness)}`,
+      );
+    }
+  }
+
+  private appendGenerationRow(report: GenerationReport): void {
     const row = document.createElement('tr');
     [
       report.generation,
@@ -220,16 +281,27 @@ export class TrainingLabController {
       row.appendChild(cell);
     });
     this.element('trainingReportBody').appendChild(row);
-    this.renderChart();
   }
 
-  private renderChart(): void {
+  private renderCondensedReport(): void {
+    const reportBody = this.element('trainingReportBody');
+    reportBody.replaceChildren();
+    const maxVisibleReports = 200;
+    const step = Math.max(1, Math.ceil(this.reports.length / maxVisibleReports));
+    const visibleReports = this.reports.filter((_, index) => (
+      index % step === 0 || index === this.reports.length - 1
+    ));
+    visibleReports.forEach((report) => this.appendGenerationRow(report));
+    this.renderChart(visibleReports);
+  }
+
+  private renderChart(reports: GenerationReport[] = this.reports): void {
     const svg = this.element('trainingChart') as unknown as SVGSVGElement;
     while (svg.firstChild) svg.firstChild.remove();
-    if (this.reports.length === 0) return;
+    if (reports.length === 0) return;
     const width = 600;
     const height = 220;
-    const values = this.reports.flatMap((report) => [
+    const values = reports.flatMap((report) => [
       report.bestFitness,
       report.meanFitness,
       report.medianFitness,
@@ -238,16 +310,16 @@ export class TrainingLabController {
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = Math.max(1, max - min);
-    this.addChartLine(svg, this.reports.map((report) => report.bestFitness), 'training-chart-best', width, height, min, range);
-    this.addChartLine(svg, this.reports.map((report) => report.meanFitness), 'training-chart-mean', width, height, min, range);
-    this.addChartLine(svg, this.reports.map((report) => report.medianFitness), 'training-chart-median', width, height, min, range);
-    const validationPoints = this.reports
+    this.addChartLine(svg, reports.map((report) => report.bestFitness), 'training-chart-best', width, height, min, range);
+    this.addChartLine(svg, reports.map((report) => report.meanFitness), 'training-chart-mean', width, height, min, range);
+    this.addChartLine(svg, reports.map((report) => report.medianFitness), 'training-chart-median', width, height, min, range);
+    const validationPoints = reports
       .map((report, index) => ({ index, value: report.validationFitness }))
       .filter((item): item is { index: number; value: number } => item.value !== undefined);
     for (const point of validationPoints) {
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('class', 'training-chart-validation');
-      circle.setAttribute('cx', String(scaleX(point.index, this.reports.length, width)));
+      circle.setAttribute('cx', String(scaleX(point.index, reports.length, width)));
       circle.setAttribute('cy', String(scaleY(point.value, min, range, height)));
       circle.setAttribute('r', '4');
       svg.appendChild(circle);
@@ -272,6 +344,11 @@ export class TrainingLabController {
   }
 
   private startReplay(model: TrainedModelArtifact): void {
+    if (this.runner.isRunning()) return;
+    if (this.displayMode === 'background') {
+      this.select('trainingDisplayMode').value = 'visual';
+      this.applyDisplayMode();
+    }
     this.replay?.stop();
     this.replay = null;
     this.activePreview = null;
@@ -380,6 +457,26 @@ export class TrainingLabController {
         ? []
         : [`Ожидает показа: поколение ${this.queuedChampion.generation}`]),
     ].join(' · ');
+  }
+
+  private async completeTraining(result: GeneticTrainingResult): Promise<void> {
+    this.result = result;
+    this.wakeLock.stop();
+    this.setPowerStatus('Wake Lock выключен: обучение завершено.');
+    this.setRunning(false);
+    if (this.displayMode === 'background') this.renderCondensedReport();
+    this.renderSummary(result.model);
+    try {
+      await this.repository.save(result.model);
+      await this.renderModels();
+      this.setStatus(
+        `Обучение завершено: ${result.completedGenerations} поколений. Модель сохранена автоматически.`,
+      );
+    } catch (error) {
+      this.setStatus(
+        `Обучение завершено, но автосохранение не удалось: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   private renderSummary(model: TrainedModelArtifact): void {
@@ -513,13 +610,18 @@ export class TrainingLabController {
     this.button('trainingSave').disabled = running || !this.result;
     this.button('trainingDownload').disabled = running || !this.result;
     this.button('trainingCsv').disabled = running || this.reports.length === 0;
+    this.select('trainingDisplayMode').disabled = running;
   }
 
   private setStatus(text: string): void {
     this.element('trainingStatus').textContent = text;
   }
 
-  private integer(id: string, min: number, max: number): number {
+  private setPowerStatus(text: string): void {
+    this.element('trainingPowerStatus').textContent = text;
+  }
+
+  private integer(id: string, min: number, max = Number.MAX_SAFE_INTEGER): number {
     const value = Number.parseInt(this.input(id).value, 10);
     if (!Number.isFinite(value)) throw new Error(`Поле ${id} должно быть целым числом`);
     return Math.max(min, Math.min(max, value));
@@ -573,10 +675,16 @@ function scaleY(value: number, min: number, range: number, height: number): numb
 const trainingLabMarkup = `
   <div class="dev-panel training-lab-panel">
     <h2 class="dev-panel-title">Генетическое обучение</h2>
-    <p class="training-lab-about-text">Популяции нейросетей обучаются в отдельном Web Worker. На Canvas показывается лучший кандидат самого свежего завершённого поколения.</p>
+    <p class="training-lab-about-text">Популяции нейросетей обучаются в отдельном Web Worker. В визуальном режиме Canvas показывает лучший кандидат самого свежего завершённого поколения.</p>
+    <div class="dev-section">
+      <div class="dev-section-title">Режим выполнения</div>
+      <label class="dev-row"><span class="dev-row-label">Отображение</span><select id="trainingDisplayMode" class="dev-input"><option value="visual">Визуальный — с Canvas</option><option value="background">Фоновый — без анимации</option></select></label>
+      <p class="training-lab-policy-note">Фоновый режим не запускает демонстрацию кандидатов и редко обновляет интерфейс, поэтому подходит для длинных ночных прогонов.</p>
+      <div id="trainingPowerStatus" class="training-power-status" aria-live="polite"></div>
+    </div>
     <div class="dev-section training-config-grid">
       <div class="dev-section-title">Популяция и сеть</div>
-      <label class="dev-row"><span class="dev-row-label">Поколения</span><input id="trainingGenerations" class="dev-input" type="number" min="1" max="1000"></label>
+      <label class="dev-row"><span class="dev-row-label">Поколения</span><input id="trainingGenerations" class="dev-input" type="number" min="1" step="1"></label>
       <label class="dev-row"><span class="dev-row-label">Популяция</span><input id="trainingPopulation" class="dev-input" type="number" min="4" max="256"></label>
       <label class="dev-row"><span class="dev-row-label">Элита</span><input id="trainingElite" class="dev-input" type="number" min="1"></label>
       <label class="dev-row"><span class="dev-row-label">Турнир</span><input id="trainingTournament" class="dev-input" type="number" min="2"></label>
@@ -619,7 +727,7 @@ const trainingLabMarkup = `
       <table class="training-report-table"><thead><tr><th>№</th><th>Best</th><th>Mean</th><th>Median</th><th>Validation</th><th>Score</th><th>Тики</th><th>Победы</th><th>Разнообразие</th><th>Скорость</th></tr></thead><tbody id="trainingReportBody"></tbody></table>
     </div>
     <div class="dev-section"><div class="dev-section-title">Итоги чемпиона</div><div id="trainingSummary" class="training-summary">Обучение ещё не завершено.</div></div>
-    <div class="dev-section">
+    <div id="trainingReplaySection" class="dev-section">
       <div class="dev-section-title">Validation replay</div>
       <label class="dev-row"><span class="dev-row-label">Скорость</span><select id="trainingReplaySpeed" class="dev-input"><option value="1">1x</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option><option value="16">16x</option><option value="100">100x</option><option value="1000">1000x</option></select></label>
     </div>

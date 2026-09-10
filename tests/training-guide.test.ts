@@ -9,7 +9,9 @@ describe('genetic training guide', () => {
 
     expect(guideDocument.title).toBe('Инструкция по генетическому обучению');
     expect(guideDocument.body.textContent).toContain('Как обучать нейросеть');
-    expect(guideDocument.body.textContent).toContain('Нажмите «Сохранить»');
+    expect(guideDocument.body.textContent).toContain('Фоновый — без анимации');
+    expect(guideDocument.body.textContent).toContain('Ограничения на число поколений нет');
+    expect(guideDocument.body.textContent).toContain('автоматически записывается');
     expect(guideDocument.body.textContent).toContain('пока не реализован');
 
     guideDocument.querySelector<HTMLButtonElement>('#trainingGuideClose')?.click();

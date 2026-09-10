@@ -2298,8 +2298,9 @@ continueAfterLevelEnd()
 | Универсальная MLP | ✅ произвольная фиксированная топология, плоский геном и совместимость с `SimpleNetwork` |
 | Fitness и генетический цикл | ✅ гибридная Arena-оценка, элита, tournament selection, uniform crossover, Gaussian mutation и validation |
 | Браузерный Web Worker и визуальный validation replay | ✅ headless-обучение, отмена и непрерывный replay лучшего кандидата свежего поколения со скоростью 1x–1000x; текущая партия не прерывается, абсолютный рекорд выводится отдельно |
-| LocalStorage repository и импорт/экспорт моделей | ✅ ключ `snake.geneticModels.v1`, до 10 моделей, version/topology validation и JSON |
-| Графики, таблицы и встроенная инструкция | ✅ best/mean/median/validation fitness, score, survival, win rate, diversity, скорость, причины смерти, CSV и отдельное окно справки |
+| Фоновый ночной прогон | ✅ без Canvas-анимации и покадрового обновления отчёта, без прикладного лимита поколений, с индикацией Screen Wake Lock |
+| LocalStorage repository и импорт/экспорт моделей | ✅ ключ `snake.geneticModels.v1`, до 10 моделей, version/topology validation, автоматическое сохранение завершённой модели и JSON |
+| Графики, таблицы и встроенная инструкция | ✅ best/mean/median/validation fitness, score, survival, win rate, diversity, скорость, причины смерти, полный CSV и отдельное окно справки; для длинного фонового прогона UI показывает выборку до 200 поколений |
 | Серверный training runner | ⏳ после браузерной реализации G1–G9 |
 
 ---
