@@ -135,7 +135,7 @@
   100% { opacity: 0; }
 }
 
-/* --- Training lab (headless runs, future loss charts) --- */
+/* --- Genetic training lab --- */
 .training-lab-panel {
   max-height: calc(100vh - 40px);
   overflow-y: auto;
@@ -170,6 +170,134 @@
 .training-lab-actions {
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.training-file-input {
+  display: none;
+}
+
+.training-status {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.8rem;
+}
+
+.training-chart {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  background: var(--color-input-bg);
+}
+
+.training-chart-best,
+.training-chart-mean,
+.training-chart-median {
+  fill: none;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.training-chart-best {
+  stroke: var(--color-primary);
+}
+
+.training-chart-mean {
+  stroke: var(--color-secondary, #62a5ff);
+}
+
+.training-chart-median {
+  stroke: var(--color-text-muted);
+}
+
+.training-chart-validation {
+  fill: var(--color-warning, #ffd166);
+}
+
+.training-chart-legend {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 5px;
+  font-size: 0.72rem;
+}
+
+.training-legend-best {
+  color: var(--color-primary);
+}
+
+.training-legend-mean {
+  color: var(--color-secondary, #62a5ff);
+}
+
+.training-legend-median {
+  color: var(--color-text-muted);
+}
+
+.training-legend-validation {
+  color: var(--color-warning, #ffd166);
+}
+
+.training-report-wrap {
+  overflow-x: auto;
+}
+
+.training-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.training-report-table th,
+.training-report-table td {
+  padding: 4px;
+  border-bottom: 1px solid var(--color-panel-border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.training-report-table th:first-child,
+.training-report-table td:first-child {
+  text-align: left;
+}
+
+.training-models {
+  display: grid;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.training-model-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.training-model-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.training-summary {
+  display: grid;
+  gap: 4px;
+  font-size: 0.75rem;
+}
+
+.training-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.training-summary-row strong {
+  text-align: right;
 }
 
 .training-lab-output {

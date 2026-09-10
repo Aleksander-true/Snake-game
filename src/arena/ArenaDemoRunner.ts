@@ -15,13 +15,15 @@ import type {
 } from '@snake-game/core';
 import { renderGame } from '../renderer/canvasRenderer';
 
+export type ArenaSpeedMultiplier = 1 | 2 | 4 | 8 | 16 | 32 | 100 | 1000;
+
 export interface ArenaDemoOptions {
   canvas: HTMLCanvasElement;
   participants: ArenaParticipant[];
   settings?: Partial<GameSettings>;
   level?: number;
   difficultyLevel?: number;
-  speedMultiplier?: 1 | 2 | 4 | 8;
+  speedMultiplier?: ArenaSpeedMultiplier;
   seed?: number;
   fitToViewport?: boolean;
   onTick?: (state: GameState, result: TickResult) => void;
@@ -30,8 +32,8 @@ export interface ArenaDemoOptions {
 export interface ArenaDemoController {
   start: () => void;
   stop: () => void;
-  setSpeedMultiplier: (multiplier: 1 | 2 | 4 | 8) => void;
-  getSpeedMultiplier: () => 1 | 2 | 4 | 8;
+  setSpeedMultiplier: (multiplier: ArenaSpeedMultiplier) => void;
+  getSpeedMultiplier: () => ArenaSpeedMultiplier;
   getState: () => GameState;
 }
 
@@ -48,7 +50,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
   private ctx: CanvasRenderingContext2D;
   private cellSize = 2;
   private fitToViewport: boolean;
-  private speedMultiplier: 1 | 2 | 4 | 8;
+  private speedMultiplier: ArenaSpeedMultiplier;
   private timerId: ReturnType<typeof setInterval> | null = null;
   private resizeBound = false;
 
@@ -96,10 +98,9 @@ export class ArenaDemoRunner implements ArenaDemoController {
       this.resizeBound = true;
       this.resizeCanvasToFit();
     }
-    const intervalMs = Math.max(
-      1,
-      Math.floor(this.engine.getSettings().tickIntervalMs / this.speedMultiplier)
-    );
+    const intervalMs = this.speedMultiplier <= 8
+      ? Math.max(16, Math.floor(this.engine.getSettings().tickIntervalMs / this.speedMultiplier))
+      : 50;
     this.timerId = setInterval(() => this.step(), intervalMs);
   }
 
@@ -113,14 +114,14 @@ export class ArenaDemoRunner implements ArenaDemoController {
     }
   }
 
-  setSpeedMultiplier(multiplier: 1 | 2 | 4 | 8): void {
+  setSpeedMultiplier(multiplier: ArenaSpeedMultiplier): void {
     this.speedMultiplier = multiplier;
     if (!this.timerId) return;
     this.stop();
     this.start();
   }
 
-  getSpeedMultiplier(): 1 | 2 | 4 | 8 {
+  getSpeedMultiplier(): ArenaSpeedMultiplier {
     return this.speedMultiplier;
   }
 
@@ -129,7 +130,10 @@ export class ArenaDemoRunner implements ArenaDemoController {
   }
 
   private step(): void {
-    for (let i = 0; i < this.speedMultiplier; i++) {
+    const ticksPerFrame = this.speedMultiplier <= 8
+      ? 1
+      : Math.max(1, Math.round(this.speedMultiplier * 50 / this.engine.getSettings().tickIntervalMs));
+    for (let i = 0; i < ticksPerFrame; i++) {
       if (this.state.gameOver || this.state.levelComplete) break;
       this.applyBotDirections();
       const tickResult = this.engine.processTick(this.state);

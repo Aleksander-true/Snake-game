@@ -3,19 +3,14 @@ import { hideModal } from './ui/modal';
 import {
   gameSettings,
   getHeuristicAlgorithmById,
-  getTrainingLabAlgorithm,
-  isTrainingLabPolicyId,
   resetSettings,
-  runArenaSimulation,
 } from '@snake-game/core';
 import type {
-  ArenaRunResult,
   EngineContext,
   GameConfig,
   GameState,
   HeuristicAlgorithm,
   Snake,
-  TrainingLabPolicyId,
 } from '@snake-game/core';
 import { InputHandler } from './inputHandler';
 import { mathRng } from './adapters/mathRandomAdapter';
@@ -29,6 +24,7 @@ import { DevPanelLoader } from './services/DevPanelLoader';
 import { MultiplayerLobbyService } from './services/MultiplayerLobbyService';
 import { createArenaDemoController } from '../arena/ArenaDemoRunner';
 import type { ArenaDemoController } from '../arena/ArenaDemoRunner';
+import { TrainingLabController } from '../training/TrainingLabController';
 
 /**
  * Application-level orchestrator.
@@ -51,6 +47,7 @@ export class SnakeGameApplication {
   private devModeActive = false;
   private gameController: GameController | null = null;
   private arenaDemoController: ArenaDemoController | null = null;
+  private trainingLabController: TrainingLabController | null = null;
   private globalKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor(private readonly appRoot: HTMLElement) {
@@ -86,6 +83,8 @@ export class SnakeGameApplication {
     this.gameController?.stop();
     this.arenaDemoController?.stop();
     this.arenaDemoController = null;
+    this.trainingLabController?.stop();
+    this.trainingLabController = null;
     this.multiplayerLobbyService.stop();
     hideModal();
 
@@ -221,10 +220,6 @@ export class SnakeGameApplication {
     this.arenaDemoController.start();
   }
 
-  /**
-   * Training lab: headless arena run with metrics in the side panel (no live game loop on canvas).
-   * Supports registered ArenaAlgorithm policies without coupling the UI to their implementation.
-   */
   private startTrainingLab(initialConfig: TrainingLaunchConfig): void {
     hideModal();
     this.inputHandler.stop();
@@ -234,149 +229,14 @@ export class SnakeGameApplication {
       gameOuter.classList.add('training-lab-mode');
     }
 
-    this.mountTrainingLabPanel(layout.devPanelContainer, initialConfig);
-  }
-
-  private mountTrainingLabPanel(container: HTMLElement | null, initialConfig: TrainingLaunchConfig): void {
-    if (!container) return;
-
-    const readFormConfig = (): TrainingLaunchConfig => {
-      const level = Math.max(
-        1,
-        Math.min(100, parseInt((container.querySelector('#trainingLabLevel') as HTMLInputElement).value || '1', 10))
-      );
-      const difficultyLevel = Math.max(
-        1,
-        Math.min(10, parseInt((container.querySelector('#trainingLabDifficulty') as HTMLInputElement).value || '1', 10))
-      );
-      const seed = Math.max(1, parseInt((container.querySelector('#trainingLabSeed') as HTMLInputElement).value || '1', 10));
-      const maxTicks = Math.max(
-        100,
-        parseInt((container.querySelector('#trainingLabMaxTicks') as HTMLInputElement).value || '50000', 10)
-      );
-      const modeRaw = (container.querySelector('#trainingLabGameMode') as HTMLSelectElement).value;
-      const gameMode = modeRaw === 'survival' ? 'survival' : 'classic';
-      const policyRaw = (container.querySelector('#trainingLabPolicy') as HTMLSelectElement).value;
-      const policyId: TrainingLabPolicyId = isTrainingLabPolicyId(policyRaw)
-        ? policyRaw
-        : 'random-turns';
-      return { seed, level, difficultyLevel, maxTicks, gameMode, policyId };
-    };
-
-    container.innerHTML = `
-      <div class="dev-panel training-lab-panel">
-        <h2 class="dev-panel-title">Лаборатория обучения</h2>
-        <div class="training-lab-about dev-section">
-          <p class="training-lab-about-text">
-            Экран для экспериментов с обучением: движок гоняет симуляцию без отрисовки каждого тика.
-            Ниже — параметры прогона и числовой результат (фитнес). Полотно слева свободно: позже можно
-            вывести график loss или подключить визуализацию.
-          </p>
-        </div>
-        <div class="dev-section">
-          <div class="dev-section-title">Параметры прогона</div>
-          <div class="dev-row">
-            <label class="dev-row-label" for="trainingLabLevel">Уровень</label>
-            <input id="trainingLabLevel" class="dev-input dev-input-num" type="number" min="1" max="100" value="${initialConfig.level}">
-          </div>
-          <div class="dev-row">
-            <label class="dev-row-label" for="trainingLabDifficulty">Сложность</label>
-            <input id="trainingLabDifficulty" class="dev-input dev-input-num" type="number" min="1" max="10" value="${initialConfig.difficultyLevel}">
-          </div>
-          <div class="dev-row">
-            <label class="dev-row-label" for="trainingLabGameMode">Режим</label>
-            <select id="trainingLabGameMode" class="dev-input">
-              <option value="classic" ${initialConfig.gameMode === 'classic' ? 'selected' : ''}>Классика</option>
-              <option value="survival" ${initialConfig.gameMode === 'survival' ? 'selected' : ''}>Выживание</option>
-            </select>
-          </div>
-          <div class="dev-row">
-            <label class="dev-row-label" for="trainingLabSeed">Seed</label>
-            <input id="trainingLabSeed" class="dev-input dev-input-num" type="number" min="1" step="1" value="${initialConfig.seed}">
-          </div>
-          <div class="dev-row">
-            <label class="dev-row-label" for="trainingLabMaxTicks">Лимит тиков</label>
-            <input id="trainingLabMaxTicks" class="dev-input dev-input-num" type="number" min="100" step="100" value="${initialConfig.maxTicks}">
-          </div>
-        </div>
-        <div class="dev-section">
-          <div class="dev-section-title">Политика</div>
-          <div class="dev-row">
-            <label class="dev-row-label" for="trainingLabPolicy">Алгоритм</label>
-            <select id="trainingLabPolicy" class="dev-input">
-              <option value="random-turns" ${initialConfig.policyId === 'random-turns' ? 'selected' : ''}>Случайные повороты (random-turns)</option>
-              <option value="neural-simple-v1" ${initialConfig.policyId === 'neural-simple-v1' ? 'selected' : ''}>Нейросеть без обучения (neural-simple-v1)</option>
-            </select>
-          </div>
-          <p class="training-lab-policy-note">Нейрополитика использует случайные детерминированные веса для выбранного seed. Обучение весов будет добавлено на следующих этапах.</p>
-        </div>
-        <div class="dev-buttons training-lab-actions">
-          <button id="trainingLabRunBtn" type="button" class="btn btn-primary btn-small">Запустить прогон</button>
-          <button id="trainingLabMenuBtn" type="button" class="btn btn-secondary btn-small">Меню</button>
-        </div>
-        <div class="dev-section">
-          <div class="dev-section-title">Результат последнего прогона</div>
-          <pre id="trainingLabOutput" class="training-lab-output">Нажмите «Запустить прогон».</pre>
-        </div>
-      </div>
-    `;
-
-    const outputPre = container.querySelector('#trainingLabOutput') as HTMLElement;
-    const runBtn = container.querySelector('#trainingLabRunBtn') as HTMLButtonElement;
-    const menuBtn = container.querySelector('#trainingLabMenuBtn') as HTMLButtonElement;
-
-    const run = (): void => {
-      const config = readFormConfig();
-      runBtn.disabled = true;
-      outputPre.textContent = 'Считаю…';
-
-      window.setTimeout(() => {
-        try {
-          const algorithm = getTrainingLabAlgorithm(config.policyId);
-          const result = runArenaSimulation({
-            participants: [{ name: 'Обучение', algorithm }],
-            seed: config.seed,
-            level: config.level,
-            difficultyLevel: config.difficultyLevel,
-            gameMode: config.gameMode,
-            maxTicks: config.maxTicks,
-          });
-          outputPre.textContent = this.formatTrainingLabResult(result, config.policyId);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          outputPre.textContent = `Ошибка: ${message}`;
-        } finally {
-          runBtn.disabled = false;
-        }
-      }, 0);
-    };
-
-    runBtn.addEventListener('click', run);
-    if (menuBtn) {
-      menuBtn.addEventListener('click', () => this.router.navigate('menu'));
-    }
-  }
-
-  private formatTrainingLabResult(result: ArenaRunResult, policyId: TrainingLabPolicyId): string {
-    const lines: string[] = [
-      `Политика: ${policyId}`,
-      `Seed: ${result.seed}`,
-      `Выполнено тиков (симуляция): ${result.ticksExecuted}`,
-      `Условное время: ${result.elapsedMs} мс (тик × интервал из настроек)`,
-      `Уровень завершён: ${result.levelComplete ? 'да' : 'нет'}`,
-      `Game over: ${result.gameOver ? 'да' : 'нет'}`,
-      '',
-    ];
-    for (const s of result.snakes) {
-      lines.push(
-        `Змейка «${s.name}» (алгоритм: ${s.algorithmId})`,
-        `  Очки: ${s.score}, длина жизни (тики): ${s.survivedTicks}, мс: ${s.survivedMs}`,
-        `  Жива в конце: ${s.aliveAtEnd ? 'да' : 'нет'}`,
-        s.deathReason ? `  Причина смерти: ${s.deathReason}` : '  Причина смерти: —',
-        ''
-      );
-    }
-    return lines.join('\n');
+    if (!layout.devPanelContainer) return;
+    this.trainingLabController = new TrainingLabController({
+      canvas: layout.canvas,
+      panel: layout.devPanelContainer,
+      initialConfig,
+      onBack: () => this.router.navigate('menu'),
+    });
+    this.trainingLabController.mount();
   }
 
   private mountArenaControls(container: HTMLElement | null, arenaConfig: ArenaLaunchConfig): void {

@@ -1,5 +1,5 @@
 import { heuristicAlgorithmOptions } from '@snake-game/core';
-import type { GameConfig, TrainingLabPolicyId } from '@snake-game/core';
+import type { GameConfig } from '@snake-game/core';
 import { renderMenu } from '../ui/menu';
 
 export interface MenuScreenCallbacks {
@@ -7,7 +7,7 @@ export interface MenuScreenCallbacks {
   onStartMultiplayer: () => void;
   onStartDevMode: () => void;
   onStartArena: (config: ArenaLaunchConfig) => void;
-  /** Headless training lab: browser UI for arena metrics and future ML steps. */
+  /** Genetic training laboratory running outside the UI thread. */
   onStartTraining: (config: TrainingLaunchConfig) => void;
 }
 
@@ -20,7 +20,7 @@ export interface ArenaLaunchConfig {
 }
 
 /**
- * Parameters for a single headless arena run from the training lab (one bot, no live canvas).
+ * Initial game rules for the configurable genetic training screen.
  */
 export interface TrainingLaunchConfig {
   seed: number;
@@ -28,7 +28,6 @@ export interface TrainingLaunchConfig {
   difficultyLevel: number;
   maxTicks: number;
   gameMode: 'classic' | 'survival';
-  policyId: TrainingLabPolicyId;
 }
 
 /** Defaults when opening the training lab from the dev menu (parameters are editable on the lab screen). */
@@ -37,9 +36,8 @@ export function getDefaultTrainingLaunchConfig(): TrainingLaunchConfig {
     seed: 1,
     level: 1,
     difficultyLevel: 1,
-    maxTicks: 50_000,
+    maxTicks: 10_000,
     gameMode: 'classic',
-    policyId: 'random-turns',
   };
 }
 
@@ -51,10 +49,10 @@ export class MenuScreenService {
 
   show(callbacks: MenuScreenCallbacks): void {
     renderMenu(this.appRoot, callbacks.onStart, callbacks.onStartMultiplayer);
+    this.attachTrainingButton(callbacks.onStartTraining);
     if (typeof __DEV_MODE__ !== 'undefined' && __DEV_MODE__) {
       this.attachDevModeButton(callbacks.onStartDevMode);
       this.attachArenaButton(callbacks.onStartArena);
-      this.attachTrainingButton(callbacks.onStartTraining);
     }
   }
 
