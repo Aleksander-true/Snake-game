@@ -7,8 +7,11 @@ import {
 } from '@snake-game/core';
 import type {
   GenerationReport,
+  GameState,
   GeneticTrainingConfig,
   GeneticTrainingResult,
+  TrainingCandidateResult,
+  TrainingEvaluationMetrics,
   TrainedModelArtifact,
 } from '@snake-game/core';
 import { createArenaDemoController } from '../arena/ArenaDemoRunner';
@@ -21,8 +24,19 @@ import { openTrainingGuide } from './TrainingGuideWindow';
 export interface TrainingLabControllerOptions {
   canvas: HTMLCanvasElement;
   panel: HTMLElement;
+  previewPanel: HTMLElement;
   initialConfig: TrainingLaunchConfig;
   onBack: () => void;
+}
+
+interface ChampionPreview {
+  id: string;
+  generation: number | null;
+  fitness: number;
+  genome: Float32Array;
+  config: GeneticTrainingConfig;
+  metrics: TrainingEvaluationMetrics;
+  source: 'training' | 'saved';
 }
 
 export class TrainingLabController {
@@ -31,6 +45,10 @@ export class TrainingLabController {
   private reports: GenerationReport[] = [];
   private result: GeneticTrainingResult | null = null;
   private replay: ArenaDemoController | null = null;
+  private activePreview: ChampionPreview | null = null;
+  private queuedChampion: ChampionPreview | null = null;
+  private bestPreviewFitness = Number.NEGATIVE_INFINITY;
+  private previewRun = 0;
 
   constructor(private readonly options: TrainingLabControllerOptions) {}
 
@@ -39,12 +57,15 @@ export class TrainingLabController {
     this.writeInitialValues();
     this.bindActions();
     this.renderModels();
+    this.renderPreviewHeader();
   }
 
   stop(): void {
     this.runner.stop();
     this.replay?.stop();
     this.replay = null;
+    this.activePreview = null;
+    this.queuedChampion = null;
   }
 
   private writeInitialValues(): void {
@@ -98,7 +119,12 @@ export class TrainingLabController {
       this.result = null;
       this.replay?.stop();
       this.replay = null;
+      this.activePreview = null;
+      this.queuedChampion = null;
+      this.bestPreviewFitness = Number.NEGATIVE_INFINITY;
+      this.previewRun = 0;
       this.clearReport();
+      this.renderPreviewHeader();
       this.setRunning(true);
       this.setStatus('Подготовка популяции…');
       this.runner.start(config, {
@@ -106,12 +132,12 @@ export class TrainingLabController {
           if (message.type === 'generation') {
             this.reports.push(message.report);
             this.renderGeneration(message.report, config.generations);
+            this.queueChampionPreview(message.champion, message.report.generation, config);
           } else if (message.type === 'completed') {
             this.result = message.result;
             this.setRunning(false);
             this.setStatus(`Обучение завершено: ${message.result.completedGenerations} поколений`);
             this.renderSummary(message.result.model);
-            this.startReplay(message.result.model);
           } else {
             this.setRunning(false);
             this.setStatus(`Ошибка: ${message.message}`);
@@ -243,21 +269,108 @@ export class TrainingLabController {
 
   private startReplay(model: TrainedModelArtifact): void {
     this.replay?.stop();
-    const speed = Number(this.select('trainingReplaySpeed').value) as ArenaSpeedMultiplier;
-    const network = createDenseNetworkFromGenome(model.topology, new Float32Array(model.genome));
-    this.replay = createArenaDemoController({
+    this.replay = null;
+    this.activePreview = null;
+    this.playPreview({
+      id: model.id,
+      generation: null,
+      fitness: model.trainingFitness,
+      genome: new Float32Array(model.genome),
+      config: model.trainingConfig,
+      metrics: model.metrics,
+      source: 'saved',
+    });
+  }
+
+  private queueChampionPreview(
+    champion: TrainingCandidateResult,
+    generation: number,
+    config: GeneticTrainingConfig,
+  ): void {
+    if (champion.fitness <= this.bestPreviewFitness) return;
+    this.bestPreviewFitness = champion.fitness;
+    this.queuedChampion = {
+      id: champion.id,
+      generation,
+      fitness: champion.fitness,
+      genome: champion.genome.slice(),
+      config,
+      metrics: champion.metrics,
+      source: 'training',
+    };
+    if (!this.replay) this.playQueuedChampion();
+  }
+
+  private playQueuedChampion(): void {
+    if (!this.queuedChampion) return;
+    const preview = this.queuedChampion;
+    this.queuedChampion = null;
+    this.playPreview(preview);
+  }
+
+  private playPreview(preview: ChampionPreview): void {
+    this.activePreview = preview;
+    this.previewRun++;
+    const network = createDenseNetworkFromGenome(preview.config.topology, preview.genome);
+    const validationSeeds = preview.config.validationSeeds;
+    const seed = validationSeeds[(this.previewRun - 1) % validationSeeds.length];
+    let controller: ArenaDemoController;
+    controller = createArenaDemoController({
       canvas: this.options.canvas,
       participants: [{
         name: 'Чемпион',
-        algorithm: createNeuralArenaAlgorithm({ id: model.id, network }),
+        algorithm: createNeuralArenaAlgorithm({ id: preview.id, network }),
       }],
-      level: model.trainingConfig.level,
-      difficultyLevel: model.trainingConfig.difficultyLevel,
-      speedMultiplier: speed,
-      seed: model.trainingConfig.validationSeeds[0],
+      level: preview.config.level,
+      difficultyLevel: preview.config.difficultyLevel,
+      speedMultiplier: Number(this.select('trainingReplaySpeed').value) as ArenaSpeedMultiplier,
+      seed,
       fitToViewport: true,
+      onRender: (state) => {
+        if (this.replay === controller) this.renderPreviewHeader(preview, state);
+      },
+      onComplete: (state) => {
+        if (this.replay !== controller) return;
+        this.renderPreviewHeader(preview, state, true);
+        this.replay = null;
+        if (this.queuedChampion) {
+          this.playQueuedChampion();
+        } else if (preview.source === 'training' && this.runner.isRunning()) {
+          this.playPreview(preview);
+        }
+      },
     });
-    this.replay.start();
+    this.replay = controller;
+    this.renderPreviewHeader(preview, controller.getState());
+    controller.start();
+  }
+
+  private renderPreviewHeader(
+    preview: ChampionPreview | null = this.activePreview,
+    state?: GameState,
+    completed = false,
+  ): void {
+    const panel = this.options.previewPanel;
+    panel.classList.add('training-preview-header');
+    if (!preview) {
+      panel.textContent = 'Ожидание первого поколения…';
+      return;
+    }
+    const snake = state?.snakes[0];
+    const generation = preview.generation === null
+      ? 'Сохранённая модель'
+      : `Чемпион поколения ${preview.generation}`;
+    const currentGame = snake
+      ? `Игра: ${snake.score} очков · длина ${snake.segments.length} · ${completed ? snake.deathReason ?? 'завершена' : 'играет'}`
+      : 'Игра запускается…';
+    panel.textContent = [
+      generation,
+      `Рекорд fitness: ${format(preview.fitness)}`,
+      `Средние очки: ${format(preview.metrics.averageScore)}`,
+      `Еда: ${format(preview.metrics.averageFoodEaten)}`,
+      `Выживание: ${format(preview.metrics.averageSurvivedTicks)} тиков`,
+      currentGame,
+    ].join(' · ');
   }
 
   private renderSummary(model: TrainedModelArtifact): void {

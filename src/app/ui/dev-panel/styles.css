@@ -136,6 +136,17 @@
 }
 
 /* --- Genetic training lab --- */
+.training-preview-header {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-panel-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .training-lab-panel {
   max-height: calc(100vh - 40px);
   overflow-y: auto;

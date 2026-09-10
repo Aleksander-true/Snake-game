@@ -2297,7 +2297,7 @@ continueAfterLevelEnd()
 | Утверждение параметров и режимов обучения | ✅ утверждён GA-профиль первой версии |
 | Универсальная MLP | ✅ произвольная фиксированная топология, плоский геном и совместимость с `SimpleNetwork` |
 | Fitness и генетический цикл | ✅ гибридная Arena-оценка, элита, tournament selection, uniform crossover, Gaussian mutation и validation |
-| Браузерный Web Worker и визуальный validation replay | ✅ headless-обучение, отмена и replay со скоростью 1x–1000x |
+| Браузерный Web Worker и визуальный validation replay | ✅ headless-обучение, отмена и непрерывный replay актуального чемпиона со скоростью 1x–1000x; текущая партия не прерывается новым поколением |
 | LocalStorage repository и импорт/экспорт моделей | ✅ ключ `snake.geneticModels.v1`, до 10 моделей, version/topology validation и JSON |
 | Графики, таблицы и встроенная инструкция | ✅ best/mean/median/validation fitness, score, survival, win rate, diversity, скорость, причины смерти, CSV и отдельное окно справки |
 | Серверный training runner | ⏳ после браузерной реализации G1–G9 |

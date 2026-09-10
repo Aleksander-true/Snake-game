@@ -27,6 +27,8 @@ export interface ArenaDemoOptions {
   seed?: number;
   fitToViewport?: boolean;
   onTick?: (state: GameState, result: TickResult) => void;
+  onRender?: (state: GameState) => void;
+  onComplete?: (state: GameState) => void;
 }
 
 export interface ArenaDemoController {
@@ -45,6 +47,8 @@ export class ArenaDemoRunner implements ArenaDemoController {
   private readonly participants: ArenaParticipant[];
   private readonly canvas: HTMLCanvasElement;
   private readonly onTick?: (state: GameState, result: TickResult) => void;
+  private readonly onRender?: (state: GameState) => void;
+  private readonly onComplete?: (state: GameState) => void;
   private readonly algorithmRng: RandomPort;
 
   private ctx: CanvasRenderingContext2D;
@@ -53,6 +57,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
   private speedMultiplier: ArenaSpeedMultiplier;
   private timerId: ReturnType<typeof setInterval> | null = null;
   private resizeBound = false;
+  private completionNotified = false;
 
   constructor(options: ArenaDemoOptions) {
     const settings = createDefaultSettings();
@@ -86,6 +91,8 @@ export class ArenaDemoRunner implements ArenaDemoController {
     this.fitToViewport = options.fitToViewport ?? true;
     this.speedMultiplier = options.speedMultiplier ?? 1;
     this.onTick = options.onTick;
+    this.onRender = options.onRender;
+    this.onComplete = options.onComplete;
 
     this.resizeCanvasToFit();
     renderGame(this.ctx, this.state, this.cellSize, this.engine.getSettings());
@@ -140,8 +147,13 @@ export class ArenaDemoRunner implements ArenaDemoController {
       if (this.onTick) this.onTick(this.state, tickResult);
     }
     renderGame(this.ctx, this.state, this.cellSize, this.engine.getSettings());
+    this.onRender?.(this.state);
     if (this.state.gameOver || this.state.levelComplete) {
       this.stop();
+      if (!this.completionNotified) {
+        this.completionNotified = true;
+        this.onComplete?.(this.state);
+      }
     }
   }
 

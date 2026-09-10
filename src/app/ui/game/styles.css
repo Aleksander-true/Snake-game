@@ -208,7 +208,7 @@
   padding: 0;
 }
 
-/* Training lab: same layout as arena demo — full canvas area, HUD hidden. */
+/* Training lab: canvas with a compact live champion header. */
 .training-lab-mode .game-layout-row {
   height: calc(100vh - 8px);
 }
@@ -217,7 +217,6 @@
   height: 100%;
 }
 
-.training-lab-mode .game-top-bar,
 .training-lab-mode .game-players-panel,
 .training-lab-mode .game-bots-panel,
 .training-lab-mode .touch-controls-single,
@@ -227,7 +226,8 @@
 
 .training-lab-mode .game-middle,
 .training-lab-mode .game-middle--dev {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   justify-content: center;
   align-items: center;
