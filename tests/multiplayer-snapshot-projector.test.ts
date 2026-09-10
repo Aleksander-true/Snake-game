@@ -85,6 +85,14 @@ describe('multiplayer snapshot projection', () => {
       { x: 5.5, y: 5 },
       { x: 4.5, y: 5 },
     ]);
+    const correctedLocal = projector.projectInterpolated(0.5, [
+      { x: 3, y: 2 },
+      { x: 2, y: 2 },
+    ]);
+    expect(correctedLocal.snakes[0].segments).toEqual([
+      { x: 3.5, y: 2 },
+      { x: 2.5, y: 2 },
+    ]);
 
     const dead = createSnapshot();
     dead.tick = current.tick + 1;

@@ -1,6 +1,7 @@
 import type {
   GameSnapshotDTO,
   NetworkDirection,
+  PositionDTO,
   RoomSnapshotDTO,
 } from '@snake-game/contracts';
 import {
@@ -53,6 +54,7 @@ export class MultiplayerGamePresenter {
   private animationFrame: number | null = null;
   private snapshotReceivedAt = 0;
   private snapshotTickIntervalMs = 0;
+  private localCorrectionStart: PositionDTO[] | null = null;
 
   constructor(private readonly appRoot: HTMLElement) {}
 
@@ -74,16 +76,21 @@ export class MultiplayerGamePresenter {
     this.exitHandler = onExit;
     this.fastForwardHandler = onFastForward ?? null;
     this.inputEnabled = snapshot.status === 'playing';
+    const previousLocalSnake = this.lastState?.snakes.find((snake) => snake.id === this.localSnakeId);
     this.localSnakeId = snapshot.snakes.find(
       (snake) => snake.controller.controllerId === playerId
     )?.snakeId ?? null;
     this.projector.reconcile(snapshot, playerId, gameMode);
-    const state = this.projector.projectInterpolated(0);
+    this.localCorrectionStart = previousLocalSnake?.alive
+      ? previousLocalSnake.segments.map((segment) => ({ ...segment }))
+      : null;
+    const state = this.projector.projectInterpolated(0, this.localCorrectionStart ?? undefined);
     this.render(state, snapshot.status, snapshot.fastForwarding === true);
     this.startSnapshotAnimation(snapshot);
   }
 
   predict(sequence: number, direction: NetworkDirection): void {
+    this.localCorrectionStart = null;
     const state = this.projector.predict(sequence, direction);
     if (state) this.render(state, 'playing');
   }
@@ -171,6 +178,7 @@ export class MultiplayerGamePresenter {
     this.lastLevel = null;
     this.snapshotReceivedAt = 0;
     this.snapshotTickIntervalMs = 0;
+    this.localCorrectionStart = null;
   }
 
   private build(onDirection: (direction: NetworkDirection) => void): void {
@@ -241,7 +249,10 @@ export class MultiplayerGamePresenter {
       const progress = this.snapshotTickIntervalMs > 0
         ? (timestamp - this.snapshotReceivedAt) / this.snapshotTickIntervalMs
         : 1;
-      this.renderCanvas(this.projector.projectInterpolated(progress));
+      this.renderCanvas(this.projector.projectInterpolated(
+        progress,
+        this.localCorrectionStart ?? undefined
+      ));
       if (progress < 1) {
         this.animationFrame = window.requestAnimationFrame(renderFrame);
       } else {

@@ -1,6 +1,7 @@
 import type {
   GameSnapshotDTO,
   NetworkDirection,
+  PositionDTO,
 } from '@snake-game/contracts';
 import {
   AppleFoodEntity,
@@ -45,7 +46,7 @@ export class MultiplayerSnapshotProjector {
     return this.project();
   }
 
-  projectInterpolated(progress: number): GameState {
+  projectInterpolated(progress: number, localCorrectionStart?: PositionDTO[]): GameState {
     const state = this.project();
     const snapshot = this.requireSnapshot();
     const previousSnapshot = this.previousSnapshot;
@@ -68,6 +69,15 @@ export class MultiplayerSnapshotProjector {
       snake.segments = currentSource.segments.map((segment, index) => ({
         x: interpolate(previousSource.segments[index].x, segment.x, interpolationProgress),
         y: interpolate(previousSource.segments[index].y, segment.y, interpolationProgress),
+      }));
+    }
+    const localSnake = state.snakes.find((snake) =>
+      snapshot.snakes.find((source) => source.snakeId === snake.id)?.controller.controllerId === this.playerId
+    );
+    if (localSnake?.alive && localCorrectionStart && canInterpolateSegments(localCorrectionStart, localSnake.segments)) {
+      localSnake.segments = localSnake.segments.map((segment, index) => ({
+        x: interpolate(localCorrectionStart[index].x, segment.x, interpolationProgress),
+        y: interpolate(localCorrectionStart[index].y, segment.y, interpolationProgress),
       }));
     }
     return state;
@@ -112,9 +122,13 @@ function canInterpolateSnake(
   current: GameSnapshotDTO['snakes'][number]
 ): previous is GameSnapshotDTO['snakes'][number] {
   if (!previous || !previous.alive || !current.alive) return false;
-  if (previous.segments.length !== current.segments.length) return false;
-  return current.segments.every((segment, index) => {
-    const previousSegment = previous.segments[index];
+  return canInterpolateSegments(previous.segments, current.segments);
+}
+
+function canInterpolateSegments(previous: PositionDTO[], current: PositionDTO[]): boolean {
+  if (previous.length !== current.length) return false;
+  return current.every((segment, index) => {
+    const previousSegment = previous[index];
     return Math.abs(segment.x - previousSegment.x) + Math.abs(segment.y - previousSegment.y) <= 1;
   });
 }
