@@ -31,6 +31,8 @@ export interface ArenaSnakeStats {
   name: string;
   algorithmId: string;
   score: number;
+  foodEaten: number;
+  finalLength: number;
   levelsWon: number;
   survivedTicks: number;
   survivedMs: number;

@@ -24,6 +24,7 @@ export class Arena {
   private readonly seed: number;
   private readonly algorithmRng: RandomPort;
   private readonly deathTickBySnakeId = new Map<number, number>();
+  private readonly foodEatenBySnakeId = new Map<number, number>();
 
   constructor(config: ArenaConfig) {
     this.seed = config.seed ?? 1;
@@ -47,6 +48,7 @@ export class Arena {
    */
   runOne(maxTicks: number = 1_000_000): ArenaRunResult {
     this.deathTickBySnakeId.clear();
+    this.foodEatenBySnakeId.clear();
     const limit = Math.max(1, maxTicks);
 
     while (
@@ -56,6 +58,7 @@ export class Arena {
     ) {
       this.applyBotDirections();
       const tickResult = this.engine.processTick(this.state);
+      this.collectFood(tickResult);
       this.collectDeathTicks(tickResult, this.state.tickCount);
     }
 
@@ -110,6 +113,16 @@ export class Arena {
     }
   }
 
+  private collectFood(result: TickResult): void {
+    for (const event of result.events) {
+      if (event.type !== 'FOOD_EATEN') continue;
+      this.foodEatenBySnakeId.set(
+        event.snakeId,
+        (this.foodEatenBySnakeId.get(event.snakeId) ?? 0) + 1,
+      );
+    }
+  }
+
   private buildSnakeStats(): ArenaSnakeStats[] {
     return this.state.snakes.map((snake, i) => {
       const algorithm = this.participants[i].algorithm;
@@ -120,6 +133,8 @@ export class Arena {
         name: snake.name,
         algorithmId: algorithm.id,
         score: snake.score,
+        foodEaten: this.foodEatenBySnakeId.get(snake.id) ?? 0,
+        finalLength: snake.segments.length,
         levelsWon: snake.levelsWon,
         survivedTicks,
         survivedMs: survivedTicks * this.engine.getSettings().tickIntervalMs,

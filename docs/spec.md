@@ -2296,7 +2296,7 @@ continueAfterLevelEnd()
 | Учёт обучения в границах монорепозитория/core | ✅ |
 | Утверждение параметров и режимов обучения | ✅ утверждён GA-профиль первой версии |
 | Универсальная MLP | ✅ произвольная фиксированная топология, плоский геном и совместимость с `SimpleNetwork` |
-| Fitness и генетический цикл | 🚧 |
+| Fitness и генетический цикл | ✅ гибридная Arena-оценка, элита, tournament selection, uniform crossover, Gaussian mutation и validation |
 | Браузерный Web Worker и визуальный validation replay | 🚧 |
 | LocalStorage repository и импорт/экспорт моделей | 🚧 |
 | Графики и таблицы обучения | 🚧 |

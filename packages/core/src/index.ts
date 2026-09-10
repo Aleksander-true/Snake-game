@@ -35,3 +35,4 @@ export * from './ai/vision';
 export * from './ai/nn/neuralArenaAlgorithm';
 export * from './ai/nn/simpleNetwork';
 export * from './ai/nn/trainingLabPolicies';
+export * from './training';
