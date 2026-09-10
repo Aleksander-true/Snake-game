@@ -13,6 +13,7 @@ export interface MatchHistoryRepository {
   save(record: MatchHistoryRecord): Promise<void>;
   getByMatchId(matchId: string): Promise<MatchHistoryRecord | null>;
   listPublic(limit: number): Promise<PublicMatchHistorySummaryDTO[]>;
+  close?(): Promise<void>;
 }
 
 export class InMemoryMatchHistoryRepository implements MatchHistoryRepository {
@@ -32,7 +33,7 @@ export class InMemoryMatchHistoryRepository implements MatchHistoryRepository {
       .filter((record) => record.history.visibility === 'public')
       .sort((left, right) => right.history.finishedAt.localeCompare(left.history.finishedAt))
       .slice(0, Math.max(0, limit))
-      .map((record) => toPublicSummary(record.history));
+      .map((record) => toPublicMatchHistorySummary(record.history));
   }
 }
 
@@ -54,7 +55,7 @@ function cloneHistory(history: MatchHistoryDTO): MatchHistoryDTO {
   };
 }
 
-function toPublicSummary(history: MatchHistoryDTO): PublicMatchHistorySummaryDTO {
+export function toPublicMatchHistorySummary(history: MatchHistoryDTO): PublicMatchHistorySummaryDTO {
   return {
     matchId: history.matchId,
     roomName: history.roomName,

@@ -253,7 +253,9 @@ interface ControlPeriodDTO {
 `GET /api/matches/:matchId` с Bearer-аутентификацией. Reconnect token возвращает
 только историю соответствующего человека, отдельный history token приватной
 комнаты — полную историю. Repository хранит только SHA-256 хэши токенов.
-Постоянный SQLite-адаптер ещё не реализован.
+`SqliteMatchHistoryRepository` использует встроенный `node:sqlite`, хранит записи
+в WAL-режиме и переживает перезапуск процесса. При запуске сервера адаптер
+включается переменной `MATCH_HISTORY_DB`; без неё dev-сервер использует память.
 
 ### 3.9 Client prediction и reconciliation
 

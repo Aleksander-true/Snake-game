@@ -75,7 +75,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
   app.disable('x-powered-by');
   app.use(express.json({ limit: MAX_INCOMING_WEBSOCKET_MESSAGE_BYTES }));
   const rooms = new RoomRegistry();
-  const historyRepository = options.historyRepository ?? new InMemoryMatchHistoryRepository();
+  const historyRepository: MatchHistoryRepository =
+    options.historyRepository ?? new InMemoryMatchHistoryRepository();
   app.get('/health', (_request, response) => {
     response.json({ status: 'ok', protocolVersion: NETWORK_PROTOCOL_VERSION });
   });
@@ -334,6 +335,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}):
       for (const session of matchSessions.values()) session.stop();
       matchSessions.clear();
       await Promise.all(pendingHistorySaves);
+      await historyRepository.close?.();
       for (const socket of webSocketServer.clients) {
         socket.terminate();
       }
