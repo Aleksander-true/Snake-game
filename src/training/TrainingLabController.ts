@@ -417,7 +417,7 @@ export class TrainingLabController {
       cell.textContent = String(value);
       row.appendChild(cell);
     });
-    this.element('trainingReportBody').appendChild(row);
+    this.element('trainingReportBody').prepend(row);
   }
 
   private renderCondensedReport(): void {
