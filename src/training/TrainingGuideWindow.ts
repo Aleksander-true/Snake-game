@@ -48,7 +48,7 @@ const trainingGuideMarkup = `
         <li><strong>Элита:</strong> 2–4; <strong>турнир:</strong> 4.</li>
         <li><strong>Скрытые слои:</strong> <code class="training-lab-code">32,16</code>.</li>
         <li><strong>Скрещивание:</strong> 0,75; <strong>мутация:</strong> 0,05; <strong>сила мутации:</strong> 0,1.</li>
-        <li><strong>Лимит:</strong> 5 000–10 000 тиков; validation — каждые 10 поколений.</li>
+        <li><strong>Лимит:</strong> 5 000–10 000 тиков; validation — каждые 10 поколений на тех же сценариях, но с отдельными seed.</li>
         <li><strong>Сценарии:</strong> одиночный 0,5; против эвристик 0,3; внутри поколения 0,2.</li>
       </ul>
       <p>Большая популяция и длинные прогоны требуют много времени. Сначала проверьте параметры на 10–30 поколениях.</p>

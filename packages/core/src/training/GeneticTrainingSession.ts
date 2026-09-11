@@ -129,6 +129,12 @@ export class GeneticTrainingSession {
       : cloneEvaluatedCandidate(previousChampion);
     const shouldValidate = this.nextGeneration % this.config.validationEvery === 0
       || this.nextGeneration === this.config.generations;
+    const championPopulationIndex = this.population.findIndex((candidate) => (
+      candidate.id === champion.id || genomesEqual(candidate.genome, champion.genome)
+    ));
+    const validationOpponent = this.config.scenarioWeights.cohort > 0
+      ? this.population[(Math.max(0, championPopulationIndex) + this.nextGeneration) % this.population.length]
+      : undefined;
     return {
       generation: this.nextGeneration,
       evaluated,
@@ -139,6 +145,7 @@ export class GeneticTrainingSession {
         id: `${this.nextGeneration}/${champion.id}/validation`,
         mode: 'validation',
         candidate: cloneGenomeCandidate(champion),
+        opponent: validationOpponent ? cloneGenomeCandidate(validationOpponent) : undefined,
         config: cloneConfig(this.config),
       } : undefined,
     };
@@ -312,27 +319,26 @@ export function evaluateTrainingTask(task: TrainingEvaluationTask): TrainingEval
     ticksExecuted += evaluation.ticksExecuted;
   };
 
-  if (task.mode === 'validation') {
-    addScenario(evaluateScenario(task, task.config.validationSeeds, 'heuristic'), 1);
-  } else {
-    if (task.config.scenarioWeights.solo > 0) {
-      addScenario(
-        evaluateScenario(task, task.config.trainingSeeds, 'solo'),
-        task.config.scenarioWeights.solo,
-      );
-    }
-    if (task.config.scenarioWeights.heuristic > 0) {
-      addScenario(
-        evaluateScenario(task, task.config.trainingSeeds, 'heuristic'),
-        task.config.scenarioWeights.heuristic,
-      );
-    }
-    if (task.config.scenarioWeights.cohort > 0) {
-      addScenario(
-        evaluateScenario(task, task.config.trainingSeeds, 'cohort'),
-        task.config.scenarioWeights.cohort,
-      );
-    }
+  const seeds = task.mode === 'validation'
+    ? task.config.validationSeeds
+    : task.config.trainingSeeds;
+  if (task.config.scenarioWeights.solo > 0) {
+    addScenario(
+      evaluateScenario(task, seeds, 'solo'),
+      task.config.scenarioWeights.solo,
+    );
+  }
+  if (task.config.scenarioWeights.heuristic > 0) {
+    addScenario(
+      evaluateScenario(task, seeds, 'heuristic'),
+      task.config.scenarioWeights.heuristic,
+    );
+  }
+  if (task.config.scenarioWeights.cohort > 0) {
+    addScenario(
+      evaluateScenario(task, seeds, 'cohort'),
+      task.config.scenarioWeights.cohort,
+    );
   }
 
   const totalWeight = scenarioFitness.reduce((sum, item) => sum + item.weight, 0);

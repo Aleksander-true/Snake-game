@@ -132,6 +132,31 @@ describe('genetic training', () => {
 
     expect(reordered.createResult().model.genome).toEqual(ordered.createResult().model.genome);
   });
+
+  test('validates with the training scenario mix on separate validation seeds', () => {
+    const config = createSmallConfig(1);
+    config.scenarioWeights = { solo: 0.5, heuristic: 0.3, cohort: 0.2 };
+    const session = new GeneticTrainingSession(config);
+    const prepared = session.prepareGeneration(session.createEvaluationTasks().map(evaluateTrainingTask));
+    const validationTask = prepared.validationTask;
+
+    if (!validationTask) throw new Error('Expected a validation task');
+    expect(validationTask.opponent).toBeDefined();
+    const validation = evaluateTrainingTask(validationTask);
+    const matchingTrainingConditions = evaluateTrainingTask({
+      ...validationTask,
+      id: 'matching-training-conditions',
+      mode: 'training',
+      config: {
+        ...validationTask.config,
+        trainingSeeds: [...validationTask.config.validationSeeds],
+      },
+    });
+
+    expect(validation.fitness).toBe(matchingTrainingConditions.fitness);
+    expect(validation.metrics).toEqual(matchingTrainingConditions.metrics);
+    expect(validation.simulations).toBe(matchingTrainingConditions.simulations);
+  });
 });
 
 function createSmallConfig(generations: number) {
