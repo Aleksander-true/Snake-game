@@ -224,7 +224,13 @@
 
 .training-lab-mode .game-middle,
 .training-lab-mode .game-middle--dev {
-  flex: 0 0 60%;
+  flex: 0 0 auto;
+}
+
+.training-lab-mode .training-results-area {
+  flex: 0 0 auto;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .training-lab-mode .training-background-mode .game-middle,
@@ -234,6 +240,7 @@
 
 .training-lab-mode .training-background-mode .training-results-area {
   flex: 1;
+  overflow: auto;
 }
 
 .training-lab-mode .game-players-panel,
