@@ -1,4 +1,9 @@
-import { heuristicAlgorithmOptions } from '@snake-game/core';
+import {
+  calculateObservationInputSize,
+  createDefaultGeneticTrainingConfig,
+  createDefaultSettings,
+  heuristicAlgorithmOptions,
+} from '@snake-game/core';
 import type { GameConfig } from '@snake-game/core';
 import { renderMenu } from '../ui/menu';
 
@@ -32,12 +37,16 @@ export interface TrainingLaunchConfig {
 
 /** Defaults when opening the training lab from the dev menu (parameters are editable on the lab screen). */
 export function getDefaultTrainingLaunchConfig(): TrainingLaunchConfig {
+  const settings = createDefaultSettings();
+  const training = createDefaultGeneticTrainingConfig(
+    calculateObservationInputSize(settings.visionSize),
+  );
   return {
-    seed: 1,
-    level: 1,
-    difficultyLevel: 1,
-    maxTicks: 10_000,
-    gameMode: 'classic',
+    seed: training.trainingSeeds[0],
+    level: training.level,
+    difficultyLevel: training.difficultyLevel,
+    maxTicks: training.maxTicks,
+    gameMode: training.gameMode,
   };
 }
 

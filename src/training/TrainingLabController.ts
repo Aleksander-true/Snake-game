@@ -260,7 +260,8 @@ export class TrainingLabController {
 
   private readConfig(): GeneticTrainingConfig {
     const inputSize = calculateObservationInputSize(createDefaultSettings().visionSize);
-    const config = createDefaultGeneticTrainingConfig(inputSize);
+    const seed = this.integer('trainingSeed', 1, 2_000_000_000);
+    const config = createDefaultGeneticTrainingConfig(inputSize, seed);
     const hiddenLayers = this.input('trainingHiddenLayers').value
       .split(',')
       .map((value) => Number(value.trim()))
@@ -268,7 +269,6 @@ export class TrainingLabController {
     if (hiddenLayers.length === 0 || hiddenLayers.length > 4) {
       throw new Error('Укажите от 1 до 4 скрытых слоёв по 1–256 нейронов');
     }
-    const seed = this.integer('trainingSeed', 1, 2_000_000_000);
     config.populationSize = this.integer('trainingPopulation', 4, 256);
     config.generations = this.integer('trainingGenerations', 1);
     config.eliteCount = this.integer('trainingElite', 1, config.populationSize - 1);
@@ -277,8 +277,6 @@ export class TrainingLabController {
     config.mutationRate = this.decimal('trainingMutationRate', 0, 1);
     config.mutationSigma = this.decimal('trainingMutationSigma', 0.0001, 10);
     config.topology = [inputSize, ...hiddenLayers, 3];
-    config.trainingSeeds = [seed, seed + 1, seed + 2];
-    config.validationSeeds = [seed + 101, seed + 103, seed + 107, seed + 109, seed + 113];
     config.validationEvery = this.integer('trainingValidationEvery', 1, config.generations);
     config.maxTicks = this.integer('trainingMaxTicks', 100, 100_000);
     config.level = this.integer('trainingLevel', 1, 100);
@@ -1061,10 +1059,10 @@ const trainingLabMarkup = `
       <label class="dev-row"><span class="dev-row-label">Популяция</span><input id="trainingPopulation" class="dev-input" type="number" min="4" max="256"></label>
       <label class="dev-row"><span class="dev-row-label">Элита</span><input id="trainingElite" class="dev-input" type="number" min="1"></label>
       <label class="dev-row"><span class="dev-row-label">Турнир</span><input id="trainingTournament" class="dev-input" type="number" min="2"></label>
-      <label class="dev-row"><span class="dev-row-label">Скрытые слои</span><input id="trainingHiddenLayers" class="dev-input" type="text" placeholder="32,16"></label>
+      <label class="dev-row"><span class="dev-row-label">Скрытые слои</span><input id="trainingHiddenLayers" class="dev-input" type="text" placeholder="16,8"></label>
       <label class="dev-row"><span class="dev-row-label">Скрещивание</span><input id="trainingCrossover" class="dev-input" type="number" min="0" max="1" step="0.01"></label>
-      <label class="dev-row"><span class="dev-row-label">Мутация</span><input id="trainingMutationRate" class="dev-input" type="number" min="0" max="1" step="0.01"></label>
-      <label class="dev-row"><span class="dev-row-label">Сила мутации</span><input id="trainingMutationSigma" class="dev-input" type="number" min="0.0001" step="0.01"></label>
+      <label class="dev-row"><span class="dev-row-label">Мутация</span><input id="trainingMutationRate" class="dev-input" type="number" min="0" max="1" step="0.001"></label>
+      <label class="dev-row"><span class="dev-row-label">Сила мутации</span><input id="trainingMutationSigma" class="dev-input" type="number" min="0.0001" step="0.001"></label>
     </div>
     <div class="dev-section">
       <div class="dev-section-title">Правила оценки</div>

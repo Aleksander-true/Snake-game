@@ -1,30 +1,28 @@
+import defaults from '../gameDefaults.json';
 import type { GeneticTrainingConfig } from './types';
 
-export function createDefaultGeneticTrainingConfig(inputSize: number): GeneticTrainingConfig {
+export function createDefaultGeneticTrainingConfig(
+  inputSize: number,
+  seed = defaults.training.seed,
+): GeneticTrainingConfig {
+  const training = defaults.training;
   return {
-    populationSize: 64,
-    generations: 100,
-    eliteCount: 4,
-    tournamentSize: 4,
-    crossoverRate: 0.75,
-    mutationRate: 0.05,
-    mutationSigma: 0.1,
-    topology: [inputSize, 32, 16, 3],
-    trainingSeeds: [101, 211, 307],
-    validationSeeds: [401, 503, 601, 701, 809],
-    validationEvery: 10,
-    maxTicks: 10_000,
-    level: 1,
-    difficultyLevel: 1,
-    gameMode: 'classic',
-    scenarioWeights: { solo: 0.5, heuristic: 0.3, cohort: 0.2 },
-    fitnessWeights: {
-      score: 1,
-      wins: 100,
-      survival: 10,
-      aliveAtLimit: 5,
-      death: 5,
-      cycle: 5,
-    },
+    populationSize: training.populationSize,
+    generations: training.generations,
+    eliteCount: training.eliteCount,
+    tournamentSize: training.tournamentSize,
+    crossoverRate: training.crossoverRate,
+    mutationRate: training.mutationRate,
+    mutationSigma: training.mutationSigma,
+    topology: [inputSize, ...training.hiddenLayers, 3],
+    trainingSeeds: training.trainingSeedOffsets.map((offset) => seed + offset),
+    validationSeeds: training.validationSeedOffsets.map((offset) => seed + offset),
+    validationEvery: training.validationEvery,
+    maxTicks: training.maxTicks,
+    level: training.level,
+    difficultyLevel: training.difficultyLevel,
+    gameMode: training.gameMode as GeneticTrainingConfig['gameMode'],
+    scenarioWeights: { ...training.scenarioWeights },
+    fitnessWeights: { ...training.fitnessWeights },
   };
 }

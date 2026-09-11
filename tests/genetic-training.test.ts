@@ -7,8 +7,27 @@ import {
   evaluateTrainingTask,
   mutateGenome,
 } from '@snake-game/core';
+import defaults from '../packages/core/src/gameDefaults.json';
 
 describe('genetic training', () => {
+  test('loads tuned genetic defaults from the canonical JSON', () => {
+    const config = createDefaultGeneticTrainingConfig(402);
+    const training = defaults.training;
+
+    expect(config).toMatchObject({
+      populationSize: training.populationSize,
+      generations: training.generations,
+      eliteCount: training.eliteCount,
+      tournamentSize: training.tournamentSize,
+      crossoverRate: training.crossoverRate,
+      mutationRate: training.mutationRate,
+      mutationSigma: training.mutationSigma,
+      topology: [402, ...training.hiddenLayers, 3],
+      trainingSeeds: training.trainingSeedOffsets.map((offset) => training.seed + offset),
+      validationSeeds: training.validationSeedOffsets.map((offset) => training.seed + offset),
+    });
+  });
+
   test('applies seeded crossover and mutation deterministically', () => {
     const first = new Float32Array([1, 1, 1, 1]);
     const second = new Float32Array([2, 2, 2, 2]);
