@@ -12,6 +12,7 @@ describe('genetic training guide', () => {
     expect(guideDocument.body.textContent).toContain('Фоновый — без анимации');
     expect(guideDocument.body.textContent).toContain('Ограничения на число поколений нет');
     expect(guideDocument.body.textContent).toContain('автоматически записывается');
+    expect(guideDocument.body.textContent).toContain('validation-чемпион');
     expect(guideDocument.body.textContent).toContain('пока не реализован');
 
     guideDocument.querySelector<HTMLButtonElement>('#trainingGuideClose')?.click();

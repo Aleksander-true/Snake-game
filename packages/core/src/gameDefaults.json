@@ -173,6 +173,7 @@
     "mutationRate": 0.02,
     "mutationSigma": 0.05,
     "seed": 1,
+    "seedStrategy": "per-generation",
     "trainingSeedOffsets": [0, 1, 2, 3, 5, 8],
     "validationSeedOffsets": [101, 103, 107, 109, 113],
     "validationEvery": 10,

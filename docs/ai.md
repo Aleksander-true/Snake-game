@@ -129,11 +129,11 @@ In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has
 - A coordinator Web Worker owns the genetic session and dispatches deterministic Arena evaluations to a persistent worker pool. Automatic selection leaves two reported CPU cores free; manual selection is also available.
 - `GeneticTrainingSession` in the shared core defines generation boundaries, canonical evaluation tasks, RNG state, checkpoints, and model fine-tuning. The browser worker only schedules those tasks.
 - Pausing completes the current generation and stores a full checkpoint in IndexedDB. Checkpoint frequency is configurable; resumptions may use a different worker count without changing the genetic result.
-- The current champion is saved under a stable run id after each checkpoint. Completed and imported models use `LocalModelRepository` (`snake.geneticModels.v1`) and can seed a new compatible fine-tuning run.
+- The best validation champion is saved under a stable run id after each checkpoint. Completed and imported models use `LocalModelRepository` (`snake.geneticModels.v1`) and can seed a new compatible fine-tuning run.
 - Visual mode independently replays the newest generation champion on Canvas. Background mode disables replay, requests a Screen Wake Lock, and places the chart and report table in the Canvas area.
 - Fitness weights, scenario weights, network topology, Arena rules, validation cadence, worker count, and checkpoint cadence are configured in the lab. The default dense food-approach reward only counts new distance progress toward a tracked target, so oscillation cannot farm fitness. All controls expose Russian help text.
 - Reaching the Arena tick limit alive is treated as successful survival: the policy receives the full survival and alive-at-end rewards without an anti-cycle penalty.
-- Validation uses the same enabled scenario mix and Arena rules as training, but runs on separate held-out seeds and does not affect selection.
+- Every generation derives a new deterministic training-seed batch from the configured base seeds. All candidates in that generation share the batch. Validation keeps separate fixed seeds, evaluates the current generation best, and selects the model artifact without changing reproduction selection.
 - Seeded Arena and genetic RNG remain independent. Evaluation results are applied in task order rather than worker completion order, so parallel scheduling does not change the result.
 
 ## Future Improvements

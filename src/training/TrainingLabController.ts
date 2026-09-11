@@ -174,6 +174,7 @@ export class TrainingLabController {
       if (checkpoint) {
         Object.assign(config, checkpoint.config, {
           generations: Math.max(checkpoint.config.generations, checkpoint.nextGeneration),
+          trainingSeedStrategy: checkpoint.config.trainingSeedStrategy ?? 'fixed',
         });
       }
       if (
@@ -648,8 +649,8 @@ export class TrainingLabController {
       : 'Текущая игра: тик — · очки — · еда — · длина — · запуск…';
     const lines = [
       preview
-        ? `Рекорд обучения: поколение ${preview.recordGeneration || '—'} · fitness ${format(preview.recordFitness)} · validation ${preview.recordValidationFitness === undefined ? '—' : format(preview.recordValidationFitness)}`
-        : 'Рекорд обучения: поколение — · fitness — · validation —',
+        ? `Validation-чемпион: поколение ${preview.recordGeneration || '—'} · training fitness ${format(preview.recordFitness)} · validation ${preview.recordValidationFitness === undefined ? '—' : format(preview.recordValidationFitness)}`
+        : 'Validation-чемпион: поколение — · training fitness — · validation —',
       preview
         ? `Показан чемпион: ${generation} · fitness ${format(preview.fitness)} · средние очки ${format(preview.metrics.averageScore)} · еда ${format(preview.metrics.averageFoodEaten)} · выживание ${format(preview.metrics.averageSurvivedTicks)} тиков`
         : 'Показан чемпион: поколение — · fitness — · средние очки — · еда — · выживание —',
@@ -1026,9 +1027,9 @@ const trainingParameterHelp: Record<string, string> = {
   trainingLevel: 'Уровень правил и размера поля, на котором оцениваются кандидаты.',
   trainingDifficulty: 'Сложность игровых правил и соперников в Arena.',
   trainingGameMode: 'Классические правила или режим выживания для всех тренировочных партий.',
-  trainingSeed: 'Начальное значение детерминированной случайности. Одинаковые настройки и seed воспроизводят результат.',
+  trainingSeed: 'Базовое значение детерминированной случайности. Из него для каждого поколения выводится новый общий набор карт; одинаковые настройки и seed воспроизводят весь прогон.',
   trainingMaxTicks: 'Максимальная длина одной партии. Большое значение позволяет долгие стратегии, но сильно замедляет обучение.',
-  trainingValidationEvery: 'Период проверки абсолютного чемпиона с теми же правилами и весами сценариев, но на отдельных validation seed. Не влияет на отбор.',
+  trainingValidationEvery: 'Период проверки лучшего кандидата поколения на постоянных validation seed. Лучший validation-результат определяет сохраняемую модель, но не влияет на генетический отбор следующей популяции.',
   trainingSoloWeight: 'Вес одиночных партий. Ноль полностью отключает сценарий и ускоряет поколение.',
   trainingHeuristicWeight: 'Вес партий против basic/solid ботов. Ноль полностью отключает сценарий.',
   trainingCohortWeight: 'Вес партий против нейросетей текущего поколения. Ноль полностью отключает сценарий.',

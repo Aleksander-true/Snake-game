@@ -15,6 +15,7 @@ export function createDefaultGeneticTrainingConfig(
     mutationRate: training.mutationRate,
     mutationSigma: training.mutationSigma,
     topology: [inputSize, ...training.hiddenLayers, 3],
+    trainingSeedStrategy: training.seedStrategy as GeneticTrainingConfig['trainingSeedStrategy'],
     trainingSeeds: training.trainingSeedOffsets.map((offset) => seed + offset),
     validationSeeds: training.validationSeedOffsets.map((offset) => seed + offset),
     validationEvery: training.validationEvery,

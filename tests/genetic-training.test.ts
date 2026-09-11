@@ -24,6 +24,7 @@ describe('genetic training', () => {
       mutationRate: training.mutationRate,
       mutationSigma: training.mutationSigma,
       topology: [402, ...training.hiddenLayers, 3],
+      trainingSeedStrategy: training.seedStrategy,
       trainingSeeds: training.trainingSeedOffsets.map((offset) => training.seed + offset),
       validationSeeds: training.validationSeedOffsets.map((offset) => training.seed + offset),
       fitnessWeights: training.fitnessWeights,
@@ -104,7 +105,7 @@ describe('genetic training', () => {
     expect(first.model.genome).toEqual(second.model.genome);
   });
 
-  test('reports the best candidate of each generation separately from the record holder', () => {
+  test('reports each generation best and saves the best validation result', () => {
     const config = createDefaultGeneticTrainingConfig(402);
     Object.assign(config, {
       populationSize: 4,
@@ -118,14 +119,14 @@ describe('genetic training', () => {
       topology: [402, 4, 3],
       scenarioWeights: { solo: 1, heuristic: 0, cohort: 0 },
     });
-    const generations: Array<{ best: number; record: number; reportBest: number }> = [];
+    const generations: Array<{ best: number; reportBest: number; validation?: number }> = [];
 
-    new GeneticTrainer(config).run({
-      onGenerationCompleted: (report, generationBest, champion) => {
+    const result = new GeneticTrainer(config).run({
+      onGenerationCompleted: (report, generationBest) => {
         generations.push({
           best: generationBest.fitness,
-          record: champion.fitness,
           reportBest: report.bestFitness,
+          validation: report.validationFitness,
         });
       },
     });
@@ -133,8 +134,65 @@ describe('genetic training', () => {
     expect(generations).toHaveLength(2);
     for (const generation of generations) {
       expect(generation.best).toBe(generation.reportBest);
-      expect(generation.record).toBeGreaterThanOrEqual(generation.best);
     }
+    expect(result.model.validationFitness).toBe(Math.max(
+      ...generations.map((generation) => generation.validation ?? Number.NEGATIVE_INFINITY),
+    ));
+  });
+
+  test('uses common rotating training seeds within each generation', () => {
+    const session = new GeneticTrainingSession(createSmallConfig(2));
+    const firstTasks = session.createEvaluationTasks();
+    const firstSeeds = firstTasks[0].config.trainingSeeds;
+
+    expect(firstTasks.every((task) => task.config.trainingSeeds.join(',') === firstSeeds.join(',')))
+      .toBe(true);
+    completeNextGeneration(session);
+    const secondTasks = session.createEvaluationTasks();
+    const secondSeeds = secondTasks[0].config.trainingSeeds;
+
+    expect(secondTasks.every((task) => task.config.trainingSeeds.join(',') === secondSeeds.join(',')))
+      .toBe(true);
+    expect(secondSeeds).not.toEqual(firstSeeds);
+
+    const legacyConfig = createSmallConfig(2);
+    delete legacyConfig.trainingSeedStrategy;
+    const legacySession = new GeneticTrainingSession(legacyConfig);
+    const legacySeeds = legacySession.createEvaluationTasks()[0].config.trainingSeeds;
+    completeNextGeneration(legacySession);
+    expect(legacySession.createEvaluationTasks()[0].config.trainingSeeds).toEqual(legacySeeds);
+  });
+
+  test('does not replace the validation champion with a worse validation candidate', () => {
+    const session = new GeneticTrainingSession(createSmallConfig(2));
+    const firstTasks = session.createEvaluationTasks();
+    const firstResults = firstTasks.map((task, index) => ({
+      ...evaluateTrainingTask(task),
+      fitness: firstTasks.length - index,
+    }));
+    const firstPrepared = session.prepareGeneration(firstResults);
+    if (!firstPrepared.validationTask) throw new Error('Expected first validation task');
+    const firstCompleted = session.completeGeneration(firstPrepared, {
+      ...evaluateTrainingTask(firstPrepared.validationTask),
+      fitness: 10,
+    }, 100);
+    const firstChampionGenome = Array.from(firstCompleted.champion.genome);
+
+    const secondTasks = session.createEvaluationTasks();
+    const secondResults = secondTasks.map((task, index) => ({
+      ...evaluateTrainingTask(task),
+      fitness: index === secondTasks.length - 1 ? 1_000 : index,
+    }));
+    const secondPrepared = session.prepareGeneration(secondResults);
+    if (!secondPrepared.validationTask) throw new Error('Expected second validation task');
+    const secondCompleted = session.completeGeneration(secondPrepared, {
+      ...evaluateTrainingTask(secondPrepared.validationTask),
+      fitness: -10,
+    }, 100);
+
+    expect(secondCompleted.championValidationFitness).toBe(10);
+    expect(Array.from(secondCompleted.champion.genome)).toEqual(firstChampionGenome);
+    expect(session.createResult().model.genome).toEqual(firstChampionGenome);
   });
 
   test('resumes from a generation checkpoint without changing the genetic result', () => {
@@ -148,6 +206,8 @@ describe('genetic training', () => {
     while (!resumed.isComplete()) completeNextGeneration(resumed);
 
     expect(resumed.createResult().model.genome).toEqual(uninterrupted.createResult().model.genome);
+    expect(resumed.createResult().model.validationFitness)
+      .toBe(uninterrupted.createResult().model.validationFitness);
     expect(resumed.createResult().reports.map((report) => report.bestFitness))
       .toEqual(uninterrupted.createResult().reports.map((report) => report.bestFitness));
   });

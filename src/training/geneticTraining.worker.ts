@@ -32,13 +32,6 @@ async function runTraining(request: Extract<TrainingWorkerRequest, { type: 'star
     initialModel: request.initialModel,
   });
   const pool = new TrainingEvaluationWorkerPool(request.execution.workerCount);
-  const checkpointChampionGeneration = request.checkpoint?.championGeneration ?? 0;
-  let recordValidationFitness = [...(request.checkpoint?.reports ?? [])]
-    .reverse()
-    .find((report) => (
-      report.generation >= checkpointChampionGeneration
-      && report.validationFitness !== undefined
-    ))?.validationFitness;
   try {
     while (!session.isComplete()) {
       const startedAt = Date.now();
@@ -48,18 +41,13 @@ async function runTraining(request: Extract<TrainingWorkerRequest, { type: 'star
         ? (await pool.evaluate([prepared.validationTask]))[0]
         : undefined;
       const completed = session.completeGeneration(prepared, validation, Date.now() - startedAt);
-      if (completed.championGeneration === completed.report.generation) {
-        recordValidationFitness = completed.report.validationFitness;
-      } else if (completed.report.validationFitness !== undefined) {
-        recordValidationFitness = completed.report.validationFitness;
-      }
       post({
         type: 'generation',
         report: completed.report,
         generationBest: completed.generationBest,
         recordFitness: completed.champion.fitness,
         recordGeneration: completed.championGeneration,
-        recordValidationFitness,
+        recordValidationFitness: completed.championValidationFitness,
         workerCount: pool.size,
       });
 

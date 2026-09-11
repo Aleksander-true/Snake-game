@@ -27,6 +27,8 @@ export interface GeneticTrainingConfig {
   mutationRate: number;
   mutationSigma: number;
   topology: number[];
+  /** Missing in legacy artifacts, which retain fixed training seeds. */
+  trainingSeedStrategy?: 'fixed' | 'per-generation';
   trainingSeeds: number[];
   validationSeeds: number[];
   validationEvery: number;
@@ -141,6 +143,7 @@ export interface GeneticTrainingCheckpoint {
   population: SerializedTrainingCandidate[];
   champion: SerializedTrainingCandidate | null;
   championGeneration: number;
+  championValidationFitness?: number;
   rngState: number;
   reports: GenerationReport[];
   parentModelId?: string;
@@ -161,4 +164,5 @@ export interface CompletedTrainingGeneration {
   generationBest: TrainingCandidateResult;
   champion: TrainingCandidateResult;
   championGeneration: number;
+  championValidationFitness?: number;
 }

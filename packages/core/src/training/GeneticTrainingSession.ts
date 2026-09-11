@@ -52,6 +52,7 @@ export class GeneticTrainingSession {
   private reports: GenerationReport[];
   private champion: TrainingCandidateResult | null;
   private championGeneration: number;
+  private championValidationFitness?: number;
   private nextGeneration: number;
 
   constructor(config: GeneticTrainingConfig, options: GeneticTrainingSessionOptions = {}) {
@@ -72,6 +73,8 @@ export class GeneticTrainingSession {
     this.reports = checkpoint?.reports.map(cloneReport) ?? [];
     this.champion = checkpoint?.champion ? deserializeEvaluatedCandidate(checkpoint.champion) : null;
     this.championGeneration = checkpoint?.championGeneration ?? 0;
+    this.championValidationFitness = checkpoint?.championValidationFitness
+      ?? findLegacyChampionValidationFitness(checkpoint);
     this.nextGeneration = checkpoint?.nextGeneration ?? 1;
     this.initialModelGenome = options.initialModel
       ? validateAndReadModelGenome(options.initialModel, config)
@@ -95,6 +98,11 @@ export class GeneticTrainingSession {
 
   createEvaluationTasks(): TrainingEvaluationTask[] {
     if (this.isComplete()) return [];
+    const generationConfig = cloneConfig(this.config);
+    generationConfig.trainingSeeds = createGenerationTrainingSeeds(
+      this.config,
+      this.nextGeneration,
+    );
     return this.population.map((candidate, index) => ({
       id: `${this.nextGeneration}/${candidate.id}/training`,
       mode: 'training',
@@ -102,7 +110,7 @@ export class GeneticTrainingSession {
       opponent: cloneGenomeCandidate(
         this.population[(index + this.nextGeneration) % this.population.length],
       ),
-      config: cloneConfig(this.config),
+      config: cloneConfig(generationConfig),
     }));
   }
 
@@ -122,29 +130,26 @@ export class GeneticTrainingSession {
       };
     }).sort((left, right) => right.fitness - left.fitness);
     const generationBest = evaluated[0];
-    const previousChampion = this.champion;
-    const hasNewChampion = !previousChampion || generationBest.fitness > previousChampion.fitness;
-    const champion = hasNewChampion
-      ? cloneEvaluatedCandidate(generationBest)
-      : cloneEvaluatedCandidate(previousChampion);
     const shouldValidate = this.nextGeneration % this.config.validationEvery === 0
       || this.nextGeneration === this.config.generations;
-    const championPopulationIndex = this.population.findIndex((candidate) => (
-      candidate.id === champion.id || genomesEqual(candidate.genome, champion.genome)
+    const generationBestPopulationIndex = this.population.findIndex((candidate) => (
+      candidate.id === generationBest.id || genomesEqual(candidate.genome, generationBest.genome)
     ));
     const validationOpponent = this.config.scenarioWeights.cohort > 0
-      ? this.population[(Math.max(0, championPopulationIndex) + this.nextGeneration) % this.population.length]
+      ? this.population[(Math.max(0, generationBestPopulationIndex) + this.nextGeneration) % this.population.length]
       : undefined;
     return {
       generation: this.nextGeneration,
       evaluated,
-      champion,
-      championGeneration: hasNewChampion ? this.nextGeneration : this.championGeneration,
+      champion: this.champion
+        ? cloneEvaluatedCandidate(this.champion)
+        : cloneEvaluatedCandidate(generationBest),
+      championGeneration: this.champion ? this.championGeneration : this.nextGeneration,
       evaluationResults: results.map(cloneEvaluationResult),
       validationTask: shouldValidate ? {
-        id: `${this.nextGeneration}/${champion.id}/validation`,
+        id: `${this.nextGeneration}/${generationBest.id}/validation`,
         mode: 'validation',
-        candidate: cloneGenomeCandidate(champion),
+        candidate: cloneGenomeCandidate(generationBest),
         opponent: validationOpponent ? cloneGenomeCandidate(validationOpponent) : undefined,
         config: cloneConfig(this.config),
       } : undefined,
@@ -162,8 +167,19 @@ export class GeneticTrainingSession {
     if (!!prepared.validationTask !== !!validation) {
       throw new Error('Validation result does not match generation requirements');
     }
-    this.champion = cloneEvaluatedCandidate(prepared.champion);
-    this.championGeneration = prepared.championGeneration;
+    const generationBest = prepared.evaluated[0];
+    if (validation && (
+      this.championValidationFitness === undefined
+      || validation.fitness > this.championValidationFitness
+    )) {
+      this.champion = cloneEvaluatedCandidate(generationBest);
+      this.championGeneration = this.nextGeneration;
+      this.championValidationFitness = validation.fitness;
+    } else if (this.championValidationFitness === undefined) {
+      this.champion = cloneEvaluatedCandidate(generationBest);
+      this.championGeneration = this.nextGeneration;
+    }
+    if (!this.champion) throw new Error('Training generation did not produce a champion');
     const simulations = prepared.evaluationResults.reduce(
       (total, result) => total + result.simulations,
       validation?.simulations ?? 0,
@@ -190,6 +206,7 @@ export class GeneticTrainingSession {
       generationBest: cloneEvaluatedCandidate(prepared.evaluated[0]),
       champion: cloneEvaluatedCandidate(this.champion),
       championGeneration: this.championGeneration,
+      championValidationFitness: this.championValidationFitness,
     };
   }
 
@@ -204,6 +221,7 @@ export class GeneticTrainingSession {
       population: this.population.map(serializeCandidate),
       champion: this.champion ? serializeCandidate(this.champion) : null,
       championGeneration: this.championGeneration,
+      championValidationFitness: this.championValidationFitness,
       rngState: this.rng.getState(),
       reports: this.reports.map(cloneReport),
       parentModelId: this.parentModelId,
@@ -213,7 +231,6 @@ export class GeneticTrainingSession {
 
   createResult(): GeneticTrainingResult {
     if (!this.isComplete() || !this.champion) throw new Error('Training session is not complete');
-    const finalReport = this.reports[this.reports.length - 1];
     return {
       model: {
         formatVersion: 1,
@@ -225,7 +242,7 @@ export class GeneticTrainingSession {
         genome: Array.from(this.champion.genome),
         trainingConfig: cloneConfig(this.config),
         trainingFitness: this.champion.fitness,
-        validationFitness: finalReport.validationFitness,
+        validationFitness: this.championValidationFitness,
         metrics: cloneMetrics(this.champion.metrics),
         parentModelId: this.parentModelId,
         parentTrainingFitness: this.parentTrainingFitness,
@@ -237,9 +254,6 @@ export class GeneticTrainingSession {
 
   createChampionModel(): TrainedModelArtifact {
     if (!this.champion) throw new Error('Training session has no evaluated champion');
-    const latestValidation = [...this.reports]
-      .reverse()
-      .find((report) => report.validationFitness !== undefined)?.validationFitness;
     return {
       formatVersion: 1,
       observationVersion: 1,
@@ -250,7 +264,7 @@ export class GeneticTrainingSession {
       genome: Array.from(this.champion.genome),
       trainingConfig: cloneConfig(this.config),
       trainingFitness: this.champion.fitness,
-      validationFitness: latestValidation,
+      validationFitness: this.championValidationFitness,
       metrics: cloneMetrics(this.champion.metrics),
       parentModelId: this.parentModelId,
       parentTrainingFitness: this.parentTrainingFitness,
@@ -461,6 +475,37 @@ function validateConfig(config: GeneticTrainingConfig): void {
   }
   const scenarioWeight = Object.values(config.scenarioWeights).reduce((sum, value) => sum + value, 0);
   if (scenarioWeight <= 0) throw new Error('scenario weights must have a positive sum');
+}
+
+function createGenerationTrainingSeeds(
+  config: GeneticTrainingConfig,
+  generation: number,
+): number[] {
+  if (config.trainingSeedStrategy !== 'per-generation' || generation <= 1) {
+    return [...config.trainingSeeds];
+  }
+  const generationSalt = Math.imul(generation - 1, 0x9e3779b1);
+  return config.trainingSeeds.map((seed) => {
+    let value = (seed ^ generationSalt) >>> 0;
+    value ^= value >>> 16;
+    value = Math.imul(value, 0x7feb352d);
+    value ^= value >>> 15;
+    value = Math.imul(value, 0x846ca68b);
+    value ^= value >>> 16;
+    return value === 0 ? 1 : value;
+  });
+}
+
+function findLegacyChampionValidationFitness(
+  checkpoint: GeneticTrainingCheckpoint | undefined,
+): number | undefined {
+  if (!checkpoint?.champion) return undefined;
+  return [...checkpoint.reports]
+    .reverse()
+    .find((report) => (
+      report.generation >= checkpoint.championGeneration
+      && report.validationFitness !== undefined
+    ))?.validationFitness;
 }
 
 function validateCheckpoint(
