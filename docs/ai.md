@@ -132,6 +132,7 @@ In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has
 - The current champion is saved under a stable run id after each checkpoint. Completed and imported models use `LocalModelRepository` (`snake.geneticModels.v1`) and can seed a new compatible fine-tuning run.
 - Visual mode independently replays the newest generation champion on Canvas. Background mode disables replay, requests a Screen Wake Lock, and places the chart and report table in the Canvas area.
 - Fitness weights, scenario weights, network topology, Arena rules, validation cadence, worker count, and checkpoint cadence are configured in the lab. The default dense food-approach reward only counts new distance progress toward a tracked target, so oscillation cannot farm fitness. All controls expose Russian help text.
+- Reaching the Arena tick limit alive is treated as successful survival: the policy receives the full survival and alive-at-end rewards without an anti-cycle penalty.
 - Validation uses the same enabled scenario mix and Arena rules as training, but runs on separate held-out seeds and does not affect selection.
 - Seeded Arena and genetic RNG remain independent. Evaluation results are applied in task order rather than worker completion order, so parallel scheduling does not change the result.
 

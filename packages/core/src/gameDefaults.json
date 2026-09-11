@@ -190,9 +190,9 @@
       "approach": 0.25,
       "wins": 100,
       "survival": 10,
-      "aliveAtLimit": 5,
+      "aliveAtLimit": 20,
       "death": 5,
-      "cycle": 5
+      "cycle": 0
     }
   },
 

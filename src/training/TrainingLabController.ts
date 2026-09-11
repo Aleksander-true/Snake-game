@@ -139,7 +139,6 @@ export class TrainingLabController {
       'trainingFitnessSurvival',
       'trainingFitnessAlive',
       'trainingFitnessDeath',
-      'trainingFitnessCycle',
     ].forEach((id) => this.input(id).addEventListener('input', () => this.renderFitnessFormula()));
     this.select('trainingReplaySpeed').addEventListener('change', () => {
       const speed = Number(this.select('trainingReplaySpeed').value) as ArenaSpeedMultiplier;
@@ -298,7 +297,7 @@ export class TrainingLabController {
       survival: this.decimal('trainingFitnessSurvival', 0, 1_000_000),
       aliveAtLimit: this.decimal('trainingFitnessAlive', 0, 1_000_000),
       death: this.decimal('trainingFitnessDeath', 0, 1_000_000),
-      cycle: this.decimal('trainingFitnessCycle', 0, 1_000_000),
+      cycle: 0,
     };
     return config;
   }
@@ -310,7 +309,6 @@ export class TrainingLabController {
     this.setValue('trainingFitnessSurvival', config.fitnessWeights.survival);
     this.setValue('trainingFitnessAlive', config.fitnessWeights.aliveAtLimit);
     this.setValue('trainingFitnessDeath', config.fitnessWeights.death);
-    this.setValue('trainingFitnessCycle', config.fitnessWeights.cycle);
     this.renderFitnessFormula();
   }
 
@@ -321,8 +319,7 @@ export class TrainingLabController {
       `+ приближение к еде × ${value('trainingFitnessApproach')}`,
       `+ победы × ${value('trainingFitnessWins')}`,
       `+ min(1, тики / лимит) × ${value('trainingFitnessSurvival')}`,
-      `+ (жива в конце ? ${value('trainingFitnessAlive')} : −${value('trainingFitnessDeath')})`,
-      `− (достигнут лимит живой змейкой ? ${value('trainingFitnessCycle')} : 0).`,
+      `+ (жива в конце ? ${value('trainingFitnessAlive')} : −${value('trainingFitnessDeath')}).`,
     ].join(' ');
   }
 
@@ -1041,7 +1038,6 @@ const trainingParameterHelp: Record<string, string> = {
   trainingFitnessSurvival: 'Награда за долю прожитых тиков относительно лимита.',
   trainingFitnessAlive: 'Дополнительная награда, если змейка осталась жива в конце партии.',
   trainingFitnessDeath: 'Штраф за смерть. Ноль отключает этот штраф.',
-  trainingFitnessCycle: 'Штраф за достижение лимита тиков живой змейкой без завершения партии.',
   trainingReplaySpeed: 'Скорость только Canvas-демонстрации. На скорость headless-обучения не влияет.',
 };
 
@@ -1093,7 +1089,6 @@ const trainingLabMarkup = `
       <label class="dev-row"><span class="dev-row-label">Выживание</span><input id="trainingFitnessSurvival" class="dev-input" type="number" min="0" step="0.1"></label>
       <label class="dev-row"><span class="dev-row-label">Жива в конце</span><input id="trainingFitnessAlive" class="dev-input" type="number" min="0" step="0.1"></label>
       <label class="dev-row"><span class="dev-row-label">Смерть</span><input id="trainingFitnessDeath" class="dev-input" type="number" min="0" step="0.1"></label>
-      <label class="dev-row"><span class="dev-row-label">Зацикливание</span><input id="trainingFitnessCycle" class="dev-input" type="number" min="0" step="0.1"></label>
       <p id="trainingFitnessFormula" class="training-lab-policy-note"></p>
     </div>
     <div class="dev-buttons training-lab-actions">

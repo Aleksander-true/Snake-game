@@ -54,6 +54,14 @@ describe('genetic training', () => {
     );
 
     expect(withProgress - withoutProgress).toBeCloseTo(3);
+
+    const aliveAtLimit = calculateRunFitness({
+      ...baseStats,
+      survivedTicks: 10_000,
+      aliveAtEnd: true,
+      deathReason: undefined,
+    }, 10_000, { ...config.fitnessWeights, cycle: 999 });
+    expect(aliveAtLimit).toBe(30);
   });
 
   test('applies seeded crossover and mutation deterministically', () => {

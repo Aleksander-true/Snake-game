@@ -14,6 +14,7 @@ export interface FitnessWeights {
   survival: number;
   aliveAtLimit: number;
   death: number;
+  /** @deprecated Kept in version 1 artifacts; reaching the limit is no longer penalized. */
   cycle: number;
 }
 

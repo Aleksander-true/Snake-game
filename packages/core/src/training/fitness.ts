@@ -7,13 +7,11 @@ export function calculateRunFitness(
   weights: FitnessWeights,
 ): number {
   const survival = Math.min(1, stats.survivedTicks / Math.max(1, maxTicks));
-  const reachedLimit = stats.aliveAtEnd && stats.survivedTicks >= maxTicks;
   return stats.score * weights.score
     + stats.foodApproachProgress * (weights.approach ?? 0)
     + stats.levelsWon * weights.wins
     + survival * weights.survival
-    + (stats.aliveAtEnd ? weights.aliveAtLimit : -weights.death)
-    - (reachedLimit ? weights.cycle : 0);
+    + (stats.aliveAtEnd ? weights.aliveAtLimit : -weights.death);
 }
 
 export function aggregateEvaluationMetrics(
