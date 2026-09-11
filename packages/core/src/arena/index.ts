@@ -1,6 +1,6 @@
 export { Arena } from './Arena';
 export { runArenaSimulation, runArenaBatch } from './runBatch';
-export { createSeededRng } from './seededRng';
+export { createSeededRng, createStatefulSeededRng } from './seededRng';
 export type {
   ArenaAlgorithm,
   ArenaParticipant,

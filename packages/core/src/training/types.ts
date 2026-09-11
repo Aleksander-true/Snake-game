@@ -64,6 +64,7 @@ export interface GenerationReport {
   validationMetrics?: TrainingEvaluationMetrics;
   elapsedMs: number;
   simulationsPerSecond: number;
+  ticksPerSecond?: number;
 }
 
 export interface TrainedModelArtifact {
@@ -78,6 +79,8 @@ export interface TrainedModelArtifact {
   trainingFitness: number;
   validationFitness?: number;
   metrics: TrainingEvaluationMetrics;
+  parentModelId?: string;
+  parentTrainingFitness?: number;
 }
 
 export interface GeneticTrainingResult {
@@ -93,4 +96,62 @@ export interface GeneticTrainingCallbacks {
     champion: TrainingCandidateResult,
   ) => void;
   shouldCancel?: () => boolean;
+}
+
+export interface TrainingCandidateGenome {
+  id: string;
+  genome: Float32Array;
+}
+
+export interface TrainingEvaluationTask {
+  id: string;
+  mode: 'training' | 'validation';
+  candidate: TrainingCandidateGenome;
+  opponent?: TrainingCandidateGenome;
+  config: GeneticTrainingConfig;
+}
+
+export interface TrainingEvaluationResult {
+  taskId: string;
+  candidateId: string;
+  fitness: number;
+  metrics: TrainingEvaluationMetrics;
+  simulations: number;
+  ticksExecuted: number;
+}
+
+export interface SerializedTrainingCandidate {
+  id: string;
+  genome: number[];
+  fitness?: number;
+  metrics?: TrainingEvaluationMetrics;
+}
+
+export interface GeneticTrainingCheckpoint {
+  formatVersion: 1;
+  runId: string;
+  createdAt: string;
+  updatedAt: string;
+  nextGeneration: number;
+  config: GeneticTrainingConfig;
+  population: SerializedTrainingCandidate[];
+  champion: SerializedTrainingCandidate | null;
+  rngState: number;
+  reports: GenerationReport[];
+  parentModelId?: string;
+  parentTrainingFitness?: number;
+}
+
+export interface PreparedTrainingGeneration {
+  generation: number;
+  evaluated: TrainingCandidateResult[];
+  champion: TrainingCandidateResult;
+  evaluationResults: TrainingEvaluationResult[];
+  validationTask?: TrainingEvaluationTask;
+}
+
+export interface CompletedTrainingGeneration {
+  report: GenerationReport;
+  generationBest: TrainingCandidateResult;
+  champion: TrainingCandidateResult;
 }

@@ -1,10 +1,14 @@
-import { RandomPort } from '../engine/ports';
+import { RandomPort, StatefulRandomPort } from '../engine/ports';
 
 /**
  * Deterministic LCG RNG for reproducible arena simulations.
  */
 export function createSeededRng(seed: number): RandomPort {
-  let state = (seed >>> 0) || 1;
+  return createStatefulSeededRng(seed);
+}
+
+export function createStatefulSeededRng(seed: number, savedState?: number): StatefulRandomPort {
+  let state = savedState === undefined ? (seed >>> 0) || 1 : savedState >>> 0;
 
   const nextUint32 = (): number => {
     state = (1664525 * state + 1013904223) >>> 0;
@@ -18,6 +22,9 @@ export function createSeededRng(seed: number): RandomPort {
     nextInt(max: number): number {
       if (max <= 0) return 0;
       return Math.floor((nextUint32() / 0x100000000) * max);
+    },
+    getState(): number {
+      return state;
     },
   };
 }

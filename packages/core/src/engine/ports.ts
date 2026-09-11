@@ -10,3 +10,7 @@ export interface RandomPort {
   /** Returns a pseudo-random integer in [0, max). */
   nextInt(max: number): number;
 }
+
+export interface StatefulRandomPort extends RandomPort {
+  getState(): number;
+}
