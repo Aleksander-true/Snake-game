@@ -32,6 +32,8 @@ export interface ArenaSnakeStats {
   algorithmId: string;
   score: number;
   foodEaten: number;
+  /** New cells closed toward tracked food targets; moving away cannot be farmed. */
+  foodApproachProgress: number;
   finalLength: number;
   levelsWon: number;
   survivedTicks: number;

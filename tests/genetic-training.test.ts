@@ -1,6 +1,7 @@
 import {
   GeneticTrainer,
   GeneticTrainingSession,
+  calculateRunFitness,
   createDefaultGeneticTrainingConfig,
   createSeededRng,
   crossoverGenomes,
@@ -25,7 +26,34 @@ describe('genetic training', () => {
       topology: [402, ...training.hiddenLayers, 3],
       trainingSeeds: training.trainingSeedOffsets.map((offset) => training.seed + offset),
       validationSeeds: training.validationSeedOffsets.map((offset) => training.seed + offset),
+      fitnessWeights: training.fitnessWeights,
     });
+  });
+
+  test('rewards bounded progress toward food without replacing score rewards', () => {
+    const config = createDefaultGeneticTrainingConfig(402);
+    const baseStats = {
+      snakeId: 1,
+      name: 'Candidate',
+      algorithmId: 'candidate',
+      score: 0,
+      foodEaten: 0,
+      foodApproachProgress: 0,
+      finalLength: 5,
+      levelsWon: 0,
+      survivedTicks: 100,
+      survivedMs: 15_000,
+      aliveAtEnd: false,
+      deathReason: 'wall',
+    };
+    const withoutProgress = calculateRunFitness(baseStats, 10_000, config.fitnessWeights);
+    const withProgress = calculateRunFitness(
+      { ...baseStats, foodApproachProgress: 12 },
+      10_000,
+      config.fitnessWeights,
+    );
+
+    expect(withProgress - withoutProgress).toBeCloseTo(3);
   });
 
   test('applies seeded crossover and mutation deterministically', () => {

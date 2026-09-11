@@ -27,6 +27,7 @@ describe('heuristic arena', () => {
     expect(result.snakes).toHaveLength(2);
     expect(result.snakes[0].algorithmId).toBe('wise');
     expect(result.snakes[0].survivedMs).toBe(result.snakes[0].survivedTicks * 150);
+    expect(result.snakes[0].foodApproachProgress).toBeGreaterThanOrEqual(0);
   });
 
   test('aggregates statistics by algorithm across multiple runs', () => {

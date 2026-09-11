@@ -134,6 +134,7 @@ export class TrainingLabController {
     this.input('trainingWorkerCount').addEventListener('input', () => this.applyWorkerSelection());
     [
       'trainingFitnessScore',
+      'trainingFitnessApproach',
       'trainingFitnessWins',
       'trainingFitnessSurvival',
       'trainingFitnessAlive',
@@ -292,6 +293,7 @@ export class TrainingLabController {
     }
     config.fitnessWeights = {
       score: this.decimal('trainingFitnessScore', 0, 1_000_000),
+      approach: this.decimal('trainingFitnessApproach', 0, 1_000_000),
       wins: this.decimal('trainingFitnessWins', 0, 1_000_000),
       survival: this.decimal('trainingFitnessSurvival', 0, 1_000_000),
       aliveAtLimit: this.decimal('trainingFitnessAlive', 0, 1_000_000),
@@ -303,6 +305,7 @@ export class TrainingLabController {
 
   private writeFitnessValues(config: GeneticTrainingConfig): void {
     this.setValue('trainingFitnessScore', config.fitnessWeights.score);
+    this.setValue('trainingFitnessApproach', config.fitnessWeights.approach ?? 0);
     this.setValue('trainingFitnessWins', config.fitnessWeights.wins);
     this.setValue('trainingFitnessSurvival', config.fitnessWeights.survival);
     this.setValue('trainingFitnessAlive', config.fitnessWeights.aliveAtLimit);
@@ -315,6 +318,7 @@ export class TrainingLabController {
     const value = (id: string) => this.input(id).value || '0';
     this.element('trainingFitnessFormula').textContent = [
       `Fitness = очки × ${value('trainingFitnessScore')}`,
+      `+ приближение к еде × ${value('trainingFitnessApproach')}`,
       `+ победы × ${value('trainingFitnessWins')}`,
       `+ min(1, тики / лимит) × ${value('trainingFitnessSurvival')}`,
       `+ (жива в конце ? ${value('trainingFitnessAlive')} : −${value('trainingFitnessDeath')})`,
@@ -404,6 +408,7 @@ export class TrainingLabController {
       format(report.medianFitness),
       report.validationFitness === undefined ? '—' : format(report.validationFitness),
       format(report.bestMetrics.averageScore),
+      format(report.bestMetrics.averageFoodApproach ?? 0),
       format(report.bestMetrics.averageSurvivedTicks),
       `${format(report.bestMetrics.winRate * 100)}%`,
       format(report.diversity),
@@ -723,6 +728,7 @@ export class TrainingLabController {
       ['Validation fitness', model.validationFitness === undefined ? '—' : format(model.validationFitness)],
       ['Средние очки', format(metrics.averageScore)],
       ['Средняя еда', format(metrics.averageFoodEaten)],
+      ['Среднее приближение к еде', format(metrics.averageFoodApproach ?? 0)],
       ['Среднее выживание', `${format(metrics.averageSurvivedTicks)} тиков`],
       ['Средняя длина', format(metrics.averageFinalLength)],
       ['Победы', `${format(metrics.winRate * 100)}%`],
@@ -884,6 +890,7 @@ export class TrainingLabController {
     const header = [
       'generation', 'bestFitness', 'meanFitness', 'medianFitness', 'validationFitness',
       'averageScore', 'averageSurvivedTicks', 'winRate', 'aliveRate', 'diversity',
+      'averageFoodApproach',
       'simulationsPerSecond',
       'ticksPerSecond', 'elapsedMs',
     ];
@@ -898,6 +905,7 @@ export class TrainingLabController {
       report.bestMetrics.winRate,
       report.bestMetrics.aliveRate,
       report.diversity,
+      report.bestMetrics.averageFoodApproach ?? 0,
       report.simulationsPerSecond,
       report.ticksPerSecond ?? '',
       report.elapsedMs,
@@ -1028,6 +1036,7 @@ const trainingParameterHelp: Record<string, string> = {
   trainingHeuristicWeight: 'Вес партий против basic/solid ботов. Ноль полностью отключает сценарий.',
   trainingCohortWeight: 'Вес партий против нейросетей текущего поколения. Ноль полностью отключает сценарий.',
   trainingFitnessScore: 'Награда за каждое игровое очко.',
+  trainingFitnessApproach: 'Награда за каждую новую клетку приближения к выбранной еде. Отход назад и повторное движение по уже пройденному пути не награждаются.',
   trainingFitnessWins: 'Награда за выигранный уровень или раунд.',
   trainingFitnessSurvival: 'Награда за долю прожитых тиков относительно лимита.',
   trainingFitnessAlive: 'Дополнительная награда, если змейка осталась жива в конце партии.',
@@ -1079,6 +1088,7 @@ const trainingLabMarkup = `
     <div class="dev-section">
       <div class="dev-section-title">Fitness</div>
       <label class="dev-row"><span class="dev-row-label">Очки</span><input id="trainingFitnessScore" class="dev-input" type="number" min="0" step="0.1"></label>
+      <label class="dev-row"><span class="dev-row-label">Приближение к еде</span><input id="trainingFitnessApproach" class="dev-input" type="number" min="0" step="0.05"></label>
       <label class="dev-row"><span class="dev-row-label">Победа</span><input id="trainingFitnessWins" class="dev-input" type="number" min="0" step="0.1"></label>
       <label class="dev-row"><span class="dev-row-label">Выживание</span><input id="trainingFitnessSurvival" class="dev-input" type="number" min="0" step="0.1"></label>
       <label class="dev-row"><span class="dev-row-label">Жива в конце</span><input id="trainingFitnessAlive" class="dev-input" type="number" min="0" step="0.1"></label>
@@ -1114,7 +1124,7 @@ const trainingLabMarkup = `
     </div>
     <div class="dev-section training-report-wrap">
       <div class="dev-section-title">Поколения</div>
-      <table class="training-report-table"><thead><tr><th>Поколение</th><th>Best fitness</th><th>Mean fitness</th><th>Median fitness</th><th>Validation</th><th>Средние очки</th><th>Средние тики</th><th>Победы</th><th>Разнообразие</th><th>Партий/с</th><th>Тиков/с</th><th>Время</th></tr></thead><tbody id="trainingReportBody"></tbody></table>
+      <table class="training-report-table"><thead><tr><th>Поколение</th><th>Best fitness</th><th>Mean fitness</th><th>Median fitness</th><th>Validation</th><th>Средние очки</th><th>Приближение</th><th>Средние тики</th><th>Победы</th><th>Разнообразие</th><th>Партий/с</th><th>Тиков/с</th><th>Время</th></tr></thead><tbody id="trainingReportBody"></tbody></table>
     </div>
     <div class="dev-section"><div class="dev-section-title">Итоги чемпиона</div><div id="trainingSummary" class="training-summary">Обучение ещё не завершено.</div></div>
   </div>

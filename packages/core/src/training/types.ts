@@ -8,6 +8,8 @@ export interface TrainingScenarioWeights {
 
 export interface FitnessWeights {
   score: number;
+  /** Reward per new cell closed toward a tracked food target. */
+  approach?: number;
   wins: number;
   survival: number;
   aliveAtLimit: number;
@@ -39,6 +41,7 @@ export interface TrainingEvaluationMetrics {
   runs: number;
   averageScore: number;
   averageFoodEaten: number;
+  averageFoodApproach?: number;
   averageSurvivedTicks: number;
   averageFinalLength: number;
   winRate: number;
