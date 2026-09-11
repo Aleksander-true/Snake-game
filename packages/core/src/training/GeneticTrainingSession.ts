@@ -51,6 +51,7 @@ export class GeneticTrainingSession {
   private population: TrainingCandidateGenome[];
   private reports: GenerationReport[];
   private champion: TrainingCandidateResult | null;
+  private championGeneration: number;
   private nextGeneration: number;
 
   constructor(config: GeneticTrainingConfig, options: GeneticTrainingSessionOptions = {}) {
@@ -70,6 +71,7 @@ export class GeneticTrainingSession {
     );
     this.reports = checkpoint?.reports.map(cloneReport) ?? [];
     this.champion = checkpoint?.champion ? deserializeEvaluatedCandidate(checkpoint.champion) : null;
+    this.championGeneration = checkpoint?.championGeneration ?? 0;
     this.nextGeneration = checkpoint?.nextGeneration ?? 1;
     this.initialModelGenome = options.initialModel
       ? validateAndReadModelGenome(options.initialModel, config)
@@ -120,15 +122,18 @@ export class GeneticTrainingSession {
       };
     }).sort((left, right) => right.fitness - left.fitness);
     const generationBest = evaluated[0];
-    const champion = !this.champion || generationBest.fitness > this.champion.fitness
+    const previousChampion = this.champion;
+    const hasNewChampion = !previousChampion || generationBest.fitness > previousChampion.fitness;
+    const champion = hasNewChampion
       ? cloneEvaluatedCandidate(generationBest)
-      : cloneEvaluatedCandidate(this.champion);
+      : cloneEvaluatedCandidate(previousChampion);
     const shouldValidate = this.nextGeneration % this.config.validationEvery === 0
       || this.nextGeneration === this.config.generations;
     return {
       generation: this.nextGeneration,
       evaluated,
       champion,
+      championGeneration: hasNewChampion ? this.nextGeneration : this.championGeneration,
       evaluationResults: results.map(cloneEvaluationResult),
       validationTask: shouldValidate ? {
         id: `${this.nextGeneration}/${champion.id}/validation`,
@@ -151,6 +156,7 @@ export class GeneticTrainingSession {
       throw new Error('Validation result does not match generation requirements');
     }
     this.champion = cloneEvaluatedCandidate(prepared.champion);
+    this.championGeneration = prepared.championGeneration;
     const simulations = prepared.evaluationResults.reduce(
       (total, result) => total + result.simulations,
       validation?.simulations ?? 0,
@@ -176,6 +182,7 @@ export class GeneticTrainingSession {
       report: cloneReport(report),
       generationBest: cloneEvaluatedCandidate(prepared.evaluated[0]),
       champion: cloneEvaluatedCandidate(this.champion),
+      championGeneration: this.championGeneration,
     };
   }
 
@@ -189,6 +196,7 @@ export class GeneticTrainingSession {
       config: cloneConfig(this.config),
       population: this.population.map(serializeCandidate),
       champion: this.champion ? serializeCandidate(this.champion) : null,
+      championGeneration: this.championGeneration,
       rngState: this.rng.getState(),
       reports: this.reports.map(cloneReport),
       parentModelId: this.parentModelId,
@@ -217,6 +225,28 @@ export class GeneticTrainingSession {
       },
       reports: this.reports.map(cloneReport),
       completedGenerations: this.reports.length,
+    };
+  }
+
+  createChampionModel(): TrainedModelArtifact {
+    if (!this.champion) throw new Error('Training session has no evaluated champion');
+    const latestValidation = [...this.reports]
+      .reverse()
+      .find((report) => report.validationFitness !== undefined)?.validationFitness;
+    return {
+      formatVersion: 1,
+      observationVersion: 1,
+      id: `ga-${this.runId}`,
+      name: `GA checkpoint ${this.runId}`,
+      createdAt: new Date().toISOString(),
+      topology: [...this.config.topology],
+      genome: Array.from(this.champion.genome),
+      trainingConfig: cloneConfig(this.config),
+      trainingFitness: this.champion.fitness,
+      validationFitness: latestValidation,
+      metrics: cloneMetrics(this.champion.metrics),
+      parentModelId: this.parentModelId,
+      parentTrainingFitness: this.parentTrainingFitness,
     };
   }
 

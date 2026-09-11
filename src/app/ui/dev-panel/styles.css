@@ -137,14 +137,23 @@
 
 /* --- Genetic training lab --- */
 .training-preview-header {
-  min-height: 44px;
-  padding: 10px 14px;
+  height: 78px;
+  min-height: 78px;
+  padding: 6px 14px;
   border-bottom: 1px solid var(--color-panel-border);
   background: var(--color-panel);
   color: var(--color-text);
   font-size: 0.8rem;
-  line-height: 1.45;
-  text-align: center;
+  line-height: 22px;
+  text-align: left;
+  overflow: hidden;
+}
+
+.training-preview-row {
+  height: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .training-lab-panel {
@@ -153,7 +162,7 @@
 }
 
 .training-lab-panel .dev-row {
-  grid-template-columns: minmax(100px, 130px) minmax(0, 1fr);
+  grid-template-columns: minmax(100px, 130px) minmax(0, 1fr) 18px;
 }
 
 .training-lab-panel .dev-row > .dev-input {
@@ -195,6 +204,51 @@
   background: var(--color-input-bg);
   color: var(--color-text);
   font-size: 0.8rem;
+}
+
+.training-execution-status {
+  margin: 6px 0;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.training-parameter-help {
+  position: relative;
+  grid-column: 3;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  line-height: 16px;
+  text-align: center;
+  cursor: help;
+}
+
+.training-parameter-tooltip {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: 22px;
+  display: none;
+  width: 260px;
+  padding: 8px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: normal;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.training-parameter-help:hover .training-parameter-tooltip,
+.training-parameter-help:focus .training-parameter-tooltip,
+.training-parameter-help:focus-within .training-parameter-tooltip {
+  display: block;
 }
 
 .training-power-status {
@@ -241,6 +295,26 @@
   fill: var(--color-warning, #ffd166);
 }
 
+.training-chart-grid {
+  stroke: var(--color-panel-border);
+  stroke-width: 1;
+}
+
+.training-chart-axis-label,
+.training-chart-axis-title {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.training-chart-axis-title {
+  text-anchor: middle;
+  font-size: 12px;
+}
+
+.training-chart-axis-label-x {
+  text-anchor: middle;
+}
+
 .training-chart-legend {
   display: flex;
   gap: 12px;
@@ -277,9 +351,24 @@
 .training-report-table th,
 .training-report-table td {
   padding: 4px;
-  border-bottom: 1px solid var(--color-panel-border);
+  border: 1px solid var(--color-panel-border);
   text-align: right;
   white-space: nowrap;
+}
+
+.training-report-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-panel);
+}
+
+.training-results-area {
+  width: 100%;
+  min-height: 260px;
+  padding: 8px;
+  overflow: auto;
+  color: var(--color-text);
 }
 
 .training-report-table th:first-child,

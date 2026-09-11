@@ -110,6 +110,28 @@ describe('genetic training', () => {
       ))
     ))).toBe(true);
   });
+
+  test('applies parallel evaluation results in canonical candidate order', () => {
+    const config = createSmallConfig(1);
+    const ordered = new GeneticTrainingSession(config, { runId: 'ordered' });
+    const reordered = new GeneticTrainingSession(config, { runId: 'ordered' });
+    const results = ordered.createEvaluationTasks().map(evaluateTrainingTask);
+    const orderedPrepared = ordered.prepareGeneration(results);
+    const reorderedPrepared = reordered.prepareGeneration([...results].reverse());
+
+    ordered.completeGeneration(
+      orderedPrepared,
+      orderedPrepared.validationTask ? evaluateTrainingTask(orderedPrepared.validationTask) : undefined,
+      100,
+    );
+    reordered.completeGeneration(
+      reorderedPrepared,
+      reorderedPrepared.validationTask ? evaluateTrainingTask(reorderedPrepared.validationTask) : undefined,
+      100,
+    );
+
+    expect(reordered.createResult().model.genome).toEqual(ordered.createResult().model.genome);
+  });
 });
 
 function createSmallConfig(generations: number) {

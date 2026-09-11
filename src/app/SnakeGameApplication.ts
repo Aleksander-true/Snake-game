@@ -233,6 +233,7 @@ export class SnakeGameApplication {
     this.trainingLabController = new TrainingLabController({
       canvas: layout.canvas,
       panel: layout.devPanelContainer,
+      outputHost: layout.gameArea,
       previewPanel: layout.gameArea.querySelector('#hud-top') as HTMLElement,
       initialConfig,
       onBack: () => this.router.navigate('menu'),

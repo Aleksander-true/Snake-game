@@ -136,6 +136,7 @@ export interface GeneticTrainingCheckpoint {
   config: GeneticTrainingConfig;
   population: SerializedTrainingCandidate[];
   champion: SerializedTrainingCandidate | null;
+  championGeneration: number;
   rngState: number;
   reports: GenerationReport[];
   parentModelId?: string;
@@ -146,6 +147,7 @@ export interface PreparedTrainingGeneration {
   generation: number;
   evaluated: TrainingCandidateResult[];
   champion: TrainingCandidateResult;
+  championGeneration: number;
   evaluationResults: TrainingEvaluationResult[];
   validationTask?: TrainingEvaluationTask;
 }
@@ -154,4 +156,5 @@ export interface CompletedTrainingGeneration {
   report: GenerationReport;
   generationBest: TrainingCandidateResult;
   champion: TrainingCandidateResult;
+  championGeneration: number;
 }

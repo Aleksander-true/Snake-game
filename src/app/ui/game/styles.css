@@ -215,10 +215,25 @@
 
 .training-lab-mode .game-area {
   height: 100%;
+  overflow-y: auto;
 }
 
 .training-lab-mode .training-canvas-hidden {
   display: none;
+}
+
+.training-lab-mode .game-middle,
+.training-lab-mode .game-middle--dev {
+  flex: 0 0 60%;
+}
+
+.training-lab-mode .training-background-mode .game-middle,
+.training-lab-mode .training-background-mode .game-middle--dev {
+  display: none;
+}
+
+.training-lab-mode .training-background-mode .training-results-area {
+  flex: 1;
 }
 
 .training-lab-mode .game-players-panel,
@@ -230,7 +245,6 @@
 
 .training-lab-mode .game-middle,
 .training-lab-mode .game-middle--dev {
-  flex: 1;
   min-height: 0;
   width: 100%;
   justify-content: center;

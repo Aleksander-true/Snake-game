@@ -126,11 +126,13 @@ The current heuristic only has a partial deterministic mistake mechanism. It mus
 
 In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has a **«Лаборатория обучения»** button that opens the lab screen directly (defaults from `getDefaultTrainingLaunchConfig()` in `MenuScreenService.ts`).
 
-- The lab runs **headless** simulations: no live game loop on the canvas; results are shown as text (ticks, score, death reason). Parameters are edited on the lab screen, not in the menu.
-- The policy selector offers the deterministic `random-turns` baseline and `neural-simple-v1`, a small neural network with deterministic random weights. The neural policy is intentionally untrained at this stage.
-- Both policies implement `ArenaAlgorithm` and use `runArenaSimulation` from `packages/core/src/arena/runBatch.ts`; the UI does not depend on their internal implementation.
-- Arena injects a seeded RNG into participant algorithms. Random decisions and neural-network initialization must use that RNG, so the same configuration and seed produce the same metrics.
-- UI copy and layout live in `SnakeGameApplication.mountTrainingLabPanel` (Russian strings).
+- A coordinator Web Worker owns the genetic session and dispatches deterministic Arena evaluations to a persistent worker pool. Automatic selection leaves two reported CPU cores free; manual selection is also available.
+- `GeneticTrainingSession` in the shared core defines generation boundaries, canonical evaluation tasks, RNG state, checkpoints, and model fine-tuning. The browser worker only schedules those tasks.
+- Pausing completes the current generation and stores a full checkpoint in IndexedDB. Checkpoint frequency is configurable; resumptions may use a different worker count without changing the genetic result.
+- The current champion is saved under a stable run id after each checkpoint. Completed and imported models use `LocalModelRepository` (`snake.geneticModels.v1`) and can seed a new compatible fine-tuning run.
+- Visual mode independently replays the newest generation champion on Canvas. Background mode disables replay, requests a Screen Wake Lock, and places the chart and report table in the Canvas area.
+- Fitness weights, scenario weights, network topology, Arena rules, validation cadence, worker count, and checkpoint cadence are configured in the lab. All controls expose Russian help text.
+- Seeded Arena and genetic RNG remain independent. Evaluation results are applied in task order rather than worker completion order, so parallel scheduling does not change the result.
 
 ## Future Improvements
 
