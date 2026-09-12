@@ -16,6 +16,11 @@ workerScope.onmessage = (event: MessageEvent<EvaluationWorkerRequest>) => {
       result: evaluateTrainingTask(event.data.task),
     });
   } catch (error) {
+    console.error(
+      '[training:evaluation] Task failed',
+      event.data.task.id,
+      error instanceof Error ? error.message : String(error),
+    );
     workerScope.postMessage({
       type: 'failed',
       taskId: event.data.task.id,

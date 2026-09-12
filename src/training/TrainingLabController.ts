@@ -212,7 +212,16 @@ export class TrainingLabController {
       const checkpointEvery = this.integer('trainingCheckpointEvery', 1, 100);
       this.runner.start(config, {
         onMessage: (message) => {
-          if (message.type === 'generation') {
+          if (message.type === 'progress') {
+            const label = message.stage === 'preparing'
+              ? 'Подготовка популяции'
+              : message.stage === 'validating'
+                ? 'Validation'
+                : 'Оценка поколения';
+            this.setStatus(
+              `${label} ${message.generation}: ${message.completed}/${message.total}; Worker: ${message.workerCount}`,
+            );
+          } else if (message.type === 'generation') {
             this.reports.push(message.report);
             if (this.displayMode === 'background') {
               this.renderBackgroundProgress(message.report, config.generations);
@@ -235,6 +244,7 @@ export class TrainingLabController {
           } else if (message.type === 'completed') {
             void this.completeTraining(message.result, message.runId);
           } else {
+            console.error('[training] Training failed', message.message);
             this.wakeLock.stop();
             this.setRunning(false);
             this.setStatus(`Ошибка: ${message.message}`);
@@ -246,6 +256,7 @@ export class TrainingLabController {
         initialModel: checkpoint ? undefined : this.fineTuneModel ?? undefined,
       });
     } catch (error) {
+      console.error('[training] Could not start training', error);
       this.wakeLock.stop();
       this.setRunning(false);
       this.setStatus(`Ошибка конфигурации: ${error instanceof Error ? error.message : String(error)}`);

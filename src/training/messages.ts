@@ -26,6 +26,14 @@ export type TrainingWorkerRequest =
 
 export type TrainingWorkerResponse =
   | {
+      type: 'progress';
+      stage: 'preparing' | 'evaluating' | 'validating';
+      generation: number;
+      completed: number;
+      total: number;
+      workerCount: number;
+    }
+  | {
       type: 'generation';
       report: GenerationReport;
       generationBest: TrainingCandidateResult;

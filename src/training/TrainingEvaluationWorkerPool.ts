@@ -18,7 +18,10 @@ export class TrainingEvaluationWorkerPool {
   private stopped = false;
   private evaluating = false;
 
-  constructor(readonly size: number) {
+  constructor(
+    readonly size: number,
+    private readonly workerFactory: () => Worker,
+  ) {
     if (!Number.isInteger(size) || size < 1) throw new Error('Worker count must be positive');
     this.slots = Array.from({ length: size }, () => ({
       worker: this.createWorker(),
@@ -26,22 +29,28 @@ export class TrainingEvaluationWorkerPool {
     }));
   }
 
-  evaluate(tasks: TrainingEvaluationTask[]): Promise<TrainingEvaluationResult[]> {
+  evaluate(
+    tasks: TrainingEvaluationTask[],
+    onProgress?: (completed: number, total: number) => void,
+  ): Promise<TrainingEvaluationResult[]> {
     if (this.stopped) return Promise.reject(new Error('Evaluation worker pool is stopped'));
     if (this.evaluating) return Promise.reject(new Error('Evaluation batch is already running'));
     if (tasks.length === 0) return Promise.resolve([]);
     this.evaluating = true;
+    logTraining('Evaluation batch started', { tasks: tasks.length, workers: this.size });
 
     return new Promise((resolve, reject) => {
       const queue = tasks.map((task, index) => ({ task, index, attempts: 0 }));
       const results = new Array<TrainingEvaluationResult>(tasks.length);
       let completed = 0;
       let settled = false;
+      onProgress?.(0, tasks.length);
 
       const finishWithError = (message: string) => {
         if (settled) return;
         settled = true;
         this.evaluating = false;
+        console.error('[training:pool] Evaluation batch failed', message);
         reject(new Error(message));
       };
 
@@ -52,13 +61,18 @@ export class TrainingEvaluationWorkerPool {
           if (completed === tasks.length) {
             settled = true;
             this.evaluating = false;
+            logTraining('Evaluation batch completed', { tasks: tasks.length });
             resolve(results);
           }
           return;
         }
         slot.current = queued;
         const request: EvaluationWorkerRequest = { type: 'evaluate', task: queued.task };
-        slot.worker.postMessage(request);
+        try {
+          slot.worker.postMessage(request);
+        } catch (error) {
+          retryOrFail(slot, errorMessage(error), true);
+        }
       };
 
       const retryOrFail = (slot: WorkerSlot, message: string, replaceWorker: boolean) => {
@@ -66,14 +80,23 @@ export class TrainingEvaluationWorkerPool {
         slot.current = null;
         if (!failed) return;
         if (replaceWorker) {
-          slot.worker.terminate();
-          slot.worker = this.createWorker();
-          bind(slot);
+          try {
+            slot.worker.terminate();
+            slot.worker = this.createWorker();
+            bind(slot);
+          } catch (error) {
+            finishWithError(`Could not replace evaluation worker: ${errorMessage(error)}`);
+            return;
+          }
         }
         if (failed.attempts >= 1) {
           finishWithError(`Evaluation ${failed.task.id} failed twice: ${message}`);
           return;
         }
+        logTraining('Retrying evaluation task', {
+          taskId: failed.task.id,
+          reason: message,
+        });
         queue.unshift({ ...failed, attempts: failed.attempts + 1 });
         assign(slot);
       };
@@ -83,6 +106,10 @@ export class TrainingEvaluationWorkerPool {
           if (settled) return;
           const current = slot.current;
           if (!current) return;
+          if (!event.data || (event.data.type !== 'failed' && event.data.type !== 'evaluated')) {
+            retryOrFail(slot, 'worker returned an invalid response', true);
+            return;
+          }
           if (event.data.type === 'failed') {
             retryOrFail(slot, event.data.message, false);
             return;
@@ -93,12 +120,16 @@ export class TrainingEvaluationWorkerPool {
           }
           results[current.index] = event.data.result;
           completed++;
+          onProgress?.(completed, tasks.length);
           slot.current = null;
           assign(slot);
         };
         slot.worker.onerror = (event) => {
           event.preventDefault();
           retryOrFail(slot, event.message || 'evaluation worker crashed', true);
+        };
+        slot.worker.onmessageerror = () => {
+          retryOrFail(slot, 'evaluation worker response could not be deserialized', true);
         };
       };
 
@@ -116,6 +147,16 @@ export class TrainingEvaluationWorkerPool {
   }
 
   private createWorker(): Worker {
-    return new Worker(new URL('./geneticEvaluation.worker.ts', import.meta.url));
+    return this.workerFactory();
   }
+}
+
+function logTraining(message: string, details: Record<string, unknown>): void {
+  if (typeof __DEV_MODE__ !== 'undefined' && __DEV_MODE__) {
+    console.info(`[training:pool] ${message} ${JSON.stringify(details)}`);
+  }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
