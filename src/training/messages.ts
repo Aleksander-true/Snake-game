@@ -4,6 +4,7 @@ import type {
   GeneticTrainingConfig,
   GeneticTrainingResult,
   TrainedModelArtifact,
+  TrainingCandidateGenome,
   TrainingCandidateResult,
   TrainingEvaluationResult,
   TrainingEvaluationTask,
@@ -37,6 +38,7 @@ export type TrainingWorkerResponse =
       type: 'generation';
       report: GenerationReport;
       generationBest: TrainingCandidateResult;
+      cohortOpponent?: TrainingCandidateGenome;
       recordFitness: number;
       recordGeneration: number;
       recordValidationFitness?: number;

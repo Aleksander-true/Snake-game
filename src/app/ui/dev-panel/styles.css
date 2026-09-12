@@ -156,6 +156,21 @@
   white-space: nowrap;
 }
 
+.training-replay-scenario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 3px 8px;
+  color: var(--color-text);
+  font-size: 0.78rem;
+}
+
+.training-replay-scenario-select {
+  width: min(320px, 60%);
+}
+
 .training-network-panel {
   align-self: stretch;
   min-width: 0;

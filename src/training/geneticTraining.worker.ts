@@ -81,10 +81,14 @@ async function runTraining(request: Extract<TrainingWorkerRequest, { type: 'star
           }))[0]
         : undefined;
       const completed = session.completeGeneration(prepared, validation, Date.now() - startedAt);
+      const cohortOpponent = tasks.find(
+        (task) => task.candidate.id === completed.generationBest.id,
+      )?.opponent;
       post({
         type: 'generation',
         report: completed.report,
         generationBest: completed.generationBest,
+        cohortOpponent,
         recordFitness: completed.champion.fitness,
         recordGeneration: completed.championGeneration,
         recordValidationFitness: completed.championValidationFitness,

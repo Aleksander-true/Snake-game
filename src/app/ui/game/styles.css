@@ -266,9 +266,14 @@
   align-items: flex-start;
   justify-content: center;
   width: 100%;
-  height: calc(100vh - 94px);
+  height: calc(100vh - 132px);
   min-width: 0;
   min-height: 320px;
+}
+
+.training-lab-mode .training-canvas-column {
+  width: 100%;
+  min-width: 0;
 }
 
 .training-lab-mode .training-canvas-stage canvas {

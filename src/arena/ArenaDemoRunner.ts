@@ -8,6 +8,7 @@ import type {
   ArenaParticipant,
   EngineContext,
   GameConfig,
+  GameMode,
   GameSettings,
   GameState,
   RandomPort,
@@ -23,6 +24,7 @@ export interface ArenaDemoOptions {
   settings?: Partial<GameSettings>;
   level?: number;
   difficultyLevel?: number;
+  gameMode?: GameMode;
   speedMultiplier?: ArenaSpeedMultiplier;
   seed?: number;
   fitToViewport?: boolean;
@@ -223,6 +225,6 @@ function createDemoConfigFromOptions(options: ArenaDemoOptions): GameConfig {
     botCount: Math.max(1, options.participants.length),
     playerNames: [],
     difficultyLevel: options.difficultyLevel ?? 1,
-    gameMode: 'classic',
+    gameMode: options.gameMode ?? 'classic',
   };
 }

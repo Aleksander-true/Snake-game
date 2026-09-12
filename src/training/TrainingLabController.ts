@@ -4,8 +4,10 @@ import {
   createDefaultGeneticTrainingConfig,
   createDenseNetworkFromGenome,
   createNeuralArenaAlgorithm,
+  getHeuristicAlgorithmById,
 } from '@snake-game/core';
 import type {
+  ArenaParticipant,
   GenerationReport,
   GameState,
   GeneticTrainingCheckpoint,
@@ -15,6 +17,7 @@ import type {
   TrainingCandidateResult,
   TrainingEvaluationMetrics,
   TrainedModelArtifact,
+  TrainingCandidateGenome,
 } from '@snake-game/core';
 import { createArenaDemoController } from '../arena/ArenaDemoRunner';
 import type { ArenaDemoController, ArenaSpeedMultiplier } from '../arena/ArenaDemoRunner';
@@ -48,9 +51,12 @@ interface ChampionPreview {
   metrics: TrainingEvaluationMetrics;
   source: 'training' | 'saved';
   currentFoodEaten: number;
+  cohortOpponent?: TrainingCandidateGenome;
+  cohortOpponentName?: string;
 }
 
 type TrainingDisplayMode = 'visual' | 'background';
+type TrainingReplayScenario = 'solo' | 'heuristic' | 'cohort';
 
 export class TrainingLabController {
   private readonly runner = new BrowserGeneticTrainingRunner();
@@ -67,6 +73,8 @@ export class TrainingLabController {
   private fineTuneModel: TrainedModelArtifact | null = null;
   private checkpointWrite: Promise<void> = Promise.resolve();
   private networkVisualizer: TrainingNetworkVisualizer | null = null;
+  private replayScenarioSelect: HTMLSelectElement | null = null;
+  private savedModels: TrainedModelArtifact[] = [];
 
   constructor(private readonly options: TrainingLabControllerOptions) {
     this.wakeLock = new TrainingWakeLock((message) => this.setPowerStatus(message));
@@ -149,6 +157,7 @@ export class TrainingLabController {
       const speed = Number(this.select('trainingReplaySpeed').value) as ArenaSpeedMultiplier;
       this.replay?.setSpeedMultiplier(speed);
     });
+    this.replayScenarioSelect?.addEventListener('change', () => this.restartPreview());
     this.applyWorkerSelection();
   }
 
@@ -157,19 +166,27 @@ export class TrainingLabController {
       const control = this.element(controlId) as HTMLInputElement | HTMLSelectElement;
       const label = control.closest('label');
       if (!label) return;
-      const help = document.createElement('span');
-      help.className = 'training-parameter-help';
-      help.tabIndex = 0;
-      help.textContent = '?';
-      const tooltip = document.createElement('span');
-      tooltip.id = `${controlId}Help`;
-      tooltip.className = 'training-parameter-tooltip';
-      tooltip.textContent = description;
-      help.appendChild(tooltip);
-      label.appendChild(help);
-      control.setAttribute('aria-describedby', tooltip.id);
-      label.title = description;
+      this.addParameterHelp(control, label, description);
     });
+  }
+
+  private addParameterHelp(
+    control: HTMLInputElement | HTMLSelectElement,
+    label: HTMLElement,
+    description: string,
+  ): void {
+    const help = document.createElement('span');
+    help.className = 'training-parameter-help';
+    help.tabIndex = 0;
+    help.textContent = '?';
+    const tooltip = document.createElement('span');
+    tooltip.id = `${control.id}Help`;
+    tooltip.className = 'training-parameter-tooltip';
+    tooltip.textContent = description;
+    help.appendChild(tooltip);
+    label.appendChild(help);
+    control.setAttribute('aria-describedby', tooltip.id);
+    label.title = description;
   }
 
   private startTraining(checkpoint?: GeneticTrainingCheckpoint): void {
@@ -240,6 +257,7 @@ export class TrainingLabController {
                 message.recordGeneration,
                 message.recordValidationFitness,
                 config,
+                message.cohortOpponent,
               );
             }
             this.renderExecutionProgress(message.report, config.generations, message.workerCount);
@@ -562,6 +580,9 @@ export class TrainingLabController {
     this.replay?.stop();
     this.replay = null;
     this.activePreview = null;
+    const compatibleOpponent = this.savedModels.find((candidate) => (
+      candidate.id !== model.id && candidate.topology.join(',') === model.topology.join(',')
+    ));
     this.playPreview({
       id: model.id,
       generation: null,
@@ -574,6 +595,11 @@ export class TrainingLabController {
       metrics: model.metrics,
       source: 'saved',
       currentFoodEaten: 0,
+      cohortOpponent: compatibleOpponent ? {
+        id: compatibleOpponent.id,
+        genome: new Float32Array(compatibleOpponent.genome),
+      } : undefined,
+      cohortOpponentName: compatibleOpponent?.name,
     });
   }
 
@@ -584,6 +610,7 @@ export class TrainingLabController {
     recordGeneration: number,
     recordValidationFitness: number | undefined,
     config: GeneticTrainingConfig,
+    cohortOpponent?: TrainingCandidateGenome,
   ): void {
     this.queuedChampion = {
       id: champion.id,
@@ -597,6 +624,10 @@ export class TrainingLabController {
       metrics: champion.metrics,
       source: 'training',
       currentFoodEaten: 0,
+      cohortOpponent: cohortOpponent ? {
+        id: cohortOpponent.id,
+        genome: cohortOpponent.genome.slice(),
+      } : undefined,
     };
     if (!this.replay) this.playQueuedChampion();
   }
@@ -617,21 +648,16 @@ export class TrainingLabController {
     const seed = validationSeeds[(this.previewRun - 1) % validationSeeds.length];
     let latestTrace: NeuralNetworkTrace | null = null;
     this.networkVisualizer?.showTopology(preview.config.topology);
+    const participants = this.createPreviewParticipants(preview, network, (trace) => {
+      latestTrace = trace;
+    });
     let controller: ArenaDemoController;
     controller = createArenaDemoController({
       canvas: this.options.canvas,
-      participants: [{
-        name: 'Чемпион',
-        algorithm: createNeuralArenaAlgorithm({
-          id: preview.id,
-          network,
-          onTrace: (trace) => {
-            latestTrace = trace;
-          },
-        }),
-      }],
+      participants,
       level: preview.config.level,
       difficultyLevel: preview.config.difficultyLevel,
+      gameMode: preview.config.gameMode,
       speedMultiplier: Number(this.select('trainingReplaySpeed').value) as ArenaSpeedMultiplier,
       seed,
       fitToViewport: true,
@@ -663,14 +689,83 @@ export class TrainingLabController {
   private mountNetworkVisualizer(): void {
     const middle = this.options.canvas.parentElement;
     if (!middle) return;
+    const canvasColumn = document.createElement('div');
+    canvasColumn.className = 'training-canvas-column';
+    const replayControls = document.createElement('label');
+    replayControls.className = 'training-replay-scenario';
+    const replayLabel = document.createElement('span');
+    replayLabel.textContent = 'Просмотр отбора';
+    const replaySelect = document.createElement('select');
+    replaySelect.id = 'trainingReplayScenario';
+    replaySelect.className = 'dev-input training-replay-scenario-select';
+    replaySelect.innerHTML = [
+      '<option value="solo">Одиночное испытание</option>',
+      '<option value="heuristic">Против эвристической змейки</option>',
+      '<option value="cohort">Против нейросети поколения</option>',
+    ].join('');
+    replayControls.append(replayLabel, replaySelect);
+    this.addParameterHelp(
+      replaySelect,
+      replayControls,
+      'Выбирает только демонстрационную партию: одиночную, против эвристики или против другой нейросети. На обучение и fitness не влияет.',
+    );
     const canvasStage = document.createElement('div');
     canvasStage.className = 'training-canvas-stage';
-    this.options.canvas.replaceWith(canvasStage);
+    this.options.canvas.replaceWith(canvasColumn);
     canvasStage.appendChild(this.options.canvas);
+    canvasColumn.append(replayControls, canvasStage);
+    this.replayScenarioSelect = replaySelect;
     const networkHost = document.createElement('aside');
-    middle.insertBefore(networkHost, canvasStage.nextSibling);
+    middle.insertBefore(networkHost, canvasColumn.nextSibling);
     this.networkVisualizer = new TrainingNetworkVisualizer(networkHost);
     this.networkVisualizer.reset();
+  }
+
+  private createPreviewParticipants(
+    preview: ChampionPreview,
+    network: ReturnType<typeof createDenseNetworkFromGenome>,
+    onTrace: (trace: NeuralNetworkTrace) => void,
+  ): ArenaParticipant[] {
+    const participants: ArenaParticipant[] = [{
+      name: 'Чемпион',
+      algorithm: createNeuralArenaAlgorithm({ id: preview.id, network, onTrace }),
+    }];
+    const scenario = this.readReplayScenario();
+    if (scenario === 'heuristic') {
+      const heuristicId = (this.previewRun - 1) % 2 === 0 ? 'basic' : 'solid';
+      participants.push({
+        name: `Эвристика ${heuristicId}`,
+        algorithm: getHeuristicAlgorithmById(heuristicId),
+      });
+    } else if (scenario === 'cohort') {
+      const opponent = preview.cohortOpponent ?? {
+        id: `${preview.id}-mirror`,
+        genome: preview.genome,
+      };
+      participants.push({
+        name: preview.cohortOpponent
+          ? preview.cohortOpponentName ?? 'Соперник поколения'
+          : 'Копия нейросети',
+        algorithm: createNeuralArenaAlgorithm({
+          id: opponent.id,
+          network: createDenseNetworkFromGenome(preview.config.topology, opponent.genome),
+        }),
+      });
+    }
+    return participants;
+  }
+
+  private restartPreview(): void {
+    const preview = this.activePreview;
+    if (!preview) return;
+    this.replay?.stop();
+    this.replay = null;
+    this.playPreview(preview);
+  }
+
+  private readReplayScenario(): TrainingReplayScenario {
+    const value = this.replayScenarioSelect?.value;
+    return value === 'heuristic' || value === 'cohort' ? value : 'solo';
   }
 
   private renderPreviewHeader(
@@ -816,6 +911,7 @@ export class TrainingLabController {
     const container = this.element('trainingModels');
     container.replaceChildren();
     const models = await this.repository.list();
+    this.savedModels = models;
     if (models.length === 0) {
       container.textContent = 'Сохранённых моделей пока нет.';
       return;
