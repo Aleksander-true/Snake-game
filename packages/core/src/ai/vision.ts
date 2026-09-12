@@ -1,6 +1,10 @@
 import { Direction, Position, GameState } from '../engine/types';
 import { GameSettings } from '../engine/settings';
 import { inBounds } from '../engine/board';
+import { getFoodReward } from '../engine/systems/foodSystem';
+
+const OPPONENT_SNAKE_DANGER_MULTIPLIER = 2;
+const HEDGEHOG_DANGER_MULTIPLIER = 3;
 
 /**
  * Generate the vision matrix for a bot snake.
@@ -21,6 +25,10 @@ export function generateVision(
   }
 
   if (size === 0) return vision;
+
+  const observerSnake = state.snakes.find(snake =>
+    snake.alive && snake.head.x === headPos.x && snake.head.y === headPos.y
+  );
 
   // Map vision coordinates to world coordinates based on direction
   for (let visionY = 0; visionY < size; visionY++) {
@@ -50,20 +58,22 @@ export function generateVision(
           && worldPos.y >= enemy.pos.y
           && worldPos.y < enemy.pos.y + enemy.height
         )) {
-          signal += getObstacleSignal(distance, settings);
+          signal += getObstacleSignal(distance, settings) * HEDGEHOG_DANGER_MULTIPLIER;
         }
 
         // Check snake bodies
         for (const snake of state.snakes) {
           if (!snake.alive) continue;
           if (snake.segments.some(segment => segment.x === worldPos.x && segment.y === worldPos.y)) {
-            signal += getObstacleSignal(distance, settings);
+            const dangerMultiplier = snake === observerSnake ? 1 : OPPONENT_SNAKE_DANGER_MULTIPLIER;
+            signal += getObstacleSignal(distance, settings) * dangerMultiplier;
           }
         }
 
         // Check food
-        if (state.foods.some(food => food.pos.x === worldPos.x && food.pos.y === worldPos.y)) {
-          signal += getFoodSignal(distance, settings);
+        const food = state.foods.find(item => item.pos.x === worldPos.x && item.pos.y === worldPos.y);
+        if (food) {
+          signal += getFoodSignal(distance, settings) * getFoodReward(food, settings).points;
         }
       }
 
@@ -97,7 +107,8 @@ function addOffscreenFoodSignals(
     ) continue;
     const projected = projectToVisionEdge(relative, minOffset, maxOffset);
     const distance = Math.max(Math.abs(relative.x), Math.abs(relative.y));
-    vision[projected.y + half][projected.x + half] += getFoodSignal(distance, settings);
+    const foodValue = getFoodReward(food, settings).points;
+    vision[projected.y + half][projected.x + half] += getFoodSignal(distance, settings) * foodValue;
   }
 }
 

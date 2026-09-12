@@ -48,6 +48,9 @@ interface BotInput {
 | Minimum magnitude | -5 |
 
 - Signals from multiple obstacles **sum** at each cell
+- The observing snake's own body keeps the regular 1x signal
+- Another living snake's body has a **2x danger multiplier**: -200 at distance 1, decaying to a minimum of -10
+- A hedgehog cell has a **3x danger multiplier**: -300 at distance 1, decaying to a minimum of -15
 
 #### Food — Positive values
 | Distance | Signal |
@@ -57,6 +60,10 @@ interface BotInput {
 | 3 cells | +90 |
 | d cells | `max(foodSignalClose - foodSignalDecay * (d - 1), foodSignalMin)` |
 | Very far (any distance) | minimum **+5** |
+
+The distance signal is multiplied by the food's current score value. Food worth
+1 point has 100% intensity, food worth 2 points has 200%, and food worth 3
+points has 300%. Projected off-screen food keeps the same value multiplier.
 
 ### Vision Rotation
 
