@@ -20,6 +20,8 @@ export function generateVision(
     vision.push(new Array(size).fill(0));
   }
 
+  if (size === 0) return vision;
+
   // Map vision coordinates to world coordinates based on direction
   for (let visionY = 0; visionY < size; visionY++) {
     for (let visionX = 0; visionX < size; visionX++) {
@@ -69,7 +71,64 @@ export function generateVision(
     }
   }
 
+  addOffscreenFoodSignals(vision, headPos, direction, state, settings, half);
+
   return vision;
+}
+
+function addOffscreenFoodSignals(
+  vision: number[][],
+  headPos: Position,
+  direction: Direction,
+  state: GameState,
+  settings: GameSettings,
+  half: number,
+): void {
+  const size = vision.length;
+  const minOffset = -half;
+  const maxOffset = size - half - 1;
+  for (const food of state.foods) {
+    const relative = rotateToVision(food.pos.x - headPos.x, food.pos.y - headPos.y, direction);
+    if (
+      relative.x >= minOffset
+      && relative.x <= maxOffset
+      && relative.y >= minOffset
+      && relative.y <= maxOffset
+    ) continue;
+    const projected = projectToVisionEdge(relative, minOffset, maxOffset);
+    const distance = Math.max(Math.abs(relative.x), Math.abs(relative.y));
+    vision[projected.y + half][projected.x + half] += getFoodSignal(distance, settings);
+  }
+}
+
+function rotateToVision(worldX: number, worldY: number, direction: Direction): Position {
+  switch (direction) {
+    case 'up':
+      return { x: worldX, y: worldY };
+    case 'down':
+      return { x: -worldX, y: -worldY };
+    case 'left':
+      return { x: -worldY, y: worldX };
+    case 'right':
+      return { x: worldY, y: -worldX };
+  }
+}
+
+function projectToVisionEdge(
+  relative: Position,
+  minOffset: number,
+  maxOffset: number,
+): Position {
+  const scales: number[] = [];
+  if (relative.x < minOffset) scales.push(minOffset / relative.x);
+  if (relative.x > maxOffset) scales.push(maxOffset / relative.x);
+  if (relative.y < minOffset) scales.push(minOffset / relative.y);
+  if (relative.y > maxOffset) scales.push(maxOffset / relative.y);
+  const scale = Math.min(...scales);
+  return {
+    x: Math.max(minOffset, Math.min(maxOffset, Math.round(relative.x * scale))),
+    y: Math.max(minOffset, Math.min(maxOffset, Math.round(relative.y * scale))),
+  };
 }
 
 /**
@@ -94,15 +153,16 @@ export function rotateToWorld(
 }
 
 function getObstacleSignal(dist: number, settings: GameSettings): number {
-  if (dist <= 0) return settings.obstacleSignalClose;
-  const signal = settings.obstacleSignalClose + settings.obstacleSignalDecay * dist;
+  if (dist <= 1) return settings.obstacleSignalClose;
+  const signal = settings.obstacleSignalClose + settings.obstacleSignalDecay * (dist - 1);
   return Math.min(signal, -5); // cap at -5
 }
 
 function getFoodSignal(dist: number, settings: GameSettings): number {
-  if (dist <= 0) return settings.foodSignalClose;
-  const signal = settings.foodSignalClose - settings.foodSignalDecay * dist;
-  return Math.max(signal, settings.foodSignalMin);
+  if (dist <= 1) return settings.foodSignalClose;
+  const signal = settings.foodSignalClose - settings.foodSignalDecay * (dist - 1);
+  const minimum = Math.max(settings.foodSignalMin, settings.foodSignalClose * 0.05);
+  return Math.max(signal, minimum);
 }
 
 /**

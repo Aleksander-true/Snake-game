@@ -164,17 +164,23 @@ export class TrainingNetworkVisualizer {
 
   private updateCell(cell: HTMLElement, value: number, label: string): void {
     cell.style.setProperty('--activation-color', activationColor(value));
+    cell.style.setProperty('--activation-darkness', String(activationStrength(value) * 0.55));
     cell.title = `${label}: ${formatActivation(value)}`;
     if (cell.getAttribute('aria-hidden') !== 'true') cell.setAttribute('aria-label', cell.title);
   }
 }
 
 function activationColor(value: number): string {
-  const strength = 1 - Math.exp(-Math.abs(value));
+  const strength = activationStrength(value);
   const faded = Math.round(255 * (1 - strength));
   if (value > 0) return `rgb(${faded}, 255, ${faded})`;
   if (value < 0) return `rgb(255, ${faded}, ${faded})`;
   return 'rgb(255, 255, 255)';
+}
+
+function activationStrength(value: number): number {
+  if (value === 0) return 0;
+  return 0.18 + 0.82 * (1 - Math.exp(-2 * Math.abs(value)));
 }
 
 function formatActivation(value: number): string {
