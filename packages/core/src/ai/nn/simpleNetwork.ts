@@ -26,6 +26,12 @@ export interface NetworkOutput {
   action: BotDecision;
 }
 
+export interface NeuralNetworkTrace {
+  input: Float32Array;
+  layerValues: Float32Array[];
+  output: NetworkOutput;
+}
+
 export function actionIndexToDecision(actionIndex: number): BotDecision {
   switch (actionIndex) {
     case 0:
@@ -109,18 +115,45 @@ export function createDenseNetwork(
 }
 
 export function runNeuralNetwork(input: Float32Array, network: NeuralNetwork): NetworkOutput {
+  const scores = forwardNetwork(input, network);
+  return createNetworkOutput(scores);
+}
+
+export function traceNeuralNetwork(
+  input: Float32Array,
+  network: NeuralNetwork,
+): NeuralNetworkTrace {
+  const layerValues: Float32Array[] = [];
+  const scores = forwardNetwork(input, network, layerValues);
+  return {
+    input: input.slice(),
+    layerValues,
+    output: createNetworkOutput(scores),
+  };
+}
+
+function forwardNetwork(
+  input: Float32Array,
+  network: NeuralNetwork,
+  trace?: Float32Array[],
+): Float32Array {
   const layers = getNetworkLayers(network);
   if (layers.length === 0) throw new Error('Neural network requires at least one layer');
   let values = input;
   for (let index = 0; index < layers.length; index++) {
     const output = forwardDense(values, layers[index]);
     values = index === layers.length - 1 ? output : applyTanh(output);
+    trace?.push(values);
   }
   if (values.length !== 3) {
     throw new Error(`Neural bot output must contain 3 scores, got ${values.length}`);
   }
-  const actionIndex = argmax(values);
-  return { scores: values, actionIndex, action: actionIndexToDecision(actionIndex) };
+  return values;
+}
+
+function createNetworkOutput(scores: Float32Array): NetworkOutput {
+  const actionIndex = argmax(scores);
+  return { scores, actionIndex, action: actionIndexToDecision(actionIndex) };
 }
 
 export function getNetworkInputSize(network: NeuralNetwork): number {

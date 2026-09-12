@@ -156,6 +156,131 @@
   white-space: nowrap;
 }
 
+.training-network-panel {
+  align-self: stretch;
+  min-width: 0;
+  max-height: calc(100vh - 94px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  background: var(--color-panel);
+  color: var(--color-text);
+}
+
+.training-network-title,
+.training-network-layer-title {
+  margin: 0;
+  color: var(--color-primary-bright);
+  text-align: center;
+}
+
+.training-network-title {
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+}
+
+.training-network-layer + .training-network-extra-inputs,
+.training-network-extra-inputs + .training-network-layer,
+.training-network-layer + .training-network-layer {
+  margin-top: 5px;
+}
+
+.training-network-layer-title {
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+}
+
+.training-network-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--network-grid-columns), minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 auto;
+}
+
+.training-network-grid--vision {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.training-network-grid--hidden {
+  width: min(100%, 96px);
+  aspect-ratio: 1;
+}
+
+.training-network-cell,
+.training-network-output {
+  display: block;
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 1px solid rgb(0 0 0 / 28%);
+  border-radius: 2px;
+  background: var(--activation-color, #fff);
+}
+
+.training-network-extra-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+}
+
+.training-network-extra-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.training-network-cell--extra {
+  width: 18px;
+}
+
+.training-network-outputs {
+  display: grid;
+  grid-template-columns: repeat(3, 38px);
+  grid-template-rows: repeat(2, 38px);
+  justify-content: center;
+  gap: 4px;
+}
+
+.training-network-output {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.training-network-output--front {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.training-network-output--left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.training-network-output--right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.training-network-output--selected {
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 2px var(--color-primary-bright);
+}
+
+.training-network-empty {
+  margin: 0;
+  padding: 20px 4px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
 .training-lab-panel {
   max-height: calc(100vh - 40px);
   overflow-y: auto;

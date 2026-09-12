@@ -177,8 +177,8 @@ export class ArenaDemoRunner implements ArenaDemoController {
     const viewportHeight = Math.max(120, window.innerHeight - 24);
     const parentWidth = Math.max(0, Math.floor(parentRect?.width ?? 0));
     const parentHeight = Math.max(0, Math.floor(parentRect?.height ?? 0));
-    const sourceWidth = Math.max(parentWidth, viewportWidth);
-    const sourceHeight = Math.max(parentHeight, viewportHeight);
+    const sourceWidth = parentWidth > 0 ? parentWidth : viewportWidth;
+    const sourceHeight = parentHeight > 0 ? parentHeight : viewportHeight;
     const safeWidth = Math.max(120, sourceWidth - 16);
     const safeHeight = Math.max(120, sourceHeight - 16);
     const byWidth = Math.floor(safeWidth / this.state.width);

@@ -11,6 +11,7 @@ import type {
   GeneticTrainingCheckpoint,
   GeneticTrainingConfig,
   GeneticTrainingResult,
+  NeuralNetworkTrace,
   TrainingCandidateResult,
   TrainingEvaluationMetrics,
   TrainedModelArtifact,
@@ -23,6 +24,7 @@ import { LocalModelRepository, parseModelArtifact } from './LocalModelRepository
 import { IndexedDbTrainingCheckpointRepository } from './TrainingCheckpointRepository';
 import { openTrainingGuide } from './TrainingGuideWindow';
 import { TrainingWakeLock } from './TrainingWakeLock';
+import { TrainingNetworkVisualizer } from './TrainingNetworkVisualizer';
 import { resolveTrainingWorkerCount } from './trainingWorkerSelection';
 
 export interface TrainingLabControllerOptions {
@@ -64,6 +66,7 @@ export class TrainingLabController {
   private displayMode: TrainingDisplayMode = 'visual';
   private fineTuneModel: TrainedModelArtifact | null = null;
   private checkpointWrite: Promise<void> = Promise.resolve();
+  private networkVisualizer: TrainingNetworkVisualizer | null = null;
 
   constructor(private readonly options: TrainingLabControllerOptions) {
     this.wakeLock = new TrainingWakeLock((message) => this.setPowerStatus(message));
@@ -71,6 +74,7 @@ export class TrainingLabController {
 
   mount(): void {
     this.options.panel.innerHTML = trainingLabMarkup;
+    this.mountNetworkVisualizer();
     this.options.outputHost.appendChild(this.element('trainingOutput'));
     this.writeInitialValues();
     this.bindActions();
@@ -86,6 +90,7 @@ export class TrainingLabController {
     this.replay = null;
     this.activePreview = null;
     this.queuedChampion = null;
+    this.networkVisualizer?.reset();
     this.wakeLock.stop();
   }
 
@@ -190,6 +195,7 @@ export class TrainingLabController {
       this.replay = null;
       this.activePreview = null;
       this.queuedChampion = null;
+      this.networkVisualizer?.reset();
       this.previewRun = 0;
       this.clearReport();
       if (this.reports.length > 0) this.renderCondensedReport();
@@ -609,12 +615,20 @@ export class TrainingLabController {
     const network = createDenseNetworkFromGenome(preview.config.topology, preview.genome);
     const validationSeeds = preview.config.validationSeeds;
     const seed = validationSeeds[(this.previewRun - 1) % validationSeeds.length];
+    let latestTrace: NeuralNetworkTrace | null = null;
+    this.networkVisualizer?.showTopology(preview.config.topology);
     let controller: ArenaDemoController;
     controller = createArenaDemoController({
       canvas: this.options.canvas,
       participants: [{
         name: 'Чемпион',
-        algorithm: createNeuralArenaAlgorithm({ id: preview.id, network }),
+        algorithm: createNeuralArenaAlgorithm({
+          id: preview.id,
+          network,
+          onTrace: (trace) => {
+            latestTrace = trace;
+          },
+        }),
       }],
       level: preview.config.level,
       difficultyLevel: preview.config.difficultyLevel,
@@ -625,11 +639,14 @@ export class TrainingLabController {
         preview.currentFoodEaten += result.events.filter((event) => event.type === 'FOOD_EATEN').length;
       },
       onRender: (state) => {
-        if (this.replay === controller) this.renderPreviewHeader(preview, state);
+        if (this.replay !== controller) return;
+        this.renderPreviewHeader(preview, state);
+        if (latestTrace) this.networkVisualizer?.render(latestTrace);
       },
       onComplete: (state) => {
         if (this.replay !== controller) return;
         this.renderPreviewHeader(preview, state, true);
+        if (latestTrace) this.networkVisualizer?.render(latestTrace);
         this.replay = null;
         if (this.queuedChampion) {
           this.playQueuedChampion();
@@ -641,6 +658,19 @@ export class TrainingLabController {
     this.replay = controller;
     this.renderPreviewHeader(preview, controller.getState());
     controller.start();
+  }
+
+  private mountNetworkVisualizer(): void {
+    const middle = this.options.canvas.parentElement;
+    if (!middle) return;
+    const canvasStage = document.createElement('div');
+    canvasStage.className = 'training-canvas-stage';
+    this.options.canvas.replaceWith(canvasStage);
+    canvasStage.appendChild(this.options.canvas);
+    const networkHost = document.createElement('aside');
+    middle.insertBefore(networkHost, canvasStage.nextSibling);
+    this.networkVisualizer = new TrainingNetworkVisualizer(networkHost);
+    this.networkVisualizer.reset();
   }
 
   private renderPreviewHeader(

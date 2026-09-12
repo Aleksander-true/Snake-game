@@ -10,6 +10,7 @@ import {
     flattenNetwork,
     runNeuralNetwork,
     runSimpleNetwork,
+    traceNeuralNetwork,
     type DenseLayer,
     type SimpleNetwork,
     createSeededRng,
@@ -145,4 +146,35 @@ import {
       expect(runNeuralNetwork(new Float32Array([1, 2, 3]), restored))
         .toEqual(runNeuralNetwork(new Float32Array([1, 2, 3]), network));
     });
+
+    test('traces the input and every layer without changing the network result', () => {
+      const network = createTestTraceNetwork();
+      const input = new Float32Array([1, 0]);
+
+      const trace = traceNeuralNetwork(input, network);
+
+      expect(trace.input).toEqual(input);
+      expect(trace.input).not.toBe(input);
+      expect(trace.layerValues).toHaveLength(2);
+      expect(trace.layerValues[0][0]).toBeCloseTo(Math.tanh(1));
+      expect(trace.layerValues[0][1]).toBeCloseTo(0);
+      expect(trace.output).toEqual(runNeuralNetwork(input, network));
+    });
   });
+
+function createTestTraceNetwork(): SimpleNetwork {
+  return {
+    hiddenLayer: {
+      inputSize: 2,
+      outputSize: 2,
+      weights: new Float32Array([1, 0, 0, 1]),
+      bias: new Float32Array([0, 0]),
+    },
+    outputLayer: {
+      inputSize: 2,
+      outputSize: 3,
+      weights: new Float32Array([1, 0, 0, 1, -1, -1]),
+      bias: new Float32Array([0, 0, 0]),
+    },
+  };
+}
