@@ -1017,18 +1017,21 @@ makeMistake = rng.next() < mistakeProbability
 | Расстояние (Чебышёв) | Сигнал |
 |---|---|
 | 1 клетка | `obstacleSignalClose` (по умолчанию **−100**) |
-| 2 клетки | −80 |
-| 3 клетки | −60 |
+| 2 клетки | −95 |
+| 3 клетки | −90 |
 | d клеток | `obstacleSignalClose + obstacleSignalDecay × (d − 1)` |
 
-Затухание: `obstacleSignalDecay = 20` за каждую клетку расстояния. Сигналы от нескольких препятствий **суммируются**.
+Затухание: `obstacleSignalDecay = 5`, то есть 5% от ближнего сигнала, за каждую
+следующую клетку расстояния. Минимальный модуль сигнала препятствия — 5%.
+Сигналы от нескольких препятствий **суммируются**.
 
 **Сигналы еды** — **положительные**:
 
 | Расстояние (Чебышёв) | Сигнал |
 |---|---|
 | 1 клетка | `foodSignalClose` (по умолчанию **+100**) |
-| 2 клетки | +80 |
+| 2 клетки | +95 |
+| 3 клетки | +90 |
 | d клеток | `max(foodSignalClose − foodSignalDecay × (d − 1), foodSignalMin)` |
 | Минимум | `max(foodSignalMin, foodSignalClose × 5%)` (по умолчанию **+5**), на любом расстоянии |
 
@@ -1681,9 +1684,9 @@ Dev-панель может изменять поля `gameSettings` в runtime.
   "ai": {
     "visionSize": 20,
     "obstacleSignalClose": -100,
-    "obstacleSignalDecay": 20,
+    "obstacleSignalDecay": 5,
     "foodSignalClose": 100,
-    "foodSignalDecay": 20,
+    "foodSignalDecay": 5,
     "foodSignalMin": 5
   },
   "colors": {

@@ -42,10 +42,10 @@ interface BotInput {
 | Distance | Signal |
 |----------|--------|
 | 1 cell | -100 |
-| 2 cells | -80 |
-| 3 cells | -60 |
-| ... | Decaying |
-| Beyond vision (dist d) | `-max(500/d, 5)` |
+| 2 cells | -95 |
+| 3 cells | -90 |
+| d cells | `min(obstacleSignalClose + obstacleSignalDecay * (d - 1), -5)` |
+| Minimum magnitude | -5 |
 
 - Signals from multiple obstacles **sum** at each cell
 
@@ -53,9 +53,9 @@ interface BotInput {
 | Distance | Signal |
 |----------|--------|
 | 1 cell | +100 |
-| 2 cells | +80 |
-| 3 cells | +60 |
-| ... | Decaying |
+| 2 cells | +95 |
+| 3 cells | +90 |
+| d cells | `max(foodSignalClose - foodSignalDecay * (d - 1), foodSignalMin)` |
 | Very far (any distance) | minimum **+5** |
 
 ### Vision Rotation
@@ -116,9 +116,9 @@ The current heuristic only has a partial deterministic mistake mechanism. It mus
 |-----------|---------|-------------|
 | `visionSize` | 20 | Vision grid width/height |
 | `obstacleSignalClose` | -100 | Obstacle signal at distance 1 |
-| `obstacleSignalDecay` | 20 | Obstacle signal decay per cell |
+| `obstacleSignalDecay` | 5 | Obstacle signal decay per cell (5% of the close signal) |
 | `foodSignalClose` | +100 | Food signal at distance 1 |
-| `foodSignalDecay` | 20 | Food signal decay per cell |
+| `foodSignalDecay` | 5 | Food signal decay per cell (5% of the close signal) |
 | `foodSignalMin` | +5 | Minimum food signal |
 | `botProfiles.*` | See `packages/core/src/gameDefaults.json` | Full-board heuristic weights by skill tier |
 

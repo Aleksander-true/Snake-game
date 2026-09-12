@@ -107,9 +107,9 @@
   "ai": {
     "visionSize": 20,
     "obstacleSignalClose": -100,
-    "obstacleSignalDecay": 20,
+    "obstacleSignalDecay": 5,
     "foodSignalClose": 100,
-    "foodSignalDecay": 20,
+    "foodSignalDecay": 5,
     "foodSignalMin": 5,
     "botProfiles": {
       "rookie": {
