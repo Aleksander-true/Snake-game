@@ -734,9 +734,9 @@ export class TrainingLabController {
     replaySelect.id = 'trainingReplayScenario';
     replaySelect.className = 'dev-input training-replay-scenario-select';
     replaySelect.innerHTML = [
-      '<option value="solo">Одиночное испытание</option>',
-      '<option value="heuristic">Против эвристической змейки</option>',
-      '<option value="cohort">Против нейросети поколения</option>',
+      '<option value="solo">Одиночная</option>',
+      '<option value="heuristic">Против эвристики</option>',
+      '<option value="cohort">Против поколения</option>',
     ].join('');
     replayControls.append(replayLabel, replaySelect);
     this.addParameterHelp(
@@ -817,27 +817,62 @@ export class TrainingLabController {
     panel.classList.add('training-preview-header');
     panel.replaceChildren();
     const snake = state?.snakes[0];
-    const generation = preview?.generation === null
-      ? 'Сохранённая модель'
-      : preview ? `Поколение ${preview.generation}` : 'Поколение —';
-    const currentGame = snake
-      ? `Текущая игра: тик ${state?.tickCount ?? 0} · очки ${snake.score} · еда ${preview?.currentFoodEaten ?? 0} · длина ${snake.segments.length} · ${completed ? snake.deathReason ?? 'завершена' : 'играет'}`
-      : 'Текущая игра: тик — · очки — · еда — · длина — · запуск…';
-    const lines = [
-      preview
-        ? `Validation-чемпион: поколение ${preview.recordGeneration || '—'} · training fitness ${format(preview.recordFitness)} · validation ${preview.recordValidationFitness === undefined ? '—' : format(preview.recordValidationFitness)}`
-        : 'Validation-чемпион: поколение — · training fitness — · validation —',
-      preview
-        ? `Показан чемпион: ${generation} · fitness ${format(preview.fitness)} · средние очки ${format(preview.metrics.averageScore)} · еда ${format(preview.metrics.averageFoodEaten)} · выживание ${format(preview.metrics.averageSurvivedTicks)} тиков`
-        : 'Показан чемпион: поколение — · fitness — · средние очки — · еда — · выживание —',
-      currentGame,
+    const shownGeneration = preview?.generation === null
+      ? 'Сохранённая'
+      : preview ? String(preview.generation) : '—';
+    const gameStatus = snake
+      ? completed ? snake.deathReason ?? 'Завершена' : 'Играет'
+      : 'Запуск…';
+    const rows: Array<[string, Array<[string, string]>]> = [
+      ['Validation-чемпион', [
+        ['Поколение', preview ? String(preview.recordGeneration || '—') : '—'],
+        ['Training fitness', preview ? format(preview.recordFitness) : '—'],
+        ['Validation', preview?.recordValidationFitness === undefined
+          ? '—'
+          : format(preview.recordValidationFitness)],
+      ]],
+      ['Показан чемпион', [
+        ['Поколение', shownGeneration],
+        ['Fitness', preview ? format(preview.fitness) : '—'],
+        ['Средние очки', preview ? format(preview.metrics.averageScore) : '—'],
+        ['Еда', preview ? format(preview.metrics.averageFoodEaten) : '—'],
+        ['Выживание', preview ? `${format(preview.metrics.averageSurvivedTicks)} тиков` : '—'],
+      ]],
+      ['Текущая игра', [
+        ['Тик', snake ? String(state?.tickCount ?? 0) : '—'],
+        ['Очки', snake ? String(snake.score) : '—'],
+        ['Еда', snake ? String(preview?.currentFoodEaten ?? 0) : '—'],
+        ['Длина', snake ? String(snake.segments.length) : '—'],
+        ['Состояние', gameStatus],
+      ]],
     ];
-    lines.forEach((text) => {
-      const row = document.createElement('div');
-      row.className = 'training-preview-row';
-      row.textContent = text;
-      panel.appendChild(row);
+    const table = document.createElement('table');
+    table.className = 'training-preview-table';
+    const body = document.createElement('tbody');
+    rows.forEach(([title, metrics]) => {
+      const row = document.createElement('tr');
+      const heading = document.createElement('th');
+      heading.scope = 'row';
+      heading.textContent = title;
+      row.appendChild(heading);
+      for (let index = 0; index < 5; index += 1) {
+        const cell = document.createElement('td');
+        const metric = metrics[index];
+        if (metric) {
+          const key = document.createElement('span');
+          key.className = 'training-preview-key';
+          key.textContent = metric[0];
+          const value = document.createElement('strong');
+          value.className = 'training-preview-value';
+          value.textContent = metric[1];
+          cell.append(key, value);
+        }
+        row.appendChild(cell);
+      }
+      body.appendChild(row);
     });
+    table.appendChild(body);
+    panel.appendChild(table);
   }
 
   private async completeTraining(result: GeneticTrainingResult, runId: string): Promise<void> {
