@@ -12,6 +12,7 @@ import {
 import type { StatefulRandomPort } from '../engine/ports';
 import { getHeuristicAlgorithmById } from '../heuristic';
 import { aggregateEvaluationMetrics, calculateRunFitness } from './fitness';
+import { resolveTrainingScenarioGames } from './defaults';
 import { crossoverGenomes, mutateGenome, selectTournament } from './geneticOperators';
 import type {
   CompletedTrainingGeneration,
@@ -56,10 +57,10 @@ export class GeneticTrainingSession {
   private nextGeneration: number;
 
   constructor(config: GeneticTrainingConfig, options: GeneticTrainingSessionOptions = {}) {
-    validateConfig(config);
     this.config = cloneConfig(config);
+    validateConfig(this.config);
     const checkpoint = options.checkpoint;
-    if (checkpoint) validateCheckpoint(checkpoint, config);
+    if (checkpoint) validateCheckpoint(checkpoint, this.config);
     const timestamp = new Date().toISOString();
     this.runId = checkpoint?.runId ?? options.runId ?? `training-${Date.now()}`;
     this.createdAt = checkpoint?.createdAt ?? timestamp;
@@ -67,7 +68,7 @@ export class GeneticTrainingSession {
     this.parentTrainingFitness = checkpoint?.parentTrainingFitness
       ?? options.initialModel?.trainingFitness;
     this.rng = createStatefulSeededRng(
-      config.trainingSeeds[0] ^ 0x6a09e667,
+      this.config.trainingSeeds[0] ^ 0x6a09e667,
       checkpoint?.rngState,
     );
     this.reports = checkpoint?.reports.map(cloneReport) ?? [];
@@ -77,7 +78,7 @@ export class GeneticTrainingSession {
       ?? findLegacyChampionValidationFitness(checkpoint);
     this.nextGeneration = checkpoint?.nextGeneration ?? 1;
     this.initialModelGenome = options.initialModel
-      ? validateAndReadModelGenome(options.initialModel, config)
+      ? validateAndReadModelGenome(options.initialModel, this.config)
       : null;
     this.population = checkpoint
       ? checkpoint.population.map(deserializeCandidateGenome)
@@ -135,7 +136,7 @@ export class GeneticTrainingSession {
     const generationBestPopulationIndex = this.population.findIndex((candidate) => (
       candidate.id === generationBest.id || genomesEqual(candidate.genome, generationBest.genome)
     ));
-    const validationOpponent = this.config.scenarioWeights.cohort > 0
+    const validationOpponent = this.config.scenarioGames.cohort > 0
       ? this.population[(Math.max(0, generationBestPopulationIndex) + this.nextGeneration) % this.population.length]
       : undefined;
     return {
@@ -324,11 +325,11 @@ export class GeneticTrainingSession {
 }
 
 export function evaluateTrainingTask(task: TrainingEvaluationTask): TrainingEvaluationResult {
-  const scenarioFitness: Array<{ value: number; weight: number }> = [];
+  let fitnessTotal = 0;
   const allStats: ArenaSnakeStats[] = [];
   let ticksExecuted = 0;
-  const addScenario = (evaluation: ScenarioEvaluation, weight: number) => {
-    scenarioFitness.push({ value: evaluation.fitness, weight });
+  const addScenario = (evaluation: ScenarioEvaluation) => {
+    fitnessTotal += evaluation.fitness * evaluation.stats.length;
     allStats.push(...evaluation.stats);
     ticksExecuted += evaluation.ticksExecuted;
   };
@@ -336,34 +337,37 @@ export function evaluateTrainingTask(task: TrainingEvaluationTask): TrainingEval
   const seeds = task.mode === 'validation'
     ? task.config.validationSeeds
     : task.config.trainingSeeds;
-  if (task.config.scenarioWeights.solo > 0) {
-    addScenario(
-      evaluateScenario(task, seeds, 'solo'),
-      task.config.scenarioWeights.solo,
-    );
+  const games = resolveTrainingScenarioGames(task.config);
+  if (games.solo > 0) {
+    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.solo, 0x243f6a88), 'solo'));
   }
-  if (task.config.scenarioWeights.heuristic > 0) {
-    addScenario(
-      evaluateScenario(task, seeds, 'heuristic'),
-      task.config.scenarioWeights.heuristic,
-    );
+  if (games.heuristic > 0) {
+    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.heuristic, 0x85a308d3), 'heuristic'));
   }
-  if (task.config.scenarioWeights.cohort > 0) {
-    addScenario(
-      evaluateScenario(task, seeds, 'cohort'),
-      task.config.scenarioWeights.cohort,
-    );
+  if (games.cohort > 0) {
+    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.cohort, 0x13198a2e), 'cohort'));
   }
 
-  const totalWeight = scenarioFitness.reduce((sum, item) => sum + item.weight, 0);
   return {
     taskId: task.id,
     candidateId: task.candidate.id,
-    fitness: scenarioFitness.reduce((sum, item) => sum + item.value * item.weight, 0) / totalWeight,
+    fitness: fitnessTotal / allStats.length,
     metrics: aggregateEvaluationMetrics(allStats),
     simulations: allStats.length,
     ticksExecuted,
   };
+}
+
+function createScenarioSeeds(baseSeeds: number[], count: number, scenarioSalt: number): number[] {
+  return Array.from({ length: count }, (_, index) => {
+    let value = (baseSeeds[index % baseSeeds.length] ^ scenarioSalt ^ Math.imul(index + 1, 0x9e3779b1)) >>> 0;
+    value ^= value >>> 16;
+    value = Math.imul(value, 0x7feb352d);
+    value ^= value >>> 15;
+    value = Math.imul(value, 0x846ca68b);
+    value ^= value >>> 16;
+    return value === 0 ? 1 : value;
+  });
 }
 
 function evaluateScenario(
@@ -473,8 +477,13 @@ function validateConfig(config: GeneticTrainingConfig): void {
   if (config.trainingSeeds.length === 0 || config.validationSeeds.length === 0) {
     throw new Error('training and validation seeds must not be empty');
   }
-  const scenarioWeight = Object.values(config.scenarioWeights).reduce((sum, value) => sum + value, 0);
-  if (scenarioWeight <= 0) throw new Error('scenario weights must have a positive sum');
+  const scenarioGames = Object.values(config.scenarioGames);
+  if (scenarioGames.some((value) => !Number.isInteger(value) || value < 0)) {
+    throw new Error('scenario game counts must be non-negative integers');
+  }
+  if (scenarioGames.every((value) => value === 0)) {
+    throw new Error('at least one scenario game count must be positive');
+  }
 }
 
 function createGenerationTrainingSeeds(
@@ -542,7 +551,8 @@ function cloneConfig(config: GeneticTrainingConfig): GeneticTrainingConfig {
     topology: [...config.topology],
     trainingSeeds: [...config.trainingSeeds],
     validationSeeds: [...config.validationSeeds],
-    scenarioWeights: { ...config.scenarioWeights },
+    scenarioGames: resolveTrainingScenarioGames(config),
+    scenarioWeights: undefined,
     fitnessWeights: { ...config.fitnessWeights },
   };
 }

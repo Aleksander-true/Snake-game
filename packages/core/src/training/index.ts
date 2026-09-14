@@ -1,6 +1,10 @@
 export { GeneticTrainer, TrainingCancelledError } from './GeneticTrainer';
 export { GeneticTrainingSession, evaluateTrainingTask } from './GeneticTrainingSession';
-export { createDefaultGeneticTrainingConfig } from './defaults';
+export {
+  createBuiltInGeneticTrainingPresets,
+  createDefaultGeneticTrainingConfig,
+  resolveTrainingScenarioGames,
+} from './defaults';
 export { aggregateEvaluationMetrics, calculateRunFitness } from './fitness';
 export { crossoverGenomes, mutateGenome, selectTournament } from './geneticOperators';
 export type {
@@ -14,6 +18,8 @@ export type {
   TrainingEvaluationMetrics,
   TrainingLabSettings,
   TrainingScenarioWeights,
+  TrainingScenarioGames,
+  GeneticTrainingPreset,
   CompletedTrainingGeneration,
   GeneticTrainingCheckpoint,
   PreparedTrainingGeneration,

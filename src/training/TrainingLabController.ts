@@ -1,10 +1,12 @@
 import {
   calculateObservationInputSize,
+  createBuiltInGeneticTrainingPresets,
   createDefaultSettings,
   createDefaultGeneticTrainingConfig,
   createDenseNetworkFromGenome,
   createNeuralArenaAlgorithm,
   getHeuristicAlgorithmById,
+  resolveTrainingScenarioGames,
 } from '@snake-game/core';
 import type {
   ArenaParticipant,
@@ -25,6 +27,10 @@ import type { ArenaDemoController, ArenaSpeedMultiplier } from '../arena/ArenaDe
 import type { TrainingLaunchConfig } from '../app/services/MenuScreenService';
 import { BrowserGeneticTrainingRunner } from './BrowserGeneticTrainingRunner';
 import { LocalModelRepository, parseModelArtifact } from './LocalModelRepository';
+import {
+  LocalTrainingPresetRepository,
+  type CustomTrainingPreset,
+} from './LocalTrainingPresetRepository';
 import { IndexedDbTrainingCheckpointRepository } from './TrainingCheckpointRepository';
 import { openTrainingGuide } from './TrainingGuideWindow';
 import { TrainingWakeLock } from './TrainingWakeLock';
@@ -62,6 +68,7 @@ type TrainingReplayScenario = 'solo' | 'heuristic' | 'cohort';
 export class TrainingLabController {
   private readonly runner = new BrowserGeneticTrainingRunner();
   private readonly repository = new LocalModelRepository();
+  private readonly presetRepository = new LocalTrainingPresetRepository();
   private readonly checkpointRepository = new IndexedDbTrainingCheckpointRepository();
   private readonly wakeLock: TrainingWakeLock;
   private reports: GenerationReport[] = [];
@@ -87,6 +94,7 @@ export class TrainingLabController {
     this.mountNetworkVisualizer();
     this.options.outputHost.appendChild(this.element('trainingOutput'));
     this.writeInitialValues();
+    this.renderPresetOptions();
     this.bindActions();
     this.bindParameterHelp();
     this.applyDisplayMode();
@@ -117,9 +125,9 @@ export class TrainingLabController {
     this.setValue('trainingMutationRate', defaults.mutationRate);
     this.setValue('trainingMutationSigma', defaults.mutationSigma);
     this.setValue('trainingValidationEvery', defaults.validationEvery);
-    this.setValue('trainingSoloWeight', defaults.scenarioWeights.solo);
-    this.setValue('trainingHeuristicWeight', defaults.scenarioWeights.heuristic);
-    this.setValue('trainingCohortWeight', defaults.scenarioWeights.cohort);
+    this.setValue('trainingSoloGames', defaults.scenarioGames.solo);
+    this.setValue('trainingHeuristicGames', defaults.scenarioGames.heuristic);
+    this.setValue('trainingCohortGames', defaults.scenarioGames.cohort);
     this.setValue('trainingLevel', this.options.initialConfig.level);
     this.setValue('trainingDifficulty', this.options.initialConfig.difficultyLevel);
     this.setValue('trainingSeed', this.options.initialConfig.seed);
@@ -131,6 +139,10 @@ export class TrainingLabController {
   }
 
   private bindActions(): void {
+    this.button('trainingPresetApply').addEventListener('click', () => this.applySelectedPreset());
+    this.button('trainingPresetSave').addEventListener('click', () => this.saveCustomPreset());
+    this.button('trainingPresetDelete').addEventListener('click', () => this.deleteSelectedPreset());
+    this.select('trainingPresetSelect').addEventListener('change', () => this.updatePresetControls());
     this.button('trainingStart').addEventListener('click', () => this.startTraining());
     this.button('trainingPause').addEventListener('click', () => this.pauseTraining());
     this.button('trainingAbort').addEventListener('click', () => this.abortTraining());
@@ -209,6 +221,8 @@ export class TrainingLabController {
         Object.assign(config, checkpoint.config, {
           generations: Math.max(checkpoint.config.generations, checkpoint.nextGeneration),
           trainingSeedStrategy: checkpoint.config.trainingSeedStrategy ?? 'fixed',
+          scenarioGames: resolveTrainingScenarioGames(checkpoint.config),
+          scenarioWeights: undefined,
         });
       }
       if (
@@ -343,13 +357,13 @@ export class TrainingLabController {
     config.level = this.integer('trainingLevel', 1, 100);
     config.difficultyLevel = this.integer('trainingDifficulty', 1, 10);
     config.gameMode = this.select('trainingGameMode').value === 'survival' ? 'survival' : 'classic';
-    config.scenarioWeights = {
-      solo: this.decimal('trainingSoloWeight', 0, 1),
-      heuristic: this.decimal('trainingHeuristicWeight', 0, 1),
-      cohort: this.decimal('trainingCohortWeight', 0, 1),
+    config.scenarioGames = {
+      solo: this.integer('trainingSoloGames', 0, 1000),
+      heuristic: this.integer('trainingHeuristicGames', 0, 1000),
+      cohort: this.integer('trainingCohortGames', 0, 1000),
     };
-    if (Object.values(config.scenarioWeights).every((weight) => weight === 0)) {
-      this.rejectField(this.input('trainingSoloWeight'), 'Хотя бы один вес сценария должен быть больше нуля');
+    if (Object.values(config.scenarioGames).every((count) => count === 0)) {
+      this.rejectField(this.input('trainingSoloGames'), 'Укажите хотя бы одну партию в любом сценарии');
     }
     config.fitnessWeights = {
       score: this.decimal('trainingFitnessScore', 0, 1_000_000),
@@ -1117,6 +1131,7 @@ export class TrainingLabController {
   }
 
   private writeConfigValues(config: GeneticTrainingConfig): void {
+    const scenarioGames = resolveTrainingScenarioGames(config);
     this.setValue('trainingGenerations', config.generations);
     this.setValue('trainingPopulation', config.populationSize);
     this.setValue('trainingElite', config.eliteCount);
@@ -1126,9 +1141,9 @@ export class TrainingLabController {
     this.setValue('trainingMutationRate', config.mutationRate);
     this.setValue('trainingMutationSigma', config.mutationSigma);
     this.setValue('trainingValidationEvery', config.validationEvery);
-    this.setValue('trainingSoloWeight', config.scenarioWeights.solo);
-    this.setValue('trainingHeuristicWeight', config.scenarioWeights.heuristic);
-    this.setValue('trainingCohortWeight', config.scenarioWeights.cohort);
+    this.setValue('trainingSoloGames', scenarioGames.solo);
+    this.setValue('trainingHeuristicGames', scenarioGames.heuristic);
+    this.setValue('trainingCohortGames', scenarioGames.cohort);
     this.setValue('trainingLevel', config.level);
     this.setValue('trainingDifficulty', config.difficultyLevel);
     this.setValue('trainingSeed', config.trainingSeeds[0]);
@@ -1144,6 +1159,100 @@ export class TrainingLabController {
     this.setValue('trainingCheckpointEvery', settings.checkpointEvery);
     this.applyDisplayMode();
     this.applyWorkerSelection();
+  }
+
+  private renderPresetOptions(selectedValue?: string): void {
+    const select = this.select('trainingPresetSelect');
+    select.replaceChildren();
+    const inputSize = calculateObservationInputSize(createDefaultSettings().visionSize);
+    const builtInGroup = document.createElement('optgroup');
+    builtInGroup.label = 'Встроенные';
+    for (const preset of createBuiltInGeneticTrainingPresets(inputSize)) {
+      const option = document.createElement('option');
+      option.value = `built-in:${preset.id}`;
+      option.textContent = preset.name;
+      option.title = preset.description;
+      builtInGroup.appendChild(option);
+    }
+    select.appendChild(builtInGroup);
+    const customPresets = this.presetRepository.list();
+    if (customPresets.length > 0) {
+      const customGroup = document.createElement('optgroup');
+      customGroup.label = 'Мои пресеты';
+      for (const preset of customPresets) {
+        const option = document.createElement('option');
+        option.value = `custom:${preset.id}`;
+        option.textContent = preset.name;
+        customGroup.appendChild(option);
+      }
+      select.appendChild(customGroup);
+    }
+    if (selectedValue && Array.from(select.options).some((option) => option.value === selectedValue)) {
+      select.value = selectedValue;
+    }
+    this.updatePresetControls();
+  }
+
+  private applySelectedPreset(): void {
+    if (this.runner.isRunning()) return;
+    const selected = this.select('trainingPresetSelect').value;
+    const preset = this.findSelectedPreset(selected);
+    if (!preset) return;
+    const topology = this.fineTuneModel?.topology ?? preset.config.topology;
+    this.writeConfigValues({ ...preset.config, topology: [...topology] });
+    if ('labSettings' in preset) this.writeLabSettings(preset.labSettings);
+    const topologyMessage = this.fineTuneModel ? ' Топология выбранной модели сохранена.' : '';
+    this.setStatus(`Применён пресет «${preset.name}».${topologyMessage}`);
+  }
+
+  private saveCustomPreset(): void {
+    if (this.runner.isRunning()) return;
+    try {
+      const nameInput = this.input('trainingPresetName');
+      const name = nameInput.value.trim();
+      if (!name) this.rejectField(nameInput, 'Введите название пресета');
+      const preset: CustomTrainingPreset = {
+        id: `preset-${Date.now()}`,
+        name,
+        createdAt: new Date().toISOString(),
+        config: this.readConfig(),
+        labSettings: this.readLabSettings(),
+      };
+      this.presetRepository.save(preset);
+      nameInput.value = '';
+      this.renderPresetOptions(`custom:${preset.id}`);
+      this.setStatus(`Пресет «${preset.name}» сохранён в браузере.`);
+    } catch (error) {
+      this.setStatus(`Не удалось сохранить пресет: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private deleteSelectedPreset(): void {
+    if (this.runner.isRunning()) return;
+    const selected = this.select('trainingPresetSelect').value;
+    if (!selected.startsWith('custom:')) return;
+    const preset = this.findSelectedPreset(selected);
+    this.presetRepository.delete(selected.slice('custom:'.length));
+    this.renderPresetOptions();
+    this.setStatus(`Пресет «${preset?.name ?? 'без названия'}» удалён.`);
+  }
+
+  private findSelectedPreset(selected: string) {
+    const inputSize = calculateObservationInputSize(createDefaultSettings().visionSize);
+    if (selected.startsWith('built-in:')) {
+      return createBuiltInGeneticTrainingPresets(inputSize)
+        .find((preset) => preset.id === selected.slice('built-in:'.length));
+    }
+    if (selected.startsWith('custom:')) {
+      return this.presetRepository.list()
+        .find((preset) => preset.id === selected.slice('custom:'.length));
+    }
+    return undefined;
+  }
+
+  private updatePresetControls(): void {
+    this.button('trainingPresetDelete').disabled = !this.select('trainingPresetSelect').value
+      .startsWith('custom:');
   }
 
   private withLabSettings(model: TrainedModelArtifact): TrainedModelArtifact {
@@ -1320,6 +1429,7 @@ function scaleY(value: number, min: number, range: number, height: number): numb
 }
 
 const trainingParameterHelp: Record<string, string> = {
+  trainingPresetSelect: 'Готовый набор параметров. Применение заменяет текущие значения полей; при дообучении топология выбранной модели сохраняется.',
   trainingDisplayMode: 'Визуальный режим показывает партии чемпионов. Фоновый отключает Canvas и экономит ресурсы.',
   trainingWorkerSelection: 'Автоматически оставляет два ядра системе. Ручной режим позволяет выбрать количество evaluation Worker.',
   trainingWorkerCount: 'Число параллельных Worker. Больше Worker обычно ускоряет обучение, но увеличивает нагрузку и нагрев.',
@@ -1338,9 +1448,9 @@ const trainingParameterHelp: Record<string, string> = {
   trainingSeed: 'Базовое значение детерминированной случайности. Из него для каждого поколения выводится новый общий набор карт; одинаковые настройки и seed воспроизводят весь прогон.',
   trainingMaxTicks: 'Максимальная длина одной партии. Большое значение позволяет долгие стратегии, но сильно замедляет обучение.',
   trainingValidationEvery: 'Период проверки лучшего кандидата поколения на постоянных validation seed. Лучший validation-результат определяет сохраняемую модель, но не влияет на генетический отбор следующей популяции.',
-  trainingSoloWeight: 'Вес одиночных партий. Ноль полностью отключает сценарий и ускоряет поколение.',
-  trainingHeuristicWeight: 'Вес партий против basic/solid ботов. Ноль полностью отключает сценарий.',
-  trainingCohortWeight: 'Вес партий против нейросетей текущего поколения. Ноль полностью отключает сценарий.',
+  trainingSoloGames: 'Число одиночных партий для каждого кандидата в поколении. Ноль отключает сценарий.',
+  trainingHeuristicGames: 'Число партий каждого кандидата против basic/solid-ботов. Ноль отключает сценарий.',
+  trainingCohortGames: 'Число партий каждого кандидата против соперника из текущего поколения. Ноль отключает сценарий.',
   trainingFitnessScore: 'Награда за каждое игровое очко.',
   trainingFitnessApproach: 'Награда за каждую новую клетку приближения к выбранной еде. Отход назад и повторное движение по уже пройденному пути не награждаются.',
   trainingFitnessWins: 'Награда за выигранный уровень или раунд.',
@@ -1354,6 +1464,17 @@ const trainingLabMarkup = `
   <div class="dev-panel training-lab-panel">
     <h2 class="dev-panel-title">Генетическое обучение</h2>
     <p class="training-lab-about-text">Популяции нейросетей обучаются в отдельном Web Worker. В визуальном режиме Canvas показывает лучший кандидат самого свежего завершённого поколения.</p>
+    <div class="dev-section training-preset-section">
+      <div class="dev-section-title">Пресеты</div>
+      <label class="dev-row"><span class="dev-row-label">Набор</span><select id="trainingPresetSelect" class="dev-input"></select></label>
+      <div class="training-preset-actions">
+        <button id="trainingPresetApply" type="button" class="btn btn-secondary btn-small">Применить</button>
+        <button id="trainingPresetDelete" type="button" class="btn btn-secondary btn-small" disabled>Удалить</button>
+      </div>
+      <label class="dev-row"><span class="dev-row-label">Мой пресет</span><input id="trainingPresetName" class="dev-input" type="text" maxlength="80" placeholder="Название"></label>
+      <button id="trainingPresetSave" type="button" class="btn btn-secondary btn-small">Сохранить текущие настройки</button>
+      <p class="training-lab-policy-note">Сначала используйте крупные мутации для поиска поведения, затем пресет тонкого дообучения. Числа партий одновременно задают долю сценария и стоимость поколения.</p>
+    </div>
     <div class="dev-section">
       <div class="dev-section-title">Режим выполнения</div>
       <label class="dev-row"><span class="dev-row-label">Отображение</span><select id="trainingDisplayMode" class="dev-input"><option value="visual">Визуальный — с Canvas</option><option value="background">Фоновый — без анимации</option></select></label>
@@ -1386,9 +1507,9 @@ const trainingLabMarkup = `
       <label class="dev-row"><span class="dev-row-label">Seed</span><input id="trainingSeed" class="dev-input" type="number" min="1"></label>
       <label class="dev-row"><span class="dev-row-label">Лимит тиков</span><input id="trainingMaxTicks" class="dev-input" type="number" min="100"></label>
       <label class="dev-row"><span class="dev-row-label">Validation</span><input id="trainingValidationEvery" class="dev-input" type="number" min="1"></label>
-      <label class="dev-row"><span class="dev-row-label">Одиночный вес</span><input id="trainingSoloWeight" class="dev-input" type="number" min="0" max="1" step="0.1"></label>
-      <label class="dev-row"><span class="dev-row-label">Эвристики</span><input id="trainingHeuristicWeight" class="dev-input" type="number" min="0" max="1" step="0.1"></label>
-      <label class="dev-row"><span class="dev-row-label">Поколение</span><input id="trainingCohortWeight" class="dev-input" type="number" min="0" max="1" step="0.1"></label>
+      <label class="dev-row"><span class="dev-row-label">Одиночные партии</span><input id="trainingSoloGames" class="dev-input" type="number" min="0" max="1000" step="1"></label>
+      <label class="dev-row"><span class="dev-row-label">Против эвристик</span><input id="trainingHeuristicGames" class="dev-input" type="number" min="0" max="1000" step="1"></label>
+      <label class="dev-row"><span class="dev-row-label">Против поколения</span><input id="trainingCohortGames" class="dev-input" type="number" min="0" max="1000" step="1"></label>
     </div>
     <div class="dev-section">
       <div class="dev-section-title">Fitness</div>

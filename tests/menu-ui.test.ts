@@ -97,6 +97,6 @@ describe('menu UI persistence and availability', () => {
     const button = root.querySelector<HTMLButtonElement>('#trainingLabBtn');
     expect(button?.textContent).toContain('Лаборатория обучения');
     button?.click();
-    expect(onStartTraining).toHaveBeenCalledWith(expect.objectContaining({ maxTicks: 10_000 }));
+    expect(onStartTraining).toHaveBeenCalledWith(expect.objectContaining({ maxTicks: 3_000 }));
   });
 });

@@ -2,11 +2,13 @@ import {
   GeneticTrainer,
   GeneticTrainingSession,
   calculateRunFitness,
+  createBuiltInGeneticTrainingPresets,
   createDefaultGeneticTrainingConfig,
   createSeededRng,
   crossoverGenomes,
   evaluateTrainingTask,
   mutateGenome,
+  resolveTrainingScenarioGames,
 } from '@snake-game/core';
 import defaults from '../packages/core/src/gameDefaults.json';
 
@@ -27,8 +29,31 @@ describe('genetic training', () => {
       trainingSeedStrategy: training.seedStrategy,
       trainingSeeds: training.trainingSeedOffsets.map((offset) => training.seed + offset),
       validationSeeds: training.validationSeedOffsets.map((offset) => training.seed + offset),
+      scenarioGames: training.scenarioGames,
       fitnessWeights: training.fitnessWeights,
     });
+  });
+
+  test('provides the four staged training presets', () => {
+    const presets = createBuiltInGeneticTrainingPresets(402);
+
+    expect(presets.map((preset) => preset.name)).toEqual([
+      'Начальное обучение кормлению',
+      'Дообучение кормлению',
+      'Дообучение с противником-эвристикой',
+      'Дообучение с другими нейросетями',
+    ]);
+    expect(presets[0].config.scenarioGames).toEqual({ solo: 12, heuristic: 0, cohort: 0 });
+    expect(presets[2].config.scenarioGames.heuristic).toBeGreaterThan(
+      presets[2].config.scenarioGames.solo,
+    );
+  });
+
+  test('migrates legacy scenario weights to deterministic game counts', () => {
+    expect(resolveTrainingScenarioGames({
+      trainingSeeds: [1, 2, 3, 4, 5, 6],
+      scenarioWeights: { solo: 0.5, heuristic: 0.3, cohort: 0.2 },
+    })).toEqual({ solo: 9, heuristic: 5, cohort: 4 });
   });
 
   test('rewards bounded progress toward food without replacing score rewards', () => {
@@ -54,7 +79,7 @@ describe('genetic training', () => {
       config.fitnessWeights,
     );
 
-    expect(withProgress - withoutProgress).toBeCloseTo(3);
+    expect(withProgress - withoutProgress).toBeCloseTo(12 * config.fitnessWeights.approach!);
 
     const aliveAtLimit = calculateRunFitness({
       ...baseStats,
@@ -62,7 +87,9 @@ describe('genetic training', () => {
       aliveAtEnd: true,
       deathReason: undefined,
     }, 10_000, { ...config.fitnessWeights, cycle: 999 });
-    expect(aliveAtLimit).toBe(30);
+    expect(aliveAtLimit).toBe(
+      config.fitnessWeights.survival + config.fitnessWeights.aliveAtLimit,
+    );
   });
 
   test('applies seeded crossover and mutation deterministically', () => {
@@ -91,7 +118,7 @@ describe('genetic training', () => {
       validationSeeds: [5],
       validationEvery: 1,
       topology: [402, 4, 3],
-      scenarioWeights: { solo: 1, heuristic: 0, cohort: 0 },
+      scenarioGames: { solo: 1, heuristic: 0, cohort: 0 },
     });
     const run = () => new GeneticTrainer(config).run();
     const first = run();
@@ -117,7 +144,7 @@ describe('genetic training', () => {
       validationSeeds: [5],
       validationEvery: 1,
       topology: [402, 4, 3],
-      scenarioWeights: { solo: 1, heuristic: 0, cohort: 0 },
+      scenarioGames: { solo: 1, heuristic: 0, cohort: 0 },
     });
     const generations: Array<{ best: number; reportBest: number; validation?: number }> = [];
 
@@ -250,7 +277,7 @@ describe('genetic training', () => {
 
   test('validates with the training scenario mix on separate validation seeds', () => {
     const config = createSmallConfig(1);
-    config.scenarioWeights = { solo: 0.5, heuristic: 0.3, cohort: 0.2 };
+    config.scenarioGames = { solo: 2, heuristic: 1, cohort: 1 };
     const session = new GeneticTrainingSession(config);
     const prepared = session.prepareGeneration(session.createEvaluationTasks().map(evaluateTrainingTask));
     const validationTask = prepared.validationTask;
@@ -271,6 +298,7 @@ describe('genetic training', () => {
     expect(validation.fitness).toBe(matchingTrainingConditions.fitness);
     expect(validation.metrics).toEqual(matchingTrainingConditions.metrics);
     expect(validation.simulations).toBe(matchingTrainingConditions.simulations);
+    expect(validation.simulations).toBe(4);
   });
 });
 
@@ -287,7 +315,7 @@ function createSmallConfig(generations: number) {
     validationSeeds: [5],
     validationEvery: 1,
     topology: [402, 4, 3],
-    scenarioWeights: { solo: 1, heuristic: 0, cohort: 0 },
+    scenarioGames: { solo: 1, heuristic: 0, cohort: 0 },
   });
   return config;
 }

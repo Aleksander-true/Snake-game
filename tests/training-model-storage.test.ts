@@ -5,6 +5,10 @@ import {
   TRAINED_MODELS_STORAGE_KEY,
   parseModelArtifact,
 } from '../src/training/LocalModelRepository';
+import {
+  LocalTrainingPresetRepository,
+  TRAINING_PRESETS_STORAGE_KEY,
+} from '../src/training/LocalTrainingPresetRepository';
 
 describe('local trained model repository', () => {
   beforeEach(() => localStorage.clear());
@@ -25,6 +29,28 @@ describe('local trained model repository', () => {
     model.genome.pop();
 
     expect(() => parseModelArtifact(JSON.stringify(model))).toThrow('совместимую модель');
+  });
+
+  test('stores and deletes a named custom training preset', () => {
+    const repository = new LocalTrainingPresetRepository(localStorage);
+    const config = createDefaultGeneticTrainingConfig(2);
+    repository.save({
+      id: 'feeding-tuned',
+      name: 'Моё кормление',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      config,
+      labSettings: {
+        displayMode: 'background',
+        workerSelection: 'automatic',
+        workerCount: 4,
+        checkpointEvery: 10,
+      },
+    });
+
+    expect(repository.list()).toHaveLength(1);
+    expect(localStorage.getItem(TRAINING_PRESETS_STORAGE_KEY)).toContain('Моё кормление');
+    repository.delete('feeding-tuned');
+    expect(repository.list()).toEqual([]);
   });
 });
 

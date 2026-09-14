@@ -165,36 +165,98 @@
 
   "training": {
     "populationSize": 128,
-    "generations": 100,
+    "generations": 1000,
     "eliteCount": 8,
     "tournamentSize": 4,
-    "hiddenLayers": [16, 8],
-    "crossoverRate": 0.25,
-    "mutationRate": 0.02,
-    "mutationSigma": 0.05,
+    "hiddenLayers": [32, 8],
+    "crossoverRate": 0.1,
+    "mutationRate": 0.05,
+    "mutationSigma": 0.1,
     "seed": 1,
     "seedStrategy": "per-generation",
     "trainingSeedOffsets": [0, 1, 2, 3, 5, 8],
     "validationSeedOffsets": [101, 103, 107, 109, 113],
     "validationEvery": 10,
-    "maxTicks": 10000,
+    "maxTicks": 3000,
     "level": 1,
     "difficultyLevel": 1,
     "gameMode": "classic",
-    "scenarioWeights": {
-      "solo": 0.5,
-      "heuristic": 0.3,
-      "cohort": 0.2
+    "scenarioGames": {
+      "solo": 12,
+      "heuristic": 0,
+      "cohort": 0
     },
     "fitnessWeights": {
-      "score": 1,
-      "approach": 0.25,
-      "wins": 100,
-      "survival": 10,
-      "aliveAtLimit": 20,
+      "score": 2,
+      "approach": 0.5,
+      "wins": 40,
+      "survival": 5,
+      "aliveAtLimit": 10,
       "death": 5,
       "cycle": 0
-    }
+    },
+    "presets": [
+      {
+        "id": "initial-feeding",
+        "name": "Начальное обучение кормлению",
+        "description": "Крупные мутации и одиночные партии для поиска еды и базового безопасного движения.",
+        "populationSize": 128,
+        "eliteCount": 8,
+        "tournamentSize": 4,
+        "hiddenLayers": [32, 8],
+        "crossoverRate": 0.1,
+        "mutationRate": 0.05,
+        "mutationSigma": 0.1,
+        "maxTicks": 3000,
+        "scenarioGames": { "solo": 12, "heuristic": 0, "cohort": 0 },
+        "fitnessWeights": { "score": 2, "approach": 0.5, "wins": 40, "survival": 5, "aliveAtLimit": 10, "death": 5, "cycle": 0 }
+      },
+      {
+        "id": "fine-feeding",
+        "name": "Дообучение кормлению",
+        "description": "Более слабые мутации для закрепления кормления без разрушения найденного поведения.",
+        "populationSize": 128,
+        "eliteCount": 12,
+        "tournamentSize": 5,
+        "hiddenLayers": [32, 8],
+        "crossoverRate": 0.05,
+        "mutationRate": 0.01,
+        "mutationSigma": 0.03,
+        "maxTicks": 3000,
+        "scenarioGames": { "solo": 12, "heuristic": 0, "cohort": 0 },
+        "fitnessWeights": { "score": 2, "approach": 0.15, "wins": 40, "survival": 10, "aliveAtLimit": 20, "death": 5, "cycle": 0 }
+      },
+      {
+        "id": "fine-heuristic",
+        "name": "Дообучение с противником-эвристикой",
+        "description": "Смешивает одиночные партии и больше партий против basic/solid-ботов.",
+        "populationSize": 128,
+        "eliteCount": 8,
+        "tournamentSize": 4,
+        "hiddenLayers": [32, 8],
+        "crossoverRate": 0.05,
+        "mutationRate": 0.02,
+        "mutationSigma": 0.05,
+        "maxTicks": 3000,
+        "scenarioGames": { "solo": 6, "heuristic": 12, "cohort": 0 },
+        "fitnessWeights": { "score": 2, "approach": 0.15, "wins": 50, "survival": 10, "aliveAtLimit": 20, "death": 5, "cycle": 0 }
+      },
+      {
+        "id": "fine-cohort",
+        "name": "Дообучение с другими нейросетями",
+        "description": "Основной отбор в партиях против соперников текущего поколения.",
+        "populationSize": 128,
+        "eliteCount": 8,
+        "tournamentSize": 4,
+        "hiddenLayers": [32, 8],
+        "crossoverRate": 0.1,
+        "mutationRate": 0.02,
+        "mutationSigma": 0.04,
+        "maxTicks": 3000,
+        "scenarioGames": { "solo": 4, "heuristic": 0, "cohort": 12 },
+        "fitnessWeights": { "score": 2, "approach": 0.15, "wins": 40, "survival": 10, "aliveAtLimit": 20, "death": 5, "cycle": 0 }
+      }
+    ]
   },
 
   "colors": {

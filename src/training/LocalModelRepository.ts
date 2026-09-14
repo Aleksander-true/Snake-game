@@ -1,4 +1,4 @@
-import type { TrainedModelArtifact } from '@snake-game/core';
+import { resolveTrainingScenarioGames, type TrainedModelArtifact } from '@snake-game/core';
 
 export const TRAINED_MODELS_STORAGE_KEY = 'snake.geneticModels.v1';
 const MAX_LOCAL_MODELS = 10;
@@ -92,5 +92,8 @@ function isLabSettings(value: unknown): boolean {
 }
 
 function cloneModel(model: TrainedModelArtifact): TrainedModelArtifact {
-  return JSON.parse(JSON.stringify(model)) as TrainedModelArtifact;
+  const cloned = JSON.parse(JSON.stringify(model)) as TrainedModelArtifact;
+  cloned.trainingConfig.scenarioGames = resolveTrainingScenarioGames(cloned.trainingConfig);
+  delete cloned.trainingConfig.scenarioWeights;
+  return cloned;
 }

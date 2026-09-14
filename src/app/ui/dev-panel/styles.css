@@ -377,6 +377,22 @@
   gap: 8px;
 }
 
+.training-preset-section {
+  display: grid;
+  gap: 8px;
+}
+
+.training-preset-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.training-preset-actions .btn,
+.training-preset-section > .btn {
+  width: 100%;
+}
+
 .training-file-input {
   display: none;
 }

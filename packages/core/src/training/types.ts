@@ -6,6 +6,12 @@ export interface TrainingScenarioWeights {
   cohort: number;
 }
 
+export interface TrainingScenarioGames {
+  solo: number;
+  heuristic: number;
+  cohort: number;
+}
+
 export interface FitnessWeights {
   score: number;
   /** Reward per new cell closed toward a tracked food target. */
@@ -36,8 +42,17 @@ export interface GeneticTrainingConfig {
   level: number;
   difficultyLevel: number;
   gameMode: GameMode;
-  scenarioWeights: TrainingScenarioWeights;
+  scenarioGames: TrainingScenarioGames;
+  /** @deprecated Version 1 models may contain weights; they are migrated when loaded. */
+  scenarioWeights?: TrainingScenarioWeights;
   fitnessWeights: FitnessWeights;
+}
+
+export interface GeneticTrainingPreset {
+  id: string;
+  name: string;
+  description: string;
+  config: GeneticTrainingConfig;
 }
 
 export interface TrainingEvaluationMetrics {
