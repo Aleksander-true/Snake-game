@@ -16,6 +16,7 @@ import type {
   NeuralNetworkTrace,
   TrainingCandidateResult,
   TrainingEvaluationMetrics,
+  TrainingLabSettings,
   TrainedModelArtifact,
   TrainingCandidateGenome,
 } from '@snake-game/core';
@@ -75,6 +76,7 @@ export class TrainingLabController {
   private networkVisualizer: TrainingNetworkVisualizer | null = null;
   private replayScenarioSelect: HTMLSelectElement | null = null;
   private savedModels: TrainedModelArtifact[] = [];
+  private activeLabSettings: TrainingLabSettings | null = null;
 
   constructor(private readonly options: TrainingLabControllerOptions) {
     this.wakeLock = new TrainingWakeLock((message) => this.setPowerStatus(message));
@@ -159,6 +161,15 @@ export class TrainingLabController {
       this.replay?.setSpeedMultiplier(speed);
     });
     this.replayScenarioSelect?.addEventListener('change', () => this.restartPreview());
+    this.options.panel.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
+      .forEach((control) => {
+        const clearValidation = () => {
+          control.setCustomValidity('');
+          control.removeAttribute('aria-invalid');
+        };
+        control.addEventListener('input', clearValidation);
+        control.addEventListener('change', clearValidation);
+      });
     this.applyWorkerSelection();
   }
 
@@ -193,6 +204,7 @@ export class TrainingLabController {
     if (this.runner.isRunning()) return;
     try {
       const config = this.readConfig();
+      const labSettings = this.readLabSettings();
       if (checkpoint) {
         Object.assign(config, checkpoint.config, {
           generations: Math.max(checkpoint.config.generations, checkpoint.nextGeneration),
@@ -217,6 +229,7 @@ export class TrainingLabController {
       this.clearReport();
       if (this.reports.length > 0) this.renderCondensedReport();
       this.displayMode = this.readDisplayMode();
+      this.activeLabSettings = labSettings;
       this.applyDisplayMode();
       if (this.displayMode === 'background') {
         this.wakeLock.start();
@@ -225,14 +238,10 @@ export class TrainingLabController {
       }
       this.setRunning(true);
       this.setStatus('Подготовка популяции…');
-      const workerSelection = this.select('trainingWorkerSelection').value === 'manual'
-        ? 'manual'
-        : 'automatic';
       const workerCount = resolveTrainingWorkerCount(
-        workerSelection,
-        this.integer('trainingWorkerCount', 1),
+        labSettings.workerSelection,
+        labSettings.workerCount,
       );
-      const checkpointEvery = this.integer('trainingCheckpointEvery', 1, 100);
       this.runner.start(config, {
         onMessage: (message) => {
           if (message.type === 'progress') {
@@ -262,9 +271,9 @@ export class TrainingLabController {
             }
             this.renderExecutionProgress(message.report, config.generations, message.workerCount);
           } else if (message.type === 'checkpoint') {
-            this.queueCheckpointSave(message.checkpoint, message.model);
+            this.queueCheckpointSave(message.checkpoint, this.withLabSettings(message.model));
           } else if (message.type === 'paused') {
-            this.queueCheckpointSave(message.checkpoint, message.model, true);
+            this.queueCheckpointSave(message.checkpoint, this.withLabSettings(message.model), true);
           } else if (message.type === 'completed') {
             void this.completeTraining(message.result, message.runId);
           } else {
@@ -275,7 +284,7 @@ export class TrainingLabController {
           }
         },
       }, {
-        execution: { workerCount, checkpointEvery },
+        execution: { workerCount, checkpointEvery: labSettings.checkpointEvery },
         checkpoint,
         initialModel: checkpoint ? undefined : this.fineTuneModel ?? undefined,
       });
@@ -310,12 +319,16 @@ export class TrainingLabController {
     const inputSize = calculateObservationInputSize(createDefaultSettings().visionSize);
     const seed = this.integer('trainingSeed', 1, 2_000_000_000);
     const config = createDefaultGeneticTrainingConfig(inputSize, seed);
-    const hiddenLayers = this.input('trainingHiddenLayers').value
-      .split(',')
-      .map((value) => Number(value.trim()))
-      .filter((value) => Number.isInteger(value) && value > 0 && value <= 256);
-    if (hiddenLayers.length === 0 || hiddenLayers.length > 4) {
-      throw new Error('Укажите от 1 до 4 скрытых слоёв по 1–256 нейронов');
+    const hiddenLayersInput = this.input('trainingHiddenLayers');
+    const hiddenLayerParts = hiddenLayersInput.value.split(',').map((value) => value.trim());
+    const hiddenLayers = hiddenLayerParts.map(Number);
+    if (
+      hiddenLayerParts.length === 0
+      || hiddenLayerParts.length > 4
+      || hiddenLayerParts.some((value) => value === '')
+      || hiddenLayers.some((value) => !Number.isInteger(value) || value < 1 || value > 256)
+    ) {
+      this.rejectField(hiddenLayersInput, 'Скрытые слои: укажите от 1 до 4 целых чисел 1–256 через запятую');
     }
     config.populationSize = this.integer('trainingPopulation', 4, 256);
     config.generations = this.integer('trainingGenerations', 1);
@@ -336,7 +349,7 @@ export class TrainingLabController {
       cohort: this.decimal('trainingCohortWeight', 0, 1),
     };
     if (Object.values(config.scenarioWeights).every((weight) => weight === 0)) {
-      throw new Error('Хотя бы один сценарий должен иметь ненулевой вес');
+      this.rejectField(this.input('trainingSoloWeight'), 'Хотя бы один вес сценария должен быть больше нуля');
     }
     config.fitnessWeights = {
       score: this.decimal('trainingFitnessScore', 0, 1_000_000),
@@ -348,6 +361,17 @@ export class TrainingLabController {
       cycle: 0,
     };
     return config;
+  }
+
+  private readLabSettings(): TrainingLabSettings {
+    return {
+      displayMode: this.readDisplayMode(),
+      workerSelection: this.select('trainingWorkerSelection').value === 'manual'
+        ? 'manual'
+        : 'automatic',
+      workerCount: this.integer('trainingWorkerCount', 1),
+      checkpointEvery: this.integer('trainingCheckpointEvery', 1, 100),
+    };
   }
 
   private writeFitnessValues(config: GeneticTrainingConfig): void {
@@ -375,9 +399,10 @@ export class TrainingLabController {
     const manual = this.select('trainingWorkerSelection').value === 'manual';
     this.input('trainingWorkerCount').disabled = !manual
       || this.select('trainingWorkerSelection').disabled;
+    const enteredCount = Number(this.input('trainingWorkerCount').value);
     const count = resolveTrainingWorkerCount(
       manual ? 'manual' : 'automatic',
-      this.integer('trainingWorkerCount', 1),
+      Number.isInteger(enteredCount) && enteredCount >= 1 ? enteredCount : 1,
     );
     this.element('trainingWorkerSummary').textContent = (
       `Будет использовано evaluation Worker: ${count}; доступно ядер: ${navigator.hardwareConcurrency || 'неизвестно'}.`
@@ -816,15 +841,19 @@ export class TrainingLabController {
   }
 
   private async completeTraining(result: GeneticTrainingResult, runId: string): Promise<void> {
-    this.result = result;
+    const completedResult = {
+      ...result,
+      model: this.withLabSettings(result.model),
+    };
+    this.result = completedResult;
     this.wakeLock.stop();
     this.setPowerStatus('Wake Lock выключен: обучение завершено.');
     this.setRunning(false);
     if (this.displayMode === 'background') this.renderCondensedReport();
-    this.renderSummary(result.model);
+    this.renderSummary(completedResult.model);
     try {
       await this.checkpointWrite;
-      await this.repository.save(result.model);
+      await this.repository.save(completedResult.model);
       await this.checkpointRepository.delete(runId);
       await this.renderModels();
       await this.renderCheckpoints();
@@ -1038,6 +1067,7 @@ export class TrainingLabController {
     if (this.runner.isRunning()) return;
     this.fineTuneModel = model;
     this.writeConfigValues(model.trainingConfig);
+    if (model.labSettings) this.writeLabSettings(model.labSettings);
     this.setStatus(`Модель «${model.name}» выбрана для дообучения. Настройте параметры и нажмите «Начать».`);
   }
 
@@ -1060,6 +1090,23 @@ export class TrainingLabController {
     this.setValue('trainingMaxTicks', config.maxTicks);
     this.setValue('trainingGameMode', config.gameMode);
     this.writeFitnessValues(config);
+  }
+
+  private writeLabSettings(settings: TrainingLabSettings): void {
+    this.setValue('trainingDisplayMode', settings.displayMode);
+    this.setValue('trainingWorkerSelection', settings.workerSelection);
+    this.setValue('trainingWorkerCount', settings.workerCount);
+    this.setValue('trainingCheckpointEvery', settings.checkpointEvery);
+    this.applyDisplayMode();
+    this.applyWorkerSelection();
+  }
+
+  private withLabSettings(model: TrainedModelArtifact): TrainedModelArtifact {
+    if (!this.activeLabSettings) return model;
+    return {
+      ...model,
+      labSettings: { ...this.activeLabSettings },
+    };
   }
 
   private downloadModel(model: TrainedModelArtifact): void {
@@ -1133,15 +1180,46 @@ export class TrainingLabController {
   }
 
   private integer(id: string, min: number, max = Number.MAX_SAFE_INTEGER): number {
-    const value = Number.parseInt(this.input(id).value, 10);
-    if (!Number.isFinite(value)) throw new Error(`Поле ${id} должно быть целым числом`);
-    return Math.max(min, Math.min(max, value));
+    const input = this.input(id);
+    const rawValue = input.value.trim();
+    const value = Number(rawValue);
+    const name = this.fieldName(input);
+    if (rawValue === '' || !Number.isInteger(value)) {
+      this.rejectField(input, `${name}: укажите целое число`);
+    }
+    if (value < min || value > max) {
+      const range = max === Number.MAX_SAFE_INTEGER
+        ? `значение должно быть не меньше ${min}`
+        : `допустимое значение от ${min} до ${max}`;
+      this.rejectField(input, `${name}: ${range}`);
+    }
+    return value;
   }
 
   private decimal(id: string, min: number, max: number): number {
-    const value = Number.parseFloat(this.input(id).value);
-    if (!Number.isFinite(value)) throw new Error(`Поле ${id} должно быть числом`);
-    return Math.max(min, Math.min(max, value));
+    const input = this.input(id);
+    const rawValue = input.value.trim();
+    const value = Number(rawValue);
+    const name = this.fieldName(input);
+    if (rawValue === '' || !Number.isFinite(value)) {
+      this.rejectField(input, `${name}: укажите число`);
+    }
+    if (value < min || value > max) {
+      this.rejectField(input, `${name}: допустимое значение от ${min} до ${max}`);
+    }
+    return value;
+  }
+
+  private fieldName(input: HTMLInputElement): string {
+    return input.closest('label')?.querySelector('.dev-row-label')?.textContent?.trim() || input.id;
+  }
+
+  private rejectField(input: HTMLInputElement, message: string): never {
+    input.setCustomValidity(message);
+    input.setAttribute('aria-invalid', 'true');
+    input.reportValidity();
+    input.focus();
+    throw new Error(message);
   }
 
   private setValue(id: string, value: string | number): void {

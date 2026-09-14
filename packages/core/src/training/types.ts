@@ -85,8 +85,16 @@ export interface TrainedModelArtifact {
   trainingFitness: number;
   validationFitness?: number;
   metrics: TrainingEvaluationMetrics;
+  labSettings?: TrainingLabSettings;
   parentModelId?: string;
   parentTrainingFitness?: number;
+}
+
+export interface TrainingLabSettings {
+  displayMode: 'visual' | 'background';
+  workerSelection: 'automatic' | 'manual';
+  workerCount: number;
+  checkpointEvery: number;
 }
 
 export interface GeneticTrainingResult {

@@ -75,7 +75,20 @@ function isModelArtifact(value: unknown): value is TrainedModelArtifact {
     && model.genome.length === expectedGenomeLength
     && model.genome.every((weight) => typeof weight === 'number' && Number.isFinite(weight))
     && !!model.trainingConfig
-    && !!model.metrics;
+    && !!model.metrics
+    && (model.labSettings === undefined || isLabSettings(model.labSettings));
+}
+
+function isLabSettings(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const settings = value as Record<string, unknown>;
+  return (settings.displayMode === 'visual' || settings.displayMode === 'background')
+    && (settings.workerSelection === 'automatic' || settings.workerSelection === 'manual')
+    && Number.isInteger(settings.workerCount)
+    && (settings.workerCount as number) >= 1
+    && Number.isInteger(settings.checkpointEvery)
+    && (settings.checkpointEvery as number) >= 1
+    && (settings.checkpointEvery as number) <= 100;
 }
 
 function cloneModel(model: TrainedModelArtifact): TrainedModelArtifact {

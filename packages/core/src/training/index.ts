@@ -12,6 +12,7 @@ export type {
   TrainedModelArtifact,
   TrainingCandidateResult,
   TrainingEvaluationMetrics,
+  TrainingLabSettings,
   TrainingScenarioWeights,
   CompletedTrainingGeneration,
   GeneticTrainingCheckpoint,
