@@ -159,16 +159,39 @@
 .training-replay-scenario {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
-  min-height: 36px;
-  padding: 3px 8px;
   color: var(--color-text);
   font-size: 0.78rem;
 }
 
 .training-replay-scenario-select {
-  width: min(320px, 60%);
+  width: min(280px, 55vw);
+}
+
+.training-replay-toolbar {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 4px 8px;
+}
+
+.training-replay-speed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text);
+  font-size: 0.78rem;
+}
+
+.training-replay-speed .dev-input {
+  width: 96px;
+}
+
+.training-replay-toolbar .training-parameter-help {
+  grid-column: auto;
 }
 
 .training-network-panel {
@@ -351,10 +374,39 @@
 }
 
 .training-execution-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 116px;
   margin: 6px 0;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
   color: var(--color-text-muted);
   font-size: 0.76rem;
   line-height: 1.35;
+}
+
+.training-execution-status > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--color-panel-border);
+}
+
+.training-execution-status > div:nth-child(odd) {
+  border-right: 1px solid var(--color-panel-border);
+}
+
+.training-execution-status dt,
+.training-execution-status dd {
+  margin: 0;
+}
+
+.training-execution-status dd {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .training-parameter-help {
@@ -529,9 +581,16 @@
 
 .training-model-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   gap: 6px;
   align-items: center;
+}
+
+.training-model-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .training-model-name {

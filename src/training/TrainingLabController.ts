@@ -130,7 +130,8 @@ export class TrainingLabController {
 
   private bindActions(): void {
     this.button('trainingStart').addEventListener('click', () => this.startTraining());
-    this.button('trainingCancel').addEventListener('click', () => this.cancelTraining());
+    this.button('trainingPause').addEventListener('click', () => this.pauseTraining());
+    this.button('trainingAbort').addEventListener('click', () => this.abortTraining());
     this.button('trainingSave').addEventListener('click', () => this.saveCurrentModel());
     this.button('trainingDownload').addEventListener('click', () => {
       if (this.result) this.downloadModel(this.result.model);
@@ -186,7 +187,6 @@ export class TrainingLabController {
     help.appendChild(tooltip);
     label.appendChild(help);
     control.setAttribute('aria-describedby', tooltip.id);
-    label.title = description;
   }
 
   private startTraining(checkpoint?: GeneticTrainingCheckpoint): void {
@@ -287,11 +287,23 @@ export class TrainingLabController {
     }
   }
 
-  private cancelTraining(): void {
+  private pauseTraining(): void {
     if (!this.runner.isRunning()) return;
     this.runner.pause();
-    this.button('trainingCancel').disabled = true;
+    this.button('trainingPause').disabled = true;
     this.setStatus('Пауза запрошена: завершается текущее поколение и сохраняется checkpoint…');
+  }
+
+  private abortTraining(): void {
+    if (!this.runner.isRunning()) return;
+    this.runner.stop();
+    this.replay?.stop();
+    this.replay = null;
+    this.queuedChampion = null;
+    this.wakeLock.stop();
+    this.setPowerStatus('Wake Lock выключен: обучение отменено.');
+    this.setRunning(false);
+    this.setStatus('Обучение отменено без дополнительного сохранения. Ранее созданные checkpoint сохранены.');
   }
 
   private readConfig(): GeneticTrainingConfig {
@@ -423,13 +435,11 @@ export class TrainingLabController {
     workerCount: number,
   ): void {
     const remainingMs = Math.max(0, totalGenerations - report.generation) * report.elapsedMs;
-    this.element('trainingExecutionStatus').textContent = [
-      `Worker: ${workerCount}`,
-      `${format(report.simulationsPerSecond)} партий/с`,
-      `${format(report.ticksPerSecond ?? 0)} тиков/с`,
-      `время поколения: ${formatDuration(report.elapsedMs)}`,
-      `осталось: ${formatDuration(remainingMs)}`,
-    ].join(' · ');
+    this.element('trainingExecutionWorkers').textContent = String(workerCount);
+    this.element('trainingExecutionSimulations').textContent = format(report.simulationsPerSecond);
+    this.element('trainingExecutionTicks').textContent = format(report.ticksPerSecond ?? 0);
+    this.element('trainingExecutionGenerationTime').textContent = formatDuration(report.elapsedMs);
+    this.element('trainingExecutionRemaining').textContent = formatDuration(remainingMs);
   }
 
   private appendGenerationRow(report: GenerationReport): void {
@@ -709,11 +719,16 @@ export class TrainingLabController {
       replayControls,
       'Выбирает только демонстрационную партию: одиночную, против эвристики или против другой нейросети. На обучение и fitness не влияет.',
     );
+    const replayToolbar = document.createElement('div');
+    replayToolbar.id = 'trainingReplayToolbar';
+    replayToolbar.className = 'training-replay-toolbar';
+    const replaySpeed = this.element('trainingReplaySection');
+    replayToolbar.append(replayControls, replaySpeed);
     const canvasStage = document.createElement('div');
     canvasStage.className = 'training-canvas-stage';
     this.options.canvas.replaceWith(canvasColumn);
     canvasStage.appendChild(this.options.canvas);
-    canvasColumn.append(replayControls, canvasStage);
+    canvasColumn.append(replayToolbar, canvasStage);
     this.replayScenarioSelect = replaySelect;
     const networkHost = document.createElement('aside');
     middle.insertBefore(networkHost, canvasColumn.nextSibling);
@@ -937,8 +952,36 @@ export class TrainingLabController {
       fineTuneButton.className = 'btn btn-secondary btn-small';
       fineTuneButton.textContent = 'Дообучить';
       fineTuneButton.addEventListener('click', () => this.prepareFineTuning(model));
-      row.append(label, replayButton, fineTuneButton, downloadButton);
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'btn btn-secondary btn-small';
+      deleteButton.textContent = 'Удалить';
+      deleteButton.addEventListener('click', () => void this.deleteSavedModel(model));
+      const actions = document.createElement('div');
+      actions.className = 'training-model-actions';
+      actions.append(replayButton, fineTuneButton, downloadButton, deleteButton);
+      row.append(label, actions);
       container.appendChild(row);
+    }
+  }
+
+  private async deleteSavedModel(model: TrainedModelArtifact): Promise<void> {
+    if (this.runner.isRunning()) return;
+    try {
+      await this.repository.delete(model.id);
+      if (this.fineTuneModel?.id === model.id) this.fineTuneModel = null;
+      if (this.activePreview?.source === 'saved' && this.activePreview.id === model.id) {
+        this.replay?.stop();
+        this.replay = null;
+        this.activePreview = null;
+        this.queuedChampion = null;
+        this.networkVisualizer?.reset();
+        this.renderPreviewHeader();
+      }
+      await this.renderModels();
+      this.setStatus(`Модель «${model.name}» удалена`);
+    } catch (error) {
+      this.setStatus(`Ошибка удаления модели: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -980,7 +1023,10 @@ export class TrainingLabController {
             .then(() => this.renderCheckpoints())
             .catch((error) => this.setStatus(`Ошибка удаления: ${String(error)}`));
         });
-        row.append(label, continueButton, deleteButton);
+        const actions = document.createElement('div');
+        actions.className = 'training-model-actions';
+        actions.append(continueButton, deleteButton);
+        row.append(label, actions);
         container.appendChild(row);
       }
     } catch (error) {
@@ -1066,7 +1112,8 @@ export class TrainingLabController {
 
   private setRunning(running: boolean): void {
     this.button('trainingStart').disabled = running;
-    this.button('trainingCancel').disabled = !running;
+    this.button('trainingPause').disabled = !running;
+    this.button('trainingAbort').disabled = !running;
     this.button('trainingSave').disabled = running || !this.result;
     this.button('trainingDownload').disabled = running || !this.result;
     this.button('trainingCsv').disabled = running || this.reports.length === 0;
@@ -1103,7 +1150,8 @@ export class TrainingLabController {
 
   private element(id: string): HTMLElement {
     const element = this.options.panel.querySelector<HTMLElement>(`#${id}`)
-      ?? this.options.outputHost.querySelector<HTMLElement>(`#${id}`);
+      ?? this.options.outputHost.querySelector<HTMLElement>(`#${id}`)
+      ?? this.options.canvas.closest('.training-canvas-column')?.querySelector<HTMLElement>(`#${id}`);
     if (!element) throw new Error(`Training control #${id} was not found`);
     return element;
   }
@@ -1231,7 +1279,8 @@ const trainingLabMarkup = `
     </div>
     <div class="dev-buttons training-lab-actions">
       <button id="trainingStart" type="button" class="btn btn-primary btn-small">Начать обучение</button>
-      <button id="trainingCancel" type="button" class="btn btn-secondary btn-small" disabled>Пауза и сохранить</button>
+      <button id="trainingPause" type="button" class="btn btn-secondary btn-small" disabled>Пауза и сохранить</button>
+      <button id="trainingAbort" type="button" class="btn btn-secondary btn-small" disabled>Отменить</button>
       <button id="trainingSave" type="button" class="btn btn-secondary btn-small" disabled>Сохранить</button>
       <button id="trainingDownload" type="button" class="btn btn-secondary btn-small" disabled>Скачать</button>
       <button id="trainingCsv" type="button" class="btn btn-secondary btn-small" disabled>CSV отчёт</button>
@@ -1241,12 +1290,15 @@ const trainingLabMarkup = `
       <button id="trainingMenu" type="button" class="btn btn-secondary btn-small">Меню</button>
     </div>
     <div id="trainingStatus" class="training-status" aria-live="polite">Настройте параметры и начните обучение.</div>
-    <div id="trainingExecutionStatus" class="training-execution-status" aria-live="polite">Worker: — · партий/с: — · тиков/с: — · время поколения: — · осталось: —</div>
+    <dl id="trainingExecutionStatus" class="training-execution-status" aria-live="polite">
+      <div><dt>Worker</dt><dd id="trainingExecutionWorkers">—</dd></div>
+      <div><dt>Партий/с</dt><dd id="trainingExecutionSimulations">—</dd></div>
+      <div><dt>Тиков/с</dt><dd id="trainingExecutionTicks">—</dd></div>
+      <div><dt>Время поколения</dt><dd id="trainingExecutionGenerationTime">—</dd></div>
+      <div><dt>Осталось</dt><dd id="trainingExecutionRemaining">—</dd></div>
+    </dl>
     <div class="dev-section"><div class="dev-section-title">Незавершённые прогоны</div><div id="trainingCheckpoints" class="training-models"></div></div>
-    <div id="trainingReplaySection" class="dev-section">
-      <div class="dev-section-title">Validation replay</div>
-      <label class="dev-row"><span class="dev-row-label">Скорость</span><select id="trainingReplaySpeed" class="dev-input"><option value="1">1x</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option><option value="16">16x</option><option value="100">100x</option><option value="1000">1000x</option></select></label>
-    </div>
+    <label id="trainingReplaySection" class="training-replay-speed"><span>Validation replay</span><select id="trainingReplaySpeed" class="dev-input"><option value="1">1x</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option><option value="16">16x</option><option value="100">100x</option><option value="1000">1000x</option></select></label>
     <div class="dev-section"><div class="dev-section-title">Сохранённые модели</div><div id="trainingModels" class="training-models"></div></div>
   </div>
   <div id="trainingOutput" class="training-results-area">
