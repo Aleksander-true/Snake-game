@@ -581,22 +581,37 @@
 
 .training-model-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
-  align-items: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-panel-border);
 }
 
 .training-model-actions {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.training-model-actions .btn {
+  width: 100%;
+}
+
+.training-model-details {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
 }
 
 .training-model-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.training-model-metadata {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
 }
 
 .training-summary {

@@ -963,9 +963,19 @@ export class TrainingLabController {
     for (const model of models) {
       const row = document.createElement('div');
       row.className = 'training-model-row';
-      const label = document.createElement('span');
-      label.className = 'training-model-name';
-      label.textContent = `${model.name} · ${format(model.trainingFitness)}`;
+      const details = document.createElement('div');
+      details.className = 'training-model-details';
+      const name = document.createElement('strong');
+      name.className = 'training-model-name';
+      name.textContent = model.name.trim() || 'Модель без названия';
+      const savedAt = new Date(model.createdAt);
+      const metadata = document.createElement('span');
+      metadata.className = 'training-model-metadata';
+      metadata.textContent = [
+        `Сохранена: ${Number.isNaN(savedAt.getTime()) ? 'дата неизвестна' : savedAt.toLocaleString('ru-RU')}`,
+        `Fitness: ${format(model.trainingFitness)}`,
+      ].join(' · ');
+      details.append(name, metadata);
       const replayButton = document.createElement('button');
       replayButton.type = 'button';
       replayButton.className = 'btn btn-secondary btn-small';
@@ -989,7 +999,7 @@ export class TrainingLabController {
       const actions = document.createElement('div');
       actions.className = 'training-model-actions';
       actions.append(replayButton, fineTuneButton, downloadButton, deleteButton);
-      row.append(label, actions);
+      row.append(details, actions);
       container.appendChild(row);
     }
   }
