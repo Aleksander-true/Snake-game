@@ -88,7 +88,7 @@ function evaluateDirection(
   if (isSnakeCollision(nextHead, state, snake, growth > 0)) return Number.NEGATIVE_INFINITY;
 
   const blocked = buildBlockedCells(state, snake, growth > 0);
-  blocked.delete(cellKey(nextHead));
+  blocked[getCellIndex(nextHead.x, nextHead.y, state.width)] = 0;
 
   const reachableArea = floodFillArea(nextHead, state, blocked);
   if (reachableArea <= 0) return Number.NEGATIVE_INFINITY;
@@ -156,13 +156,15 @@ function isSnakeCollision(pos: Position, state: GameState, currentSnake: Snake, 
   return false;
 }
 
-function buildBlockedCells(state: GameState, currentSnake: Snake, growing: boolean): Set<string> {
-  const blocked = new Set<string>();
-  for (const wall of state.walls) blocked.add(cellKey(wall));
+function buildBlockedCells(state: GameState, currentSnake: Snake, growing: boolean): Uint8Array {
+  const blocked = new Uint8Array(state.width * state.height);
+  for (const wall of state.walls) {
+    blocked[getCellIndex(wall.x, wall.y, state.width)] = 1;
+  }
   for (const enemy of state.enemies) {
     for (let y = enemy.pos.y; y < enemy.pos.y + enemy.height; y++) {
       for (let x = enemy.pos.x; x < enemy.pos.x + enemy.width; x++) {
-        blocked.add(cellKey({ x, y }));
+        blocked[getCellIndex(x, y, state.width)] = 1;
       }
     }
   }
@@ -173,51 +175,70 @@ function buildBlockedCells(state: GameState, currentSnake: Snake, growing: boole
       const segment = snake.segments[segmentIndex];
       const isOwnTail = snake.id === currentSnake.id && segmentIndex === snake.segments.length - 1;
       if (!growing && isOwnTail) continue;
-      blocked.add(cellKey(segment));
+      blocked[getCellIndex(segment.x, segment.y, state.width)] = 1;
     }
   }
 
   return blocked;
 }
 
-function floodFillArea(start: Position, state: GameState, blocked: Set<string>): number {
-  const visited = new Set<string>();
-  const queue: Position[] = [start];
+function floodFillArea(start: Position, state: GameState, blocked: Uint8Array): number {
+  const visited = new Uint8Array(state.width * state.height);
+  const queue = new Int32Array(state.width * state.height);
+  const startIndex = getCellIndex(start.x, start.y, state.width);
+  if (blocked[startIndex]) return 0;
+
+  let readIndex = 0;
+  let writeIndex = 0;
   let size = 0;
+  queue[writeIndex++] = startIndex;
+  visited[startIndex] = 1;
 
-  while (queue.length > 0) {
-    const pos = queue.shift() as Position;
-    if (!isInBounds(pos, state)) continue;
-
-    const key = cellKey(pos);
-    if (visited.has(key) || blocked.has(key)) continue;
-
-    visited.add(key);
+  while (readIndex < writeIndex) {
+    const index = queue[readIndex++];
+    const x = index % state.width;
     size++;
 
-    queue.push({ x: pos.x + 1, y: pos.y });
-    queue.push({ x: pos.x - 1, y: pos.y });
-    queue.push({ x: pos.x, y: pos.y + 1 });
-    queue.push({ x: pos.x, y: pos.y - 1 });
+    if (x + 1 < state.width) {
+      const right = index + 1;
+      if (!visited[right] && !blocked[right]) {
+        visited[right] = 1;
+        queue[writeIndex++] = right;
+      }
+    }
+    if (x > 0) {
+      const left = index - 1;
+      if (!visited[left] && !blocked[left]) {
+        visited[left] = 1;
+        queue[writeIndex++] = left;
+      }
+    }
+    if (index + state.width < blocked.length) {
+      const down = index + state.width;
+      if (!visited[down] && !blocked[down]) {
+        visited[down] = 1;
+        queue[writeIndex++] = down;
+      }
+    }
+    if (index >= state.width) {
+      const up = index - state.width;
+      if (!visited[up] && !blocked[up]) {
+        visited[up] = 1;
+        queue[writeIndex++] = up;
+      }
+    }
   }
 
   return size;
 }
 
-function countFreeNeighbors(pos: Position, state: GameState, blocked: Set<string>): number {
-  const neighbors: Position[] = [
-    { x: pos.x + 1, y: pos.y },
-    { x: pos.x - 1, y: pos.y },
-    { x: pos.x, y: pos.y + 1 },
-    { x: pos.x, y: pos.y - 1 },
-  ];
-
+function countFreeNeighbors(pos: Position, state: GameState, blocked: Uint8Array): number {
+  const index = getCellIndex(pos.x, pos.y, state.width);
   let count = 0;
-  for (const neighbor of neighbors) {
-    if (!isInBounds(neighbor, state)) continue;
-    if (blocked.has(cellKey(neighbor))) continue;
-    count++;
-  }
+  if (pos.x + 1 < state.width && !blocked[index + 1]) count++;
+  if (pos.x > 0 && !blocked[index - 1]) count++;
+  if (pos.y + 1 < state.height && !blocked[index + state.width]) count++;
+  if (pos.y > 0 && !blocked[index - state.width]) count++;
   return count;
 }
 
@@ -251,8 +272,8 @@ function getNearestFoodReward(origin: Position, foods: Food[], settings: GameSet
   return bestReward;
 }
 
-function cellKey(pos: Position): string {
-  return `${pos.x},${pos.y}`;
+function getCellIndex(x: number, y: number, width: number): number {
+  return y * width + x;
 }
 
 function resolveProfileByDifficulty(difficulty: number, settings: GameSettings): SkillProfile {
