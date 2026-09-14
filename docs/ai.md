@@ -131,6 +131,10 @@ The current heuristic only has a partial deterministic mistake mechanism. It mus
 
 ## Training lab (dev build)
 
+The complete user-facing description of the implemented genetic algorithm,
+seed derivation, validation, presets, fitness, and persistence is in
+[training.md](training.md).
+
 In **`npm run dev:debug`** (or any build with `__DEV_MODE__`), the main menu has a **«Лаборатория обучения»** button that opens the lab screen directly (defaults from `getDefaultTrainingLaunchConfig()` in `MenuScreenService.ts`).
 
 - A coordinator Web Worker owns the genetic session and dispatches deterministic Arena evaluations to a persistent worker pool. Automatic selection leaves two reported CPU cores free; manual selection is also available.

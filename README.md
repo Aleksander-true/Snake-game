@@ -12,6 +12,8 @@ npm run build
 
 Build output is generated in the `dist/` directory.
 
+Detailed genetic training documentation: [docs/training.md](docs/training.md).
+
 ## Server requirements
 
 Preliminary requirements for a small multiplayer instance before load testing:
