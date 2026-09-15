@@ -1,4 +1,4 @@
-import { renderTrainingGuide } from '../src/training/TrainingGuideWindow';
+import { renderTrainingGuide } from '../apps/web/src/training/TrainingGuideWindow';
 
 describe('genetic training guide', () => {
   test('renders actionable instructions and closes from its own button', () => {

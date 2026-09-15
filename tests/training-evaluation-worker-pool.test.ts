@@ -3,8 +3,8 @@ import type {
   TrainingEvaluationTask,
 } from '@snake-game/core';
 import { createDefaultGeneticTrainingConfig } from '@snake-game/core';
-import { TrainingEvaluationWorkerPool } from '../src/training/TrainingEvaluationWorkerPool';
-import type { EvaluationWorkerRequest, EvaluationWorkerResponse } from '../src/training/messages';
+import { TrainingEvaluationWorkerPool } from '../apps/web/src/training/TrainingEvaluationWorkerPool';
+import type { EvaluationWorkerRequest, EvaluationWorkerResponse } from '../apps/web/src/training/messages';
 
 const metrics: TrainingEvaluationMetrics = {
   runs: 1,

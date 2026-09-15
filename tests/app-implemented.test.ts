@@ -1,8 +1,8 @@
-import { InputHandler } from '../src/app/inputHandler';
-import { InputApplicationService } from '../src/app/services/InputApplicationService';
-import { SessionProgressionService } from '../src/app/services/SessionProgressionService';
-import { ScorePersistenceService } from '../src/app/services/ScorePersistenceService';
-import { GameController } from '../src/app/gameController';
+import { InputHandler } from '../apps/web/src/app/inputHandler';
+import { InputApplicationService } from '../apps/web/src/app/services/InputApplicationService';
+import { SessionProgressionService } from '../apps/web/src/app/services/SessionProgressionService';
+import { ScorePersistenceService } from '../apps/web/src/app/services/ScorePersistenceService';
+import { GameController } from '../apps/web/src/app/gameController';
 import {
   AppleFoodEntity,
   createDefaultSettings,
@@ -14,16 +14,16 @@ import {
   SnakeEntity,
 } from '@snake-game/core';
 import type { EngineContext, GameConfig, GameState, RandomPort } from '@snake-game/core';
-import { clearScores, getScores } from '../src/storage/scoreStorage';
-import { hideModal } from '../src/app/ui/modal';
-import { renderGame } from '../src/renderer/canvasRenderer';
+import { clearScores, getScores } from '../apps/web/src/storage/scoreStorage';
+import { hideModal } from '../apps/web/src/app/ui/modal';
+import { renderGame } from '../apps/web/src/renderer/canvasRenderer';
 
 jest.mock('@snake-game/core', () => ({
   ...jest.requireActual('@snake-game/core'),
   processBots: jest.fn(),
 }));
 
-jest.mock('../src/renderer/canvasRenderer', () => ({
+jest.mock('../apps/web/src/renderer/canvasRenderer', () => ({
   renderGame: jest.fn(),
   calculateCellSize: jest.fn(() => 10),
 }));

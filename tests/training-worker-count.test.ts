@@ -1,4 +1,4 @@
-import { resolveTrainingWorkerCount } from '../src/training/trainingWorkerSelection';
+import { resolveTrainingWorkerCount } from '../apps/web/src/training/trainingWorkerSelection';
 
 describe('training worker selection', () => {
   test('reserves two cores automatically and one core in manual mode', () => {

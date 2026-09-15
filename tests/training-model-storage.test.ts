@@ -4,11 +4,11 @@ import {
   LocalModelRepository,
   TRAINED_MODELS_STORAGE_KEY,
   parseModelArtifact,
-} from '../src/training/LocalModelRepository';
+} from '../apps/web/src/training/LocalModelRepository';
 import {
   LocalTrainingPresetRepository,
   TRAINING_PRESETS_STORAGE_KEY,
-} from '../src/training/LocalTrainingPresetRepository';
+} from '../apps/web/src/training/LocalTrainingPresetRepository';
 
 describe('local trained model repository', () => {
   beforeEach(() => localStorage.clear());

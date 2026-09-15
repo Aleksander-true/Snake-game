@@ -1,4 +1,4 @@
-import { TrainingWakeLock } from '../src/training/TrainingWakeLock';
+import { TrainingWakeLock } from '../apps/web/src/training/TrainingWakeLock';
 
 describe('training wake lock', () => {
   test('acquires, reports and releases the screen lock', async () => {

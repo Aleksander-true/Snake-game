@@ -1,6 +1,6 @@
 import { createDefaultSettings, createEmptyBoard, GameEngine, resetSettings, SnakeEntity } from '@snake-game/core';
 import type { EngineContext, GameConfig, GameState, RandomPort } from '@snake-game/core';
-import { InputApplicationService } from '../src/app/services/InputApplicationService';
+import { InputApplicationService } from '../apps/web/src/app/services/InputApplicationService';
 
 function createCtx(): EngineContext {
   const rng: RandomPort = {

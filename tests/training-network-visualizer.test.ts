@@ -1,5 +1,5 @@
 import type { NeuralNetworkTrace } from '@snake-game/core';
-import { TrainingNetworkVisualizer } from '../src/training/TrainingNetworkVisualizer';
+import { TrainingNetworkVisualizer } from '../apps/web/src/training/TrainingNetworkVisualizer';
 
 describe('training network visualizer', () => {
   test('renders vision, hidden layers and relative output activations', () => {

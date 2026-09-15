@@ -1,19 +1,19 @@
-import { TrainingLabController } from '../src/training/TrainingLabController';
+import { TrainingLabController } from '../apps/web/src/training/TrainingLabController';
 
-jest.mock('../src/training/LocalModelRepository', () => ({
+jest.mock('../apps/web/src/training/LocalModelRepository', () => ({
   LocalModelRepository: class {
     list = async () => [];
   },
   parseModelArtifact: jest.fn(),
 }));
 
-jest.mock('../src/training/TrainingCheckpointRepository', () => ({
+jest.mock('../apps/web/src/training/TrainingCheckpointRepository', () => ({
   IndexedDbTrainingCheckpointRepository: class {
     list = async () => [];
   },
 }));
 
-jest.mock('../src/training/BrowserGeneticTrainingRunner', () => ({
+jest.mock('../apps/web/src/training/BrowserGeneticTrainingRunner', () => ({
   BrowserGeneticTrainingRunner: class {
     isRunning = () => false;
     stop = jest.fn();

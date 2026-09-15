@@ -3,13 +3,13 @@ import {
   type GameSnapshotDTO,
   type RoomSnapshotDTO,
 } from '@snake-game/contracts';
-import { MultiplayerGamePresenter } from '../src/app/services/MultiplayerGamePresenter';
+import { MultiplayerGamePresenter } from '../apps/web/src/app/services/MultiplayerGamePresenter';
 import {
   MultiplayerSnapshotProjector,
   snapshotToGameState,
-} from '../src/multiplayer/MultiplayerSnapshotProjector';
+} from '../apps/web/src/multiplayer/MultiplayerSnapshotProjector';
 
-jest.mock('../src/renderer/canvasRenderer', () => ({
+jest.mock('../apps/web/src/renderer/canvasRenderer', () => ({
   calculateCellSize: jest.fn(() => 10),
   renderGame: jest.fn(),
 }));

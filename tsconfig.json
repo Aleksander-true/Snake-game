@@ -13,9 +13,9 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
-    "baseUrl": "./src"
+    "rootDir": "./apps/web/src",
+    "baseUrl": "./apps/web/src"
   },
-  "include": ["src/**/*"],
+  "include": ["apps/web/src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }

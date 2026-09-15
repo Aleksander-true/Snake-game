@@ -6,7 +6,7 @@ import {
 import {
   getDefaultMultiplayerWebSocketUrl,
   MultiplayerClient,
-} from '../src/multiplayer/MultiplayerClient';
+} from '../apps/web/src/multiplayer/MultiplayerClient';
 
 const room: RoomSnapshotDTO = {
   roomId: 'room-1',

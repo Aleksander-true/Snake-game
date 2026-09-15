@@ -31,7 +31,8 @@ Preliminary requirements for a small multiplayer instance before load testing:
 - a dedicated persistent directory for the SQLite match-history database and backups.
 
 Current static deployment:
-[https://aleksander-true.github.io/Snake-game/](https://aleksander-true.github.io/Snake-game/).
+[game](https://aleksander-true.github.io/Snake-game/) ·
+[training laboratory](https://aleksander-true.github.io/Snake-game/lab/).
 
 ## Game Description
 

@@ -9,9 +9,12 @@ module.exports = (env, argv) => {
   const publicPath = env && env.publicPath ? env.publicPath : '/';
 
   return {
-    entry: './src/index.ts',
+    entry: {
+      game: './apps/web/src/index.ts',
+      lab: './apps/web/src/lab/index.ts',
+    },
     output: {
-      filename: isProduction ? 'bundle.[contenthash].js' : 'bundle.js',
+      filename: isProduction ? '[name].[contenthash].js' : '[name].js',
       path: path.resolve(__dirname, 'dist'),
       clean: true,
       publicPath,
@@ -34,9 +37,17 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new HtmlWebpackPlugin({
-        template: './src/index.html',
+        template: './apps/web/src/index.html',
         title: 'Snake Eats Rabbits',
-        favicon: path.resolve(__dirname, 'src/assets/images/snake.ico'),
+        favicon: path.resolve(__dirname, 'apps/web/src/assets/images/snake.ico'),
+        chunks: ['game'],
+      }),
+      new HtmlWebpackPlugin({
+        template: './apps/web/src/lab/index.html',
+        filename: 'lab/index.html',
+        title: 'Лаборатория обучения — Голодные змейки',
+        favicon: path.resolve(__dirname, 'apps/web/src/assets/images/snake.ico'),
+        chunks: ['lab'],
       }),
       new webpack.DefinePlugin({
         __DEV_MODE__: JSON.stringify(isDevMode),

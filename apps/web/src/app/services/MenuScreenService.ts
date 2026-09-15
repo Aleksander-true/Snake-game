@@ -1,7 +1,4 @@
 import {
-  calculateObservationInputSize,
-  createDefaultGeneticTrainingConfig,
-  createDefaultSettings,
   heuristicAlgorithmOptions,
 } from '@snake-game/core';
 import type { GameConfig } from '@snake-game/core';
@@ -12,8 +9,6 @@ export interface MenuScreenCallbacks {
   onStartMultiplayer: () => void;
   onStartDevMode: () => void;
   onStartArena: (config: ArenaLaunchConfig) => void;
-  /** Genetic training laboratory running outside the UI thread. */
-  onStartTraining: (config: TrainingLaunchConfig) => void;
 }
 
 export interface ArenaLaunchConfig {
@@ -25,32 +20,6 @@ export interface ArenaLaunchConfig {
 }
 
 /**
- * Initial game rules for the configurable genetic training screen.
- */
-export interface TrainingLaunchConfig {
-  seed: number;
-  level: number;
-  difficultyLevel: number;
-  maxTicks: number;
-  gameMode: 'classic' | 'survival';
-}
-
-/** Defaults when opening the training lab from the dev menu (parameters are editable on the lab screen). */
-export function getDefaultTrainingLaunchConfig(): TrainingLaunchConfig {
-  const settings = createDefaultSettings();
-  const training = createDefaultGeneticTrainingConfig(
-    calculateObservationInputSize(settings.visionSize),
-  );
-  return {
-    seed: training.trainingSeeds[0],
-    level: training.level,
-    difficultyLevel: training.difficultyLevel,
-    maxTicks: training.maxTicks,
-    gameMode: training.gameMode,
-  };
-}
-
-/**
  * Handles menu rendering and menu-specific interactions.
  */
 export class MenuScreenService {
@@ -58,7 +27,7 @@ export class MenuScreenService {
 
   show(callbacks: MenuScreenCallbacks): void {
     renderMenu(this.appRoot, callbacks.onStart, callbacks.onStartMultiplayer);
-    this.attachTrainingButton(callbacks.onStartTraining);
+    this.attachTrainingLink();
     if (typeof __DEV_MODE__ !== 'undefined' && __DEV_MODE__) {
       this.attachDevModeButton(callbacks.onStartDevMode);
       this.attachArenaButton(callbacks.onStartArena);
@@ -123,23 +92,16 @@ export class MenuScreenService {
     });
   }
 
-  /**
-   * Training lab: single button navigates straight to the lab screen (defaults from getDefaultTrainingLaunchConfig).
-   */
-  private attachTrainingButton(onStartTraining: (config: TrainingLaunchConfig) => void): void {
+  private attachTrainingLink(): void {
     const menuPanel = this.appRoot.querySelector('.menu-panel');
-    if (!menuPanel || this.appRoot.querySelector('#trainingLabBtn')) return;
+    if (!menuPanel || this.appRoot.querySelector('#trainingLabLink')) return;
 
     const trainingRow = document.createElement('div');
     trainingRow.className = 'menu-dev-row';
     trainingRow.innerHTML = `
-      <button id="trainingLabBtn" type="button" class="btn btn-dev">🧪 Лаборатория обучения</button>
+      <a id="trainingLabLink" href="lab/" class="btn btn-dev">🧪 Лаборатория обучения</a>
     `;
     menuPanel.appendChild(trainingRow);
-
-    trainingRow.querySelector('#trainingLabBtn')!.addEventListener('click', () => {
-      onStartTraining(getDefaultTrainingLaunchConfig());
-    });
   }
 
   private renderArenaConfigPanel(

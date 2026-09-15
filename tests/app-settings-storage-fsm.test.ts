@@ -21,19 +21,19 @@ import {
   saveMenuPreferences,
   saveName,
   saveScore,
-} from '../src/storage/scoreStorage';
-import { GameFSM } from '../src/app/gameFSM';
-import { GameLoopScheduler } from '../src/app/services/GameLoopScheduler';
-import { LevelCompletionService } from '../src/app/services/LevelCompletionService';
-import { renderDevPanel } from '../src/app/ui/dev-panel';
+} from '../apps/web/src/storage/scoreStorage';
+import { GameFSM } from '../apps/web/src/app/gameFSM';
+import { GameLoopScheduler } from '../apps/web/src/app/services/GameLoopScheduler';
+import { LevelCompletionService } from '../apps/web/src/app/services/LevelCompletionService';
+import { renderDevPanel } from '../apps/web/src/app/ui/dev-panel';
 
-jest.mock('../src/app/ui/modal', () => ({
+jest.mock('../apps/web/src/app/ui/modal', () => ({
   showLevelCompleteModal: jest.fn(),
   showGameOverModal: jest.fn(),
   hideModal: jest.fn(),
 }));
 
-import { hideModal, showGameOverModal, showLevelCompleteModal } from '../src/app/ui/modal';
+import { hideModal, showGameOverModal, showLevelCompleteModal } from '../apps/web/src/app/ui/modal';
 
 function createDeterministicRng(): RandomPort {
   return {

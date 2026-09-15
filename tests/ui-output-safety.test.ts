@@ -7,12 +7,12 @@ import {
   SnakeEntity,
 } from '@snake-game/core';
 import type { GameState } from '@snake-game/core';
-import { renderResults } from '../src/app/ui/results';
-import { renderHUD } from '../src/app/ui/game';
-import { GameLayoutBuilder } from '../src/app/ui/game-layout';
-import { getDeadSnakeColor } from '../src/shared/color';
-import { renderGame } from '../src/renderer/canvasRenderer';
-import { saveScore } from '../src/storage/scoreStorage';
+import { renderResults } from '../apps/web/src/app/ui/results';
+import { renderHUD } from '../apps/web/src/app/ui/game';
+import { GameLayoutBuilder } from '../apps/web/src/app/ui/game-layout';
+import { getDeadSnakeColor } from '../apps/web/src/shared/color';
+import { renderGame } from '../apps/web/src/renderer/canvasRenderer';
+import { saveScore } from '../apps/web/src/storage/scoreStorage';
 
 function createUnsafeState(): GameState {
   return {

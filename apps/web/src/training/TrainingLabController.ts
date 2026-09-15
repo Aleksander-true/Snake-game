@@ -24,7 +24,7 @@ import type {
 } from '@snake-game/core';
 import { createArenaDemoController } from '../arena/ArenaDemoRunner';
 import type { ArenaDemoController, ArenaSpeedMultiplier } from '../arena/ArenaDemoRunner';
-import type { TrainingLaunchConfig } from '../app/services/MenuScreenService';
+import type { TrainingLaunchConfig } from './launchConfig';
 import { BrowserGeneticTrainingRunner } from './BrowserGeneticTrainingRunner';
 import { LocalModelRepository, parseModelArtifact } from './LocalModelRepository';
 import {

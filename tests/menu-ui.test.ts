@@ -1,6 +1,6 @@
-import { renderMenu } from '../src/app/ui/menu';
-import { getMenuPreferences, saveMenuPreferences } from '../src/storage/scoreStorage';
-import { MenuScreenService } from '../src/app/services/MenuScreenService';
+import { renderMenu } from '../apps/web/src/app/ui/menu';
+import { getMenuPreferences, saveMenuPreferences } from '../apps/web/src/storage/scoreStorage';
+import { MenuScreenService } from '../apps/web/src/app/services/MenuScreenService';
 
 describe('menu UI persistence and availability', () => {
   beforeEach(() => {
@@ -83,20 +83,17 @@ describe('menu UI persistence and availability', () => {
     });
   });
 
-  test('shows the genetic training laboratory in the regular menu', () => {
+  test('links to the separate genetic training laboratory page', () => {
     const root = document.createElement('div');
-    const onStartTraining = jest.fn();
     new MenuScreenService(root).show({
       onStart: jest.fn(),
       onStartMultiplayer: jest.fn(),
       onStartDevMode: jest.fn(),
       onStartArena: jest.fn(),
-      onStartTraining,
     });
 
-    const button = root.querySelector<HTMLButtonElement>('#trainingLabBtn');
-    expect(button?.textContent).toContain('Лаборатория обучения');
-    button?.click();
-    expect(onStartTraining).toHaveBeenCalledWith(expect.objectContaining({ maxTicks: 3_000 }));
+    const link = root.querySelector<HTMLAnchorElement>('#trainingLabLink');
+    expect(link?.textContent).toContain('Лаборатория обучения');
+    expect(link?.getAttribute('href')).toBe('lab/');
   });
 });

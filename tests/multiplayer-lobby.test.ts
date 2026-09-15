@@ -4,14 +4,14 @@ import {
   type RoomJoinedMessage,
   type RoomSnapshotDTO,
 } from '@snake-game/contracts';
-import { MultiplayerLobbyService } from '../src/app/services/MultiplayerLobbyService';
-import { renderMultiplayerLobby } from '../src/app/ui/multiplayer';
+import { MultiplayerLobbyService } from '../apps/web/src/app/services/MultiplayerLobbyService';
+import { renderMultiplayerLobby } from '../apps/web/src/app/ui/multiplayer';
 import type {
   MultiplayerClient,
   MultiplayerClientHandlers,
   MultiplayerSessionIdentity,
-} from '../src/multiplayer/MultiplayerClient';
-import { MultiplayerRoomApi } from '../src/multiplayer/MultiplayerRoomApi';
+} from '../apps/web/src/multiplayer/MultiplayerClient';
+import { MultiplayerRoomApi } from '../apps/web/src/multiplayer/MultiplayerRoomApi';
 
 const publicRoom: PublicRoomSummaryDTO = {
   roomId: 'room-1',

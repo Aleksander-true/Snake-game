@@ -18,13 +18,12 @@ import { loadSettingsFromStorage } from './adapters/storageAdapter';
 import { GameController } from './gameController';
 import { GameLayoutBuilder } from './ui/game-layout';
 import { MenuScreenService } from './services/MenuScreenService';
-import { ArenaLaunchConfig, TrainingLaunchConfig } from './services/MenuScreenService';
+import { ArenaLaunchConfig } from './services/MenuScreenService';
 import { ResultsScreenService } from './services/ResultsScreenService';
 import { DevPanelLoader } from './services/DevPanelLoader';
 import { MultiplayerLobbyService } from './services/MultiplayerLobbyService';
 import { createArenaDemoController } from '../arena/ArenaDemoRunner';
 import type { ArenaDemoController } from '../arena/ArenaDemoRunner';
-import { TrainingLabController } from '../training/TrainingLabController';
 
 /**
  * Application-level orchestrator.
@@ -47,7 +46,6 @@ export class SnakeGameApplication {
   private devModeActive = false;
   private gameController: GameController | null = null;
   private arenaDemoController: ArenaDemoController | null = null;
-  private trainingLabController: TrainingLabController | null = null;
   private globalKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor(private readonly appRoot: HTMLElement) {
@@ -83,8 +81,6 @@ export class SnakeGameApplication {
     this.gameController?.stop();
     this.arenaDemoController?.stop();
     this.arenaDemoController = null;
-    this.trainingLabController?.stop();
-    this.trainingLabController = null;
     this.multiplayerLobbyService.stop();
     hideModal();
 
@@ -132,12 +128,6 @@ export class SnakeGameApplication {
         this.devModeActive = true;
         this.router.navigate('game', { mode: 'arena', arenaConfig });
       },
-      onStartTraining: (trainingConfig: TrainingLaunchConfig) => {
-        resetSettings();
-        loadSettingsFromStorage();
-        this.devModeActive = true;
-        this.router.navigate('game', { mode: 'training', trainingConfig });
-      },
     });
   }
 
@@ -153,11 +143,6 @@ export class SnakeGameApplication {
     if (data && typeof data === 'object' && (data as any).mode === 'arena') {
       const arenaConfig = (data as { mode: 'arena'; arenaConfig: ArenaLaunchConfig }).arenaConfig;
       this.startArenaDemo(arenaConfig);
-      return;
-    }
-    if (data && typeof data === 'object' && (data as any).mode === 'training') {
-      const trainingConfig = (data as { mode: 'training'; trainingConfig: TrainingLaunchConfig }).trainingConfig;
-      this.startTrainingLab(trainingConfig);
       return;
     }
     this.startGame(data as GameConfig);
@@ -218,27 +203,6 @@ export class SnakeGameApplication {
     this.mountArenaControls(layout.devPanelContainer, arenaConfig);
     this.updateArenaLiveStats(this.arenaDemoController.getState());
     this.arenaDemoController.start();
-  }
-
-  private startTrainingLab(initialConfig: TrainingLaunchConfig): void {
-    hideModal();
-    this.inputHandler.stop();
-    const layout = this.gameLayoutBuilder.build(true);
-    const gameOuter = this.appRoot.querySelector('.game-outer');
-    if (gameOuter) {
-      gameOuter.classList.add('training-lab-mode');
-    }
-
-    if (!layout.devPanelContainer) return;
-    this.trainingLabController = new TrainingLabController({
-      canvas: layout.canvas,
-      panel: layout.devPanelContainer,
-      outputHost: layout.gameArea,
-      previewPanel: layout.gameArea.querySelector('#hud-top') as HTMLElement,
-      initialConfig,
-      onBack: () => this.router.navigate('menu'),
-    });
-    this.trainingLabController.mount();
   }
 
   private mountArenaControls(container: HTMLElement | null, arenaConfig: ArenaLaunchConfig): void {

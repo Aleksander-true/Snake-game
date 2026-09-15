@@ -35,7 +35,7 @@ describe('multiplayer server transport', () => {
 
   test('serves the browser application from the configured static directory', async () => {
     server = createMultiplayerServer({
-      staticDirectory: path.resolve(__dirname, '../src'),
+      staticDirectory: path.resolve(__dirname, '../apps/web/src'),
     });
     const address = await server.start(0);
     baseUrl = `http://127.0.0.1:${address.port}`;
@@ -44,6 +44,10 @@ describe('multiplayer server transport', () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toContain('<div id="app"></div>');
+
+    const labResponse = await fetch(`${baseUrl}/lab/index.html`);
+    expect(labResponse.status).toBe(200);
+    expect(await labResponse.text()).toContain('Лаборатория обучения');
   });
 
   test('exposes public summaries and protects full match history with bearer tokens', async () => {

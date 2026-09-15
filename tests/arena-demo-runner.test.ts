@@ -1,8 +1,8 @@
-import { createArenaDemoController } from '../src/arena/ArenaDemoRunner';
+import { createArenaDemoController } from '../apps/web/src/arena/ArenaDemoRunner';
 import type { HeuristicAlgorithm } from '@snake-game/core';
-import { renderGame } from '../src/renderer/canvasRenderer';
+import { renderGame } from '../apps/web/src/renderer/canvasRenderer';
 
-jest.mock('../src/renderer/canvasRenderer', () => ({
+jest.mock('../apps/web/src/renderer/canvasRenderer', () => ({
   renderGame: jest.fn(),
 }));
 

@@ -1,0 +1,9 @@
+{
+  "name": "@snake-game/web",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@snake-game/contracts": "0.1.0",
+    "@snake-game/core": "0.1.0"
+  }
+}

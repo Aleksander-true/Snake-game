@@ -13,7 +13,7 @@ import {
   resetSettings,
 } from '@snake-game/core';
 import type { EngineContext, RandomPort } from '@snake-game/core';
-import { GameFSM } from '../src/app/gameFSM';
+import { GameFSM } from '../apps/web/src/app/gameFSM';
 
 /** Deterministic RNG for tests — always returns 0.5 / floor(0.5 * max). */
 const testRng: RandomPort = {
