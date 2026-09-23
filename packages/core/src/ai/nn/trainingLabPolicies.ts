@@ -1,3 +1,4 @@
+import type { ObservationVersion } from '../encodeObservation';
 import type { ArenaAlgorithm } from '../../arena/types';
 import { randomArenaAlgorithm } from '../ai_algorithm';
 import { createNeuralArenaAlgorithm } from './neuralArenaAlgorithm';
@@ -13,9 +14,9 @@ export interface DemoNeuralPolicyOptions {
   visionValueScale?: number;
 }
 
-/** Encoded observation = flattened square vision + two scalar features. */
-export function calculateObservationInputSize(visionSize: number): number {
-  return visionSize * visionSize + 2;
+/** Encoded observation = vision, two scalar features and previous-decision one-hot. */
+export function calculateObservationInputSize(visionSize: number, observationVersion: ObservationVersion = 3): number {
+  return visionSize * visionSize * (observationVersion === 4 ? 2 : 1) + 5;
 }
 
 /** Build an untrained neural policy whose weights are initialized by the Arena RNG. */

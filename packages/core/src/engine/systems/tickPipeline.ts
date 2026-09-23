@@ -17,8 +17,8 @@ import { consumeMeatUnderEnemies, processEnemies } from './enemySystem';
  * Run all tick systems in the required order.
  */
 export function runTickPipeline(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
-  movementSystem(state, ctx, events);
-  hungerSystem(state, ctx, events);
+  const fedSnakeIds = movementSystem(state, ctx, events);
+  hungerSystem(state, ctx, events, fedSnakeIds);
   reproductionSystem(state, ctx, events);
   processMovingFood(state, ctx);
   processEnemies(state, ctx, events);
@@ -29,7 +29,8 @@ export function runTickPipeline(state: GameState, ctx: EngineContext, events: Do
 }
 
 /* ---- System 1: Movement + collisions + eating ---- */
-function movementSystem(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
+function movementSystem(state: GameState, ctx: EngineContext, events: DomainEvent[]): Set<number> {
+  const fedSnakeIds = new Set<number>();
   const intents = state.snakes
     .filter(snake => snake.alive && !snake.movementPaused)
     .map(snake => createMoveIntent(snake, state.foods, ctx));
@@ -41,8 +42,9 @@ function movementSystem(state: GameState, ctx: EngineContext, events: DomainEven
       markSnakeDead(intent.snake, deathReason, events);
       continue;
     }
-    applyMoveIntent(intent, state, ctx, events);
+    if (applyMoveIntent(intent, state, ctx, events)) fedSnakeIds.add(intent.snake.id);
   }
+  return fedSnakeIds;
 }
 
 interface MoveIntent {
@@ -122,7 +124,7 @@ function applyMoveIntent(
   state: GameState,
   ctx: EngineContext,
   events: DomainEvent[]
-): void {
+): boolean {
   moveSnake(intent.snake, intent.growth > 0);
   if (intent.growth > 1) {
     const tail = intent.snake.segments[intent.snake.segments.length - 1];
@@ -131,19 +133,21 @@ function applyMoveIntent(
     }
   }
 
-  if (!intent.eatenFood) return;
+  if (!intent.eatenFood) return false;
   const foodIndex = state.foods.indexOf(intent.eatenFood);
-  if (foodIndex === -1) return;
+  if (foodIndex === -1) return false;
   const reward = getFoodReward(intent.eatenFood, ctx.settings);
   state.foods.splice(foodIndex, 1);
   awardFoodPoints(intent.snake, reward.points);
   resetHunger(intent.snake);
+  intent.snake.setSatiety(reward.growth);
   events.push({
     type: 'FOOD_EATEN',
     snakeId: intent.snake.id,
     pos: { ...intent.eatenFood.pos },
     newScore: intent.snake.score,
   });
+  return true;
 }
 
 function samePosition(left: Position, right: Position): boolean {
@@ -151,10 +155,15 @@ function samePosition(left: Position, right: Position): boolean {
 }
 
 /* ---- System 2: Hunger ---- */
-function hungerSystem(state: GameState, ctx: EngineContext, events: DomainEvent[]): void {
+function hungerSystem(
+  state: GameState,
+  ctx: EngineContext,
+  events: DomainEvent[],
+  fedSnakeIds: ReadonlySet<number>,
+): void {
   for (const snake of state.snakes) {
     if (!snake.alive) continue;
-    const hasDiedFromHunger = processHunger(snake, ctx);
+    const hasDiedFromHunger = processHunger(snake, ctx, !fedSnakeIds.has(snake.id));
     if (hasDiedFromHunger) {
       events.push({ type: 'SNAKE_DIED', snakeId: snake.id, reason: 'Умерла с голоду' });
     }

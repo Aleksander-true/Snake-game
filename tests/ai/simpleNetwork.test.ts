@@ -6,6 +6,7 @@ import {
     forwardDense,
     createSimpleNetwork,
     createDenseNetwork,
+    initializeSpatialVisionWeights,
     createDenseNetworkFromGenome,
     flattenNetwork,
     runNeuralNetwork,
@@ -17,6 +18,45 @@ import {
   } from '@snake-game/core';
   
   describe('simpleNetwork', () => {
+    test('v5 uses Gaussian distance with signed amplitude and additive noise', () => {
+      const network = createDenseNetwork(86, [1], 3, createSeededRng(1));
+      const before = flattenNetwork(network);
+      const next = jest.fn().mockReturnValue(0.75)
+        .mockReturnValueOnce(0.75).mockReturnValueOnce(0.25)
+        .mockReturnValueOnce(0.75).mockReturnValueOnce(0);
+      initializeSpatialVisionWeights(network, 9, 5, { ...createSeededRng(1), next });
+      const weights = network.layers[0].weights;
+      expect(weights[2 * 9 + 6]).toBeCloseTo(0.055, 7);
+      expect(weights[2 * 9 + 7]).toBeCloseTo(0.05 * Math.exp(-0.5) + 0.005, 7);
+      expect(weights[3 * 9 + 7]).toBeCloseTo(0.05 * Math.exp(-1) + 0.005, 7);
+      expect(flattenNetwork(network).slice(81)).toEqual(before.slice(81));
+    });
+
+    test.each([5, 6] as const)('v%i only changes vision weights and is seeded', version => {
+      const build = () => {
+        const network = createDenseNetwork(86, [4, 9], 3, createSeededRng(1));
+        initializeSpatialVisionWeights(network, 9, version, createSeededRng(2));
+        return network;
+      };
+      const network = build();
+      expect(flattenNetwork(network)).toEqual(flattenNetwork(build()));
+      const original = createDenseNetwork(86, [4, 9], 3, createSeededRng(1));
+      for (let neuron = 0; neuron < 4; neuron++) {
+        const offset = neuron * 86;
+        expect(network.layers[0].weights.slice(offset + 81, offset + 86))
+          .toEqual(original.layers[0].weights.slice(offset + 81, offset + 86));
+        if (version === 6) expect(Array.from(network.layers[0].weights.slice(offset, offset + 81)))
+          .toEqual(new Array(81).fill(Math.fround(0.1)));
+      }
+      expect(network.layers[0].bias).toEqual(original.layers[0].bias);
+      expect(network.layers.slice(1)).toEqual(original.layers.slice(1));
+      if (version === 5) {
+        const changed = createDenseNetwork(86, [4, 9], 3, createSeededRng(1));
+        initializeSpatialVisionWeights(changed, 9, 5, createSeededRng(3));
+        expect(network.layers[0].weights).not.toEqual(changed.layers[0].weights);
+      }
+    });
+
     test('maps action index to decision', () => {
       expect(actionIndexToDecision(0)).toBe('left');
       expect(actionIndexToDecision(1)).toBe('front');

@@ -75,7 +75,7 @@
     "foodVisionRadius": 20,
     "populationPercentPerLevel": 20,
     "spawnWindowTicks": 100,
-    "spawnChanceDivisor": 10000,
+    "spawnChanceDivisor": 20000,
     "spawnChanceDecayFactor": 2,
     "botThreatRadius": 20,
     "botEscapeWeight": 500,
@@ -229,7 +229,7 @@
       {
         "id": "fine-heuristic",
         "name": "Дообучение с противником-эвристикой",
-        "description": "Смешивает одиночные партии и больше партий против basic/solid-ботов.",
+        "description": "Одиночные партии и больше партий против выбранной эвристики.",
         "populationSize": 128,
         "eliteCount": 8,
         "tournamentSize": 4,

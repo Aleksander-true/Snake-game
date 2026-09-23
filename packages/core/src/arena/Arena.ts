@@ -1,7 +1,7 @@
 import { applyDirection } from '../engine/systems/movementSystem';
 import { EngineContext } from '../engine/context';
 import { createDefaultSettings, GameSettings } from '../engine/settings';
-import { GameConfig, GameState } from '../engine/types';
+import { Direction, GameConfig, GameState } from '../engine/types';
 import { GameEngine } from '../engine/GameEngine';
 import { TickResult } from '../engine/events';
 import { createSeededRng } from './seededRng';
@@ -73,13 +73,16 @@ export class Arena {
 
     const ticksExecuted = this.state.tickCount;
     const elapsedMs = ticksExecuted * this.engine.getSettings().tickIntervalMs;
+    const reachedTickLimit = ticksExecuted >= limit
+      && !this.state.gameOver
+      && !this.state.levelComplete;
     return {
       seed: this.seed,
       ticksExecuted,
       elapsedMs,
       levelComplete: this.state.levelComplete,
       gameOver: this.state.gameOver,
-      snakes: this.buildSnakeStats(),
+      snakes: this.buildSnakeStats(reachedTickLimit),
     };
   }
 
@@ -97,6 +100,7 @@ export class Arena {
   }
 
   private applyBotDirections(): void {
+    const directions: (Direction | undefined)[] = [];
     for (let i = 0; i < this.participants.length; i++) {
       const snake = this.state.snakes[i];
       if (!snake || !snake.alive) continue;
@@ -106,7 +110,12 @@ export class Arena {
         this.engine.getSettings(),
         this.algorithmRng
       );
-      applyDirection(snake, direction);
+      directions[i] = direction;
+    }
+    // All algorithms observe the same directions at the start of the tick.
+    for (let i = 0; i < directions.length; i++) {
+      const direction = directions[i];
+      if (direction) applyDirection(this.state.snakes[i], direction);
     }
   }
 
@@ -187,7 +196,9 @@ export class Arena {
     });
   }
 
-  private buildSnakeStats(): ArenaSnakeStats[] {
+  private buildSnakeStats(reachedTickLimit: boolean): ArenaSnakeStats[] {
+    const aliveCount = this.state.snakes.filter(snake => snake.alive).length;
+    const drawn = aliveCount > 1 && this.state.snakes.every(snake => snake.levelsWon === 0);
     return this.state.snakes.map((snake, i) => {
       const algorithm = this.participants[i].algorithm;
       const survivedTicks =
@@ -204,6 +215,8 @@ export class Arena {
         survivedTicks,
         survivedMs: survivedTicks * this.engine.getSettings().tickIntervalMs,
         aliveAtEnd: snake.alive,
+        reachedTickLimit: reachedTickLimit && snake.alive,
+        drawAtEnd: drawn && snake.alive,
         deathReason: snake.deathReason,
       };
     });

@@ -165,6 +165,7 @@ function createGameStateMessage(acknowledgedSequence = -1): object {
         score: 0,
         levelsWon: 0,
         ticksWithoutFood: 0,
+        satiety: 0,
         controller: {
           type: 'human',
           controllerId: 'player-1',

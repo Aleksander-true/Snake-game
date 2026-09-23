@@ -1,4 +1,4 @@
-import type { GeneticTrainingCheckpoint } from '@snake-game/core';
+import { resolveTrainingHeuristic, isTrainingObservationConfig, type GeneticTrainingCheckpoint } from '@snake-game/core';
 
 const TRAINING_DATABASE_NAME = 'snake-genetic-training';
 const TRAINING_DATABASE_VERSION = 1;
@@ -97,10 +97,16 @@ function validateCheckpoint(checkpoint: GeneticTrainingCheckpoint): void {
 function isCheckpoint(value: unknown): value is GeneticTrainingCheckpoint {
   if (!value || typeof value !== 'object') return false;
   const checkpoint = value as Partial<GeneticTrainingCheckpoint>;
+  try {
+    resolveTrainingHeuristic(checkpoint.config?.heuristicOpponent);
+  } catch {
+    return false;
+  }
   return checkpoint.formatVersion === 1
     && typeof checkpoint.runId === 'string'
     && Number.isInteger(checkpoint.nextGeneration)
     && Array.isArray(checkpoint.population)
     && Array.isArray(checkpoint.reports)
-    && !!checkpoint.config;
+    && !!checkpoint.config
+    && isTrainingObservationConfig(checkpoint.config);
 }

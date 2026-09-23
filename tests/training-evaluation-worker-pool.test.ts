@@ -2,7 +2,7 @@ import type {
   TrainingEvaluationMetrics,
   TrainingEvaluationTask,
 } from '@snake-game/core';
-import { createDefaultGeneticTrainingConfig } from '@snake-game/core';
+import { createDefaultGeneticTrainingConfig, GeneticTrainingSession, evaluateTrainingTask } from '@snake-game/core';
 import { TrainingEvaluationWorkerPool } from '../apps/web/src/training/TrainingEvaluationWorkerPool';
 import type { EvaluationWorkerRequest, EvaluationWorkerResponse } from '../apps/web/src/training/messages';
 
@@ -14,11 +14,34 @@ const metrics: TrainingEvaluationMetrics = {
   averageSurvivedTicks: 1,
   averageFinalLength: 1,
   winRate: 0,
+  drawRate: 0,
+  tickLimitRate: 0,
   aliveRate: 0,
   deathReasons: {},
 };
 
 describe('training evaluation worker pool', () => {
+  test('dual-channel results are identical with one or three evaluation workers', async () => {
+    class EvaluationWorker {
+      onmessage: ((event: MessageEvent<EvaluationWorkerResponse>) => void) | null = null;
+      terminate(): void {}
+      postMessage(request: EvaluationWorkerRequest): void {
+        queueMicrotask(() => this.onmessage?.(new MessageEvent('message', {
+          data: { type: 'evaluated', result: evaluateTrainingTask(request.task) },
+        })));
+      }
+    }
+    const config = { ...createDefaultGeneticTrainingConfig(167, 3, 4),
+      topology: [167, 4, 3], populationSize: 4, eliteCount: 1, tournamentSize: 2,
+      maxTicks: 30, scenarioGames: { solo: 1, heuristic: 1, cohort: 1 } };
+    const tasks = new GeneticTrainingSession(config).createEvaluationTasks();
+    const evaluate = async (count: number) => {
+      const pool = new TrainingEvaluationWorkerPool(count, () => new EvaluationWorker() as unknown as Worker);
+      try { return await pool.evaluate(tasks, () => undefined); }
+      finally { pool.stop(); }
+    };
+    expect(await evaluate(3)).toEqual(await evaluate(1));
+  });
   test('retries a task when a worker response cannot be deserialized', async () => {
     let createdWorkers = 0;
     class FakeWorker {

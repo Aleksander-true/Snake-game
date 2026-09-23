@@ -296,6 +296,38 @@
   width: 18px;
 }
 
+.training-network-turn-input {
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.training-network-turns {
+  display: grid;
+  grid-template-columns: repeat(3, 8px);
+  grid-template-rows: repeat(2, 8px);
+  gap: 2px;
+}
+
+.training-network-turn {
+  width: 8px;
+}
+
+.training-network-turn--front {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.training-network-turn--left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.training-network-turn--right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
 .training-network-outputs {
   display: grid;
   grid-template-columns: repeat(3, 38px);

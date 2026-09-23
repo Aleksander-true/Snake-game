@@ -1,8 +1,10 @@
 import { createNeuralArenaAlgorithm } from '../ai/nn/neuralArenaAlgorithm';
+import { isObservationVersion } from '../ai/encodeObservation';
 import {
   createDenseNetwork,
   createDenseNetworkFromGenome,
   flattenNetwork,
+  initializeSpatialVisionWeights,
 } from '../ai/nn/simpleNetwork';
 import {
   createStatefulSeededRng,
@@ -12,7 +14,7 @@ import {
 import type { StatefulRandomPort } from '../engine/ports';
 import { getHeuristicAlgorithmById } from '../heuristic';
 import { aggregateEvaluationMetrics, calculateRunFitness } from './fitness';
-import { resolveTrainingScenarioGames } from './defaults';
+import { resolveTrainingScenarioGames, resolveTrainingHeuristic } from './defaults';
 import { crossoverGenomes, mutateGenome, selectTournament } from './geneticOperators';
 import type {
   CompletedTrainingGeneration,
@@ -25,6 +27,7 @@ import type {
   TrainedModelArtifact,
   TrainingCandidateGenome,
   TrainingCandidateResult,
+  TrainingEvaluationMetrics,
   TrainingEvaluationResult,
   TrainingEvaluationTask,
 } from './types';
@@ -235,7 +238,7 @@ export class GeneticTrainingSession {
     return {
       model: {
         formatVersion: 1,
-        observationVersion: 1,
+        observationVersion: this.config.observationVersion,
         id: `ga-${this.runId}`,
         name: `GA champion ${new Date().toISOString()}`,
         createdAt: new Date().toISOString(),
@@ -257,7 +260,7 @@ export class GeneticTrainingSession {
     if (!this.champion) throw new Error('Training session has no evaluated champion');
     return {
       formatVersion: 1,
-      observationVersion: 1,
+      observationVersion: this.config.observationVersion,
       id: `ga-${this.runId}`,
       name: `GA checkpoint ${this.runId}`,
       createdAt: new Date().toISOString(),
@@ -282,15 +285,19 @@ export class GeneticTrainingSession {
           : mutateGenome(genome, this.config.mutationRate, this.config.mutationSigma, this.rng),
       }));
     }
-    return Array.from({ length: this.config.populationSize }, (_, index) => ({
-      id: `candidate-1-${index + 1}`,
-      genome: flattenNetwork(createDenseNetwork(
+    return Array.from({ length: this.config.populationSize }, (_, index) => {
+      const network = createDenseNetwork(
         this.config.topology[0],
         this.config.topology.slice(1, -1),
         this.config.topology[this.config.topology.length - 1],
         this.rng,
-      )),
-    }));
+      );
+      const version = this.config.observationVersion;
+      if (version === 5 || version === 6) {
+        initializeSpatialVisionWeights(network, this.config.visionSize, version, this.rng);
+      }
+      return { id: `candidate-1-${index + 1}`, genome: flattenNetwork(network) };
+    });
   }
 
   private createNextPopulation(
@@ -338,14 +345,26 @@ export function evaluateTrainingTask(task: TrainingEvaluationTask): TrainingEval
     ? task.config.validationSeeds
     : task.config.trainingSeeds;
   const games = resolveTrainingScenarioGames(task.config);
+  const candidateAlgorithm = createNeuralArenaAlgorithm({
+    id: task.candidate.id,
+    observationVersion: task.config.observationVersion,
+    network: createDenseNetworkFromGenome(task.config.topology, task.candidate.genome),
+  });
+  const opponentAlgorithm = games.cohort > 0 && task.opponent
+    ? createNeuralArenaAlgorithm({
+      id: task.opponent.id,
+      observationVersion: task.config.observationVersion,
+      network: createDenseNetworkFromGenome(task.config.topology, task.opponent.genome),
+    })
+    : undefined;
   if (games.solo > 0) {
-    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.solo, 0x243f6a88), 'solo'));
+    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.solo, 0x243f6a88), 'solo', candidateAlgorithm));
   }
   if (games.heuristic > 0) {
-    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.heuristic, 0x85a308d3), 'heuristic'));
+    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.heuristic, 0x85a308d3), 'heuristic', candidateAlgorithm));
   }
   if (games.cohort > 0) {
-    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.cohort, 0x13198a2e), 'cohort'));
+    addScenario(evaluateScenario(task, createScenarioSeeds(seeds, games.cohort, 0x13198a2e), 'cohort', candidateAlgorithm, opponentAlgorithm));
   }
 
   return {
@@ -374,28 +393,24 @@ function evaluateScenario(
   task: TrainingEvaluationTask,
   seeds: number[],
   scenario: 'solo' | 'heuristic' | 'cohort',
+  candidateAlgorithm: ReturnType<typeof createNeuralArenaAlgorithm>,
+  opponentAlgorithm?: ReturnType<typeof createNeuralArenaAlgorithm>,
 ): ScenarioEvaluation {
   let ticksExecuted = 0;
-  const stats = seeds.map((seed, seedIndex) => {
+  const stats = seeds.map((seed) => {
     const participants = [{
       name: 'Кандидат',
-      algorithm: createNeuralArenaAlgorithm({
-        id: task.candidate.id,
-        network: createDenseNetworkFromGenome(task.config.topology, task.candidate.genome),
-      }),
+      algorithm: candidateAlgorithm,
     }];
     if (scenario === 'heuristic') {
       participants.push({
         name: 'Эвристический бот',
-        algorithm: getHeuristicAlgorithmById(seedIndex % 2 === 0 ? 'basic' : 'solid'),
+        algorithm: getHeuristicAlgorithmById(resolveTrainingHeuristic(task.config.heuristicOpponent)),
       });
-    } else if (scenario === 'cohort' && task.opponent) {
+    } else if (scenario === 'cohort' && opponentAlgorithm) {
       participants.push({
         name: 'Соперник поколения',
-        algorithm: createNeuralArenaAlgorithm({
-          id: task.opponent.id,
-          network: createDenseNetworkFromGenome(task.config.topology, task.opponent.genome),
-        }),
+        algorithm: opponentAlgorithm,
       });
     }
     const run = runArenaSimulation({
@@ -405,6 +420,7 @@ function evaluateScenario(
       level: task.config.level,
       difficultyLevel: task.config.difficultyLevel,
       gameMode: task.config.gameMode,
+      settings: { visionSize: task.config.visionSize },
     });
     ticksExecuted += run.ticksExecuted;
     return run.snakes[0];
@@ -428,6 +444,12 @@ function buildGenerationReport(
   ticksExecuted: number,
 ): GenerationReport {
   const fitness = evaluated.map((candidate) => candidate.fitness).sort((a, b) => a - b);
+  const populationMean = (
+    select: (metrics: TrainingEvaluationMetrics) => number,
+  ): number => evaluated.reduce(
+    (sum, candidate) => sum + select(candidate.metrics),
+    0,
+  ) / evaluated.length;
   const middle = Math.floor(fitness.length / 2);
   const median = fitness.length % 2 === 0
     ? (fitness[middle - 1] + fitness[middle]) / 2
@@ -441,6 +463,9 @@ function buildGenerationReport(
     validationFitness: validation?.fitness,
     bestMetrics: cloneMetrics(evaluated[0].metrics),
     validationMetrics: validation ? cloneMetrics(validation.metrics) : undefined,
+    populationWinRate: populationMean((metrics) => metrics.winRate),
+    populationDrawRate: populationMean((metrics) => metrics.drawRate),
+    populationTickLimitRate: populationMean((metrics) => metrics.tickLimitRate),
     elapsedMs,
     simulationsPerSecond: simulations * 1000 / elapsedMs,
     ticksPerSecond: ticksExecuted * 1000 / elapsedMs,
@@ -473,6 +498,22 @@ function validateConfig(config: GeneticTrainingConfig): void {
   }
   if (config.topology.length < 2 || config.topology[config.topology.length - 1] !== 3) {
     throw new Error('topology must contain input, hidden layers and 3 outputs');
+  }
+  const visionSize = config.visionSize;
+  if (!Number.isInteger(visionSize) || visionSize < 3 || visionSize > 64) {
+    throw new Error('visionSize must be an integer between 3 and 64');
+  }
+  if (!isObservationVersion(config.observationVersion)) {
+    throw new Error('Only observationVersion 3, 4, 5 or 6 is supported');
+  }
+  if ((config.observationVersion === 5 || config.observationVersion === 6) && config.topology.length < 3) {
+    throw new Error('Observation versions 5 and 6 require a hidden layer');
+  }
+  if (config.topology[0] !== visionSize * visionSize * (config.observationVersion === 4 ? 2 : 1) + 5) {
+    throw new Error('topology input size does not match visionSize and observationVersion');
+  }
+  if (config.observationVersion !== 3 && visionSize % 2 === 0) {
+    throw new Error('Observation versions 4, 5 and 6 require an odd visionSize');
   }
   if (config.trainingSeeds.length === 0 || config.validationSeeds.length === 0) {
     throw new Error('training and validation seeds must not be empty');
@@ -528,7 +569,12 @@ function validateCheckpoint(
   if (checkpoint.population.length !== config.populationSize) {
     throw new Error('Checkpoint population size does not match configuration');
   }
-  if (checkpoint.config.topology.join(',') !== config.topology.join(',')) {
+  if (resolveTrainingHeuristic(checkpoint.config.heuristicOpponent) !== resolveTrainingHeuristic(config.heuristicOpponent)) {
+    throw new Error('Checkpoint heuristic opponent does not match configuration');
+  }
+  if (checkpoint.config.observationVersion !== config.observationVersion
+    || checkpoint.config.visionSize !== config.visionSize
+    || checkpoint.config.topology.join(',') !== config.topology.join(',')) {
     throw new Error('Checkpoint topology does not match configuration');
   }
 }
@@ -537,7 +583,8 @@ function validateAndReadModelGenome(
   model: TrainedModelArtifact,
   config: GeneticTrainingConfig,
 ): Float32Array {
-  if (model.observationVersion !== 1 || model.topology.join(',') !== config.topology.join(',')) {
+  if (model.observationVersion !== config.observationVersion
+    || model.topology.join(',') !== config.topology.join(',')) {
     throw new Error('Model observation or topology is not compatible with training configuration');
   }
   const genome = new Float32Array(model.genome);
@@ -548,6 +595,7 @@ function validateAndReadModelGenome(
 function cloneConfig(config: GeneticTrainingConfig): GeneticTrainingConfig {
   return {
     ...config,
+    heuristicOpponent: resolveTrainingHeuristic(config.heuristicOpponent),
     topology: [...config.topology],
     trainingSeeds: [...config.trainingSeeds],
     validationSeeds: [...config.validationSeeds],

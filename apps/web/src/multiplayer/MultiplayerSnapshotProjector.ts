@@ -155,6 +155,7 @@ export function snapshotToGameState(snapshot: GameSnapshotDTO, gameMode: GameMod
       snake.score = source.score;
       snake.levelsWon = source.levelsWon;
       snake.ticksWithoutFood = source.ticksWithoutFood;
+      snake.satiety = source.satiety;
       snake.movementPaused = !source.controller.connected;
       snake.deathReason = source.deathReason;
       return snake;

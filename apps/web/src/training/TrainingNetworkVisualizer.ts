@@ -1,4 +1,4 @@
-import type { NeuralNetworkTrace } from '@snake-game/core';
+import type { NeuralNetworkTrace, ObservationVersion } from '@snake-game/core';
 
 interface LayerView {
   cells: HTMLElement[];
@@ -15,6 +15,7 @@ const OUTPUT_ACTIONS = [
 export class TrainingNetworkVisualizer {
   private topologyKey = '';
   private vision: LayerView | null = null;
+  private events: LayerView | null = null;
   private extraInputs: LayerView | null = null;
   private hiddenLayers: LayerView[] = [];
   private outputs: HTMLElement[] = [];
@@ -24,8 +25,8 @@ export class TrainingNetworkVisualizer {
     this.host.setAttribute('aria-label', 'Живая визуализация нейросети');
   }
 
-  showTopology(topology: number[]): void {
-    const key = topology.join(',');
+  showTopology(topology: number[], observationVersion: ObservationVersion = 3): void {
+    const key = `${observationVersion}:${topology.join(',')}`;
     if (this.topologyKey === key) return;
     this.topologyKey = key;
     this.host.replaceChildren();
@@ -36,12 +37,15 @@ export class TrainingNetworkVisualizer {
     this.host.appendChild(heading);
 
     const inputSize = topology[0] ?? 0;
-    const visionCount = Math.max(0, inputSize - 2);
+    const extraInputCount = 5;
+    const visionCount = Math.max(0, inputSize - extraInputCount) / (observationVersion === 4 ? 2 : 1);
     const visionSide = Math.sqrt(visionCount);
     const visionColumns = Number.isInteger(visionSide)
       ? visionSide
       : Math.ceil(Math.sqrt(Math.max(1, visionCount)));
-    this.vision = this.createLayer('Зрение', visionCount, visionColumns, 'vision');
+    this.vision = this.createLayer(observationVersion === 4 ? 'Текущее поле' : 'Зрение', visionCount, visionColumns, 'vision');
+    this.events = observationVersion === 4
+      ? this.createLayer('Угрозы и события', visionCount, visionColumns, 'vision') : null;
     this.extraInputs = this.createExtraInputs();
     this.hiddenLayers = topology.slice(1, -1).map((size, index) => (
       this.createLayer(
@@ -56,7 +60,12 @@ export class TrainingNetworkVisualizer {
 
   render(trace: NeuralNetworkTrace): void {
     this.updateLayer(this.vision, trace.input.subarray(0, this.vision?.cells.length ?? 0));
-    this.updateLayer(this.extraInputs, trace.input.subarray(Math.max(0, trace.input.length - 2)));
+    const count = this.vision?.cells.length ?? 0;
+    this.updateLayer(this.events, trace.input.subarray(count, count * 2));
+    this.updateLayer(
+      this.extraInputs,
+      trace.input.subarray(Math.max(0, trace.input.length - (this.extraInputs?.cells.length ?? 0))),
+    );
     this.hiddenLayers.forEach((layer, index) => {
       this.updateLayer(layer, trace.layerValues[index] ?? new Float32Array());
     });
@@ -73,6 +82,7 @@ export class TrainingNetworkVisualizer {
   reset(): void {
     this.topologyKey = '';
     this.vision = null;
+    this.events = null;
     this.extraInputs = null;
     this.hiddenLayers = [];
     this.outputs = [];
@@ -116,7 +126,7 @@ export class TrainingNetworkVisualizer {
   private createExtraInputs(): LayerView {
     const section = document.createElement('section');
     section.className = 'training-network-extra-inputs';
-    const labels = ['Длина', 'Голод'];
+    const labels = ['Длина', 'Насыщение'];
     const cells = labels.map((label) => {
       const item = document.createElement('div');
       item.className = 'training-network-extra-input';
@@ -129,6 +139,26 @@ export class TrainingNetworkVisualizer {
       section.appendChild(item);
       return cell;
     });
+    const item = document.createElement('div');
+    item.className = 'training-network-extra-input training-network-turn-input';
+    const caption = document.createElement('span');
+    caption.textContent = 'Повороты';
+    const turns = document.createElement('span');
+    turns.className = 'training-network-turns';
+    const actions = [
+      { action: 'left', label: 'Было влево' },
+      { action: 'front', label: 'Было прямо' },
+      { action: 'right', label: 'Было вправо' },
+    ] as const;
+    for (const { action, label } of actions) {
+      const cell = document.createElement('span');
+      cell.className = `training-network-cell training-network-cell--extra training-network-turn training-network-turn--${action}`;
+      this.updateCell(cell, 0, label);
+      turns.appendChild(cell);
+      cells.push(cell);
+    }
+    item.append(caption, turns);
+    section.appendChild(item);
     this.host.appendChild(section);
     return { cells, title: 'Вход' };
   }

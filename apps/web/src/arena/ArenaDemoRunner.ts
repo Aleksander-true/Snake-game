@@ -198,6 +198,7 @@ export class ArenaDemoRunner implements ArenaDemoController {
   }
 
   private applyBotDirections(): void {
+    const directions: (GameState['snakes'][number]['direction'] | undefined)[] = [];
     for (let i = 0; i < this.participants.length; i++) {
       const snake = this.state.snakes[i];
       if (!snake || !snake.alive) continue;
@@ -207,7 +208,12 @@ export class ArenaDemoRunner implements ArenaDemoController {
         this.engine.getSettings(),
         this.algorithmRng
       );
-      applyDirection(snake, direction);
+      directions[i] = direction;
+    }
+    // Apply decisions only after every participant has chosen its direction.
+    for (let i = 0; i < directions.length; i++) {
+      const direction = directions[i];
+      if (direction) applyDirection(this.state.snakes[i], direction);
     }
   }
 

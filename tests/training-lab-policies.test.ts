@@ -10,7 +10,7 @@ describe('training lab policies', () => {
     expect(isTrainingLabPolicyId('random-turns')).toBe(true);
     expect(isTrainingLabPolicyId('neural-simple-v1')).toBe(true);
     expect(isTrainingLabPolicyId('unknown')).toBe(false);
-    expect(calculateObservationInputSize(20)).toBe(402);
+    expect(calculateObservationInputSize(20)).toBe(405);
   });
 
   test('returns the selected ArenaAlgorithm implementation', () => {

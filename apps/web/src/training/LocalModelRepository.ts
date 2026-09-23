@@ -1,4 +1,5 @@
-import { resolveTrainingScenarioGames, type TrainedModelArtifact } from '@snake-game/core';
+import { isObservationVersion } from '@snake-game/core';
+import { resolveTrainingHeuristic, isTrainingObservationConfig, resolveTrainingScenarioGames, type TrainedModelArtifact } from '@snake-game/core';
 
 export const TRAINED_MODELS_STORAGE_KEY = 'snake.geneticModels.v1';
 const MAX_LOCAL_MODELS = 10;
@@ -44,7 +45,7 @@ export class LocalModelRepository implements ModelRepository {
 
 export function parseModelArtifact(serialized: string): TrainedModelArtifact {
   const value = JSON.parse(serialized) as unknown;
-  if (!isModelArtifact(value)) throw new Error('Файл не содержит совместимую модель версии 1');
+  if (!isModelArtifact(value)) throw new Error('Файл не содержит совместимую модель');
   return cloneModel(value);
 }
 
@@ -55,6 +56,11 @@ function validateModelArtifact(value: TrainedModelArtifact): void {
 function isModelArtifact(value: unknown): value is TrainedModelArtifact {
   if (!value || typeof value !== 'object') return false;
   const model = value as Partial<TrainedModelArtifact>;
+  try {
+    resolveTrainingHeuristic(model.trainingConfig?.heuristicOpponent);
+  } catch {
+    return false;
+  }
   const topology = model.topology;
   const expectedGenomeLength = Array.isArray(topology) && topology.length >= 2
     ? topology.slice(1).reduce((count, size, index) =>
@@ -64,7 +70,7 @@ function isModelArtifact(value: unknown): value is TrainedModelArtifact {
     0)
     : Number.NaN;
   return model.formatVersion === 1
-    && model.observationVersion === 1
+    && isObservationVersion(model.observationVersion)
     && typeof model.id === 'string'
     && typeof model.name === 'string'
     && Array.isArray(model.topology)
@@ -75,6 +81,9 @@ function isModelArtifact(value: unknown): value is TrainedModelArtifact {
     && model.genome.length === expectedGenomeLength
     && model.genome.every((weight) => typeof weight === 'number' && Number.isFinite(weight))
     && !!model.trainingConfig
+    && model.trainingConfig.observationVersion === model.observationVersion
+    && isTrainingObservationConfig(model.trainingConfig)
+    && model.trainingConfig.topology.join(',') === model.topology.join(',')
     && !!model.metrics
     && (model.labSettings === undefined || isLabSettings(model.labSettings));
 }

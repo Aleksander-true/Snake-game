@@ -27,6 +27,7 @@ export interface SnakeSnapshotDTO {
   score: number;
   levelsWon: number;
   ticksWithoutFood: number;
+  satiety: number;
   deathReason?: string;
   controller: SnakeControllerDTO;
 }

@@ -1,5 +1,7 @@
 import {
   resolveTrainingScenarioGames,
+  isTrainingObservationConfig,
+  resolveTrainingHeuristic,
   type GeneticTrainingConfig,
   type TrainingLabSettings,
 } from '@snake-game/core';
@@ -51,11 +53,17 @@ export class LocalTrainingPresetRepository {
 function isCustomTrainingPreset(value: unknown): value is CustomTrainingPreset {
   if (!value || typeof value !== 'object') return false;
   const preset = value as Partial<CustomTrainingPreset>;
+  try {
+    resolveTrainingHeuristic(preset.config?.heuristicOpponent);
+  } catch {
+    return false;
+  }
   return typeof preset.id === 'string'
     && typeof preset.name === 'string'
     && preset.name.trim().length > 0
     && typeof preset.createdAt === 'string'
     && !!preset.config
+    && isTrainingObservationConfig(preset.config)
     && !!preset.labSettings;
 }
 

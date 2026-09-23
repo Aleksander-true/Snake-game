@@ -1,10 +1,55 @@
-import { Direction, Position, GameState } from '../engine/types';
+import { Direction, Position, GameState, Snake } from '../engine/types';
 import { GameSettings } from '../engine/settings';
 import { inBounds } from '../engine/board';
 import { getFoodReward } from '../engine/systems/foodSystem';
 
 const OPPONENT_SNAKE_DANGER_MULTIPLIER = 2;
 const HEDGEHOG_DANGER_MULTIPLIER = 3;
+
+/** Single-channel neural vision uses fixed obstacle values in the raw 100-point scale. */
+export function generateSingleChannelVision(
+  snake: Snake,
+  state: GameState,
+  settings: GameSettings,
+): number[][] {
+  const vision = generateVision(snake.head, snake.direction, state, settings);
+  const size = vision.length;
+  const center = Math.floor(size / 2);
+  const obstacles = Array.from({ length: size }, () => new Array<number>(size).fill(0));
+  const mark = (position: Position, value: number) => {
+    const local = rotateToVision(position.x - snake.head.x, position.y - snake.head.y, snake.direction);
+    const x = local.x + center;
+    const y = local.y + center;
+    if (x >= 0 && x < size && y >= 0 && y < size) {
+      obstacles[y][x] = Math.min(obstacles[y][x], value);
+    }
+  };
+  for (const wall of state.walls) mark(wall, -100);
+  for (const other of state.snakes) {
+    if (!other.alive) continue;
+    other.segments.forEach((segment, index) => {
+      const value = other.id === snake.id ? -100 : index === 0 ? -200 : index === 1 ? -160 : -120;
+      mark(segment, value);
+    });
+  }
+  for (const enemy of state.enemies) {
+    const frontX = enemy.facing === 'left' ? enemy.pos.x : enemy.pos.x + enemy.width - 1;
+    for (let y = enemy.pos.y; y < enemy.pos.y + enemy.height; y++) {
+      for (let x = enemy.pos.x; x < enemy.pos.x + enemy.width; x++) {
+        mark({ x, y }, x === frontX ? -160 : -120);
+      }
+    }
+  }
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const world = rotateToWorld(x - center, y - center, snake.direction, snake.head);
+      if (!inBounds(world, state.width, state.height)) obstacles[y][x] = Math.min(obstacles[y][x], -100);
+      // Food, including distant projections, must not cancel an occupied cell.
+      if (obstacles[y][x] < 0) vision[y][x] = obstacles[y][x];
+    }
+  }
+  return vision;
+}
 
 /**
  * Generate the vision matrix for a bot snake.
@@ -29,6 +74,42 @@ export function generateVision(
   const observerSnake = state.snakes.find(snake =>
     snake.alive && snake.head.x === headPos.x && snake.head.y === headPos.y
   );
+  // Rebuild from the current state; tickCount alone does not track all mutations.
+  const cellCount = state.width * state.height;
+  const obstacles = new Uint8Array(cellCount);
+  const snakeDanger = new Uint32Array(cellCount);
+  const foodValues = new Float64Array(cellCount);
+  const foodPresent = new Uint8Array(cellCount);
+  for (const wall of state.walls) {
+    if (inBounds(wall, state.width, state.height)) obstacles[wall.y * state.width + wall.x] |= 1;
+  }
+  for (const enemy of state.enemies) {
+    for (let y = Math.max(0, enemy.pos.y); y < Math.min(state.height, enemy.pos.y + enemy.height); y++) {
+      for (let x = Math.max(0, enemy.pos.x); x < Math.min(state.width, enemy.pos.x + enemy.width); x++) {
+        obstacles[y * state.width + x] |= 2;
+      }
+    }
+  }
+  for (const snake of state.snakes) {
+    if (!snake.alive) continue;
+    const occupied = new Set<number>();
+    const multiplier = snake === observerSnake ? 1 : OPPONENT_SNAKE_DANGER_MULTIPLIER;
+    for (const segment of snake.segments) {
+      if (!inBounds(segment, state.width, state.height)) continue;
+      const index = segment.y * state.width + segment.x;
+      if (occupied.has(index)) continue;
+      occupied.add(index);
+      snakeDanger[index] += multiplier;
+    }
+  }
+  for (const food of state.foods) {
+    if (!inBounds(food.pos, state.width, state.height)) continue;
+    const index = food.pos.y * state.width + food.pos.x;
+    // Match the previous find(): only the first food in an occupied cell is visible.
+    if (foodPresent[index]) continue;
+    foodPresent[index] = 1;
+    foodValues[index] = getFoodReward(food, settings).points;
+  }
 
   // Map vision coordinates to world coordinates based on direction
   for (let visionY = 0; visionY < size; visionY++) {
@@ -48,32 +129,19 @@ export function generateVision(
         // Out of bounds = wall
         signal += getObstacleSignal(distance, settings);
       } else {
-        // Check walls
-        if (state.walls.some(wall => wall.x === worldPos.x && wall.y === worldPos.y)) {
+        const index = worldPos.y * state.width + worldPos.x;
+        if (obstacles[index] & 1) {
           signal += getObstacleSignal(distance, settings);
         }
-        if (state.enemies.some(enemy =>
-          worldPos.x >= enemy.pos.x
-          && worldPos.x < enemy.pos.x + enemy.width
-          && worldPos.y >= enemy.pos.y
-          && worldPos.y < enemy.pos.y + enemy.height
-        )) {
+        if (obstacles[index] & 2) {
           signal += getObstacleSignal(distance, settings) * HEDGEHOG_DANGER_MULTIPLIER;
         }
 
-        // Check snake bodies
-        for (const snake of state.snakes) {
-          if (!snake.alive) continue;
-          if (snake.segments.some(segment => segment.x === worldPos.x && segment.y === worldPos.y)) {
-            const dangerMultiplier = snake === observerSnake ? 1 : OPPONENT_SNAKE_DANGER_MULTIPLIER;
-            signal += getObstacleSignal(distance, settings) * dangerMultiplier;
-          }
-        }
+        signal += getObstacleSignal(distance, settings) * snakeDanger[index];
 
         // Check food
-        const food = state.foods.find(item => item.pos.x === worldPos.x && item.pos.y === worldPos.y);
-        if (food) {
-          signal += getFoodSignal(distance, settings) * getFoodReward(food, settings).points;
+        if (foodPresent[index] && !obstacles[index] && !snakeDanger[index]) {
+          signal = 100 * foodValues[index];
         }
       }
 
@@ -97,6 +165,8 @@ function addOffscreenFoodSignals(
   const size = vision.length;
   const minOffset = -half;
   const maxOffset = size - half - 1;
+  const visibleFood = new Set<number>();
+  const projections = new Map<number, { maximum: number; evidence: number }>();
   for (const food of state.foods) {
     const relative = rotateToVision(food.pos.x - headPos.x, food.pos.y - headPos.y, direction);
     if (
@@ -104,15 +174,36 @@ function addOffscreenFoodSignals(
       && relative.x <= maxOffset
       && relative.y >= minOffset
       && relative.y <= maxOffset
-    ) continue;
+    ) {
+      visibleFood.add((relative.y + half) * size + relative.x + half);
+      continue;
+    }
     const projected = projectToVisionEdge(relative, minOffset, maxOffset);
-    const distance = Math.max(Math.abs(relative.x), Math.abs(relative.y));
+    const distance = Math.max(
+      minOffset - relative.x, relative.x - maxOffset,
+      minOffset - relative.y, relative.y - maxOffset,
+    );
     const foodValue = getFoodReward(food, settings).points;
-    vision[projected.y + half][projected.x + half] += getFoodSignal(distance, settings) * foodValue;
+    if (foodValue <= 0) continue;
+    const index = (projected.y + half) * size + projected.x + half;
+    const projection = projections.get(index) ?? { maximum: 0, evidence: 0 };
+    projection.maximum = Math.max(projection.maximum, foodValue);
+    projection.evidence += foodValue / distance;
+    projections.set(index, projection);
+  }
+  for (const [index, { maximum, evidence }] of projections) {
+    const y = Math.floor(index / size);
+    const x = index % size;
+    // Direct observations take priority over projected food.
+    if (visibleFood.has(index) || vision[y][x] < 0) continue;
+    const floor = Math.min(0.05, maximum);
+    // Apply the floor once per cell, so a receding group also tends to 0.05.
+    const signal = floor + (maximum - floor) * (evidence / (maximum + evidence));
+    vision[y][x] = 100 * signal;
   }
 }
 
-function rotateToVision(worldX: number, worldY: number, direction: Direction): Position {
+export function rotateToVision(worldX: number, worldY: number, direction: Direction): Position {
   switch (direction) {
     case 'up':
       return { x: worldX, y: worldY };
@@ -167,13 +258,6 @@ function getObstacleSignal(dist: number, settings: GameSettings): number {
   if (dist <= 1) return settings.obstacleSignalClose;
   const signal = settings.obstacleSignalClose + settings.obstacleSignalDecay * (dist - 1);
   return Math.min(signal, -5); // cap at -5
-}
-
-function getFoodSignal(dist: number, settings: GameSettings): number {
-  if (dist <= 1) return settings.foodSignalClose;
-  const signal = settings.foodSignalClose - settings.foodSignalDecay * (dist - 1);
-  const minimum = Math.max(settings.foodSignalMin, settings.foodSignalClose * 0.05);
-  return Math.max(signal, minimum);
 }
 
 /**

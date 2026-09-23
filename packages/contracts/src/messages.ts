@@ -1,7 +1,7 @@
 import type { NetworkDirection, GameSnapshotDTO } from './gameContracts';
 import type { RoomSnapshotDTO } from './roomContracts';
 
-export const NETWORK_PROTOCOL_VERSION = 1;
+export const NETWORK_PROTOCOL_VERSION = 2;
 export const MAX_INCOMING_WEBSOCKET_MESSAGE_BYTES = 16 * 1024;
 export const HEARTBEAT_INTERVAL_MS = 2000;
 export const HEARTBEAT_TIMEOUT_MS = 5000;

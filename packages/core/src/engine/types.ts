@@ -64,6 +64,7 @@ export interface Snake {
   score: number;
   levelsWon: number;
   ticksWithoutFood: number;
+  satiety: number;
   isBot: boolean;
   movementPaused?: boolean;
   deathReason?: string;
@@ -73,6 +74,8 @@ export interface Snake {
   move(grow: boolean): void;
   incrementScore(points?: number): void;
   incrementHungerTick(): void;
+  decreaseSatiety(amount: number): void;
+  setSatiety(value: number): void;
   resetHunger(): void;
   trimTail(): void;
   die(reason: string): void;
@@ -134,8 +137,12 @@ export interface GameConfig {
 /** Input for bot AI */
 export interface BotInput {
   vision: number[][];
+  /** Normalized threats and events for observation version 4. */
+  events?: number[][];
   snakeLength: number;
-  ticksWithoutFood: number;
+  satiety: number;
+  /** Previous relative neural decision. Defaults to front before the first decision. */
+  previousDecision?: BotDecision;
 }
 
 /** Serializable score record used by persistence adapters. */

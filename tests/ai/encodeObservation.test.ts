@@ -1,19 +1,18 @@
 import { DEFAULT_MAX_SNAKE_LENGTH, DEFAULT_VISION_VALUE_SCALE, encodeObservation, getObservationSize } from '@snake-game/core';
 import type { BotInput } from '@snake-game/core';
-import defaults from '../../packages/core/src/gameDefaults.json';
 
 describe('encodeObservation', () => {
-  test('calculates observation size from vision plus two extra features', () => {
+  test('calculates observation size from vision, scalar features and previous decision', () => {
     const input: BotInput = {
       vision: [
         [1, 2, 3],
         [4, 5, 6],
       ],
       snakeLength: 5,
-      ticksWithoutFood: 2,
+      satiety: 0,
     };
 
-    expect(getObservationSize(input)).toBe(8);
+    expect(getObservationSize(input)).toBe(11);
   });
 
   test('flattens vision row by row', () => {
@@ -23,126 +22,126 @@ describe('encodeObservation', () => {
         [-100, 50],
       ],
       snakeLength: 5,
-      ticksWithoutFood: 3,
+      satiety: 0,
     };
 
-    const result = encodeObservation(input, {
-      hungerThreshold: 15,
-    });
+    const result = encodeObservation(input, {});
 
-    expect(result.slice(0,-2)).toEqual(new Float32Array([1,0,-1,0.5]))
+    expect(result.slice(0, 4)).toEqual(new Float32Array([1, 0, -1, 0.5]));
   });
 
-  test('appends normalized snake length and hunger', () => {
+  test('appends normalized snake length and satiety', () => {
     const input: BotInput = {
       vision: [
         [0, 0],
         [0, 0],
       ],
       snakeLength: 10,
-      ticksWithoutFood: 6,
+      satiety: 3,
     };
 
     const result = encodeObservation(input, {
-      hungerThreshold: 12,
       maxSnakeLengthForEncoding: 20,
     });
-    expect(result.slice(-2)).toEqual(new Float32Array([0.5,0.5]))
+    expect(result.slice(4, 6)).toEqual(new Float32Array([0.5, 3]));
+    expect(result.slice(-3)).toEqual(new Float32Array([0, 1, 0]));
   });
 
-  test('handles zero or negative hunger threshold safely', () => {
+  test('clamps negative satiety to zero', () => {
     const input: BotInput = {
       vision: [[0]],
       snakeLength: 5,
-      ticksWithoutFood: 10,
+      satiety: -1,
     };
 
-    const result = encodeObservation(input, {
-      hungerThreshold: 0,
-    });
+    const result = encodeObservation(input, {});
 
-    expect(result.every(i => !isNaN(i) && isFinite(i))).toBe(true);
+    expect(result[2]).toBe(0);
   });
 
-  test('empty vision array yields zero-length observation', () => {
+  test('empty vision still includes scalar and previous-decision inputs', () => {
     const input: BotInput = {
       vision: [],
       snakeLength: 5,
-      ticksWithoutFood: 10,
+      satiety: 0,
     };
 
-    expect(getObservationSize(input)).toBe(2);
-    expect(encodeObservation(input, { hungerThreshold: 15 }).length).toBe(2);
+    expect(getObservationSize(input)).toBe(5);
+    expect(encodeObservation(input, {}).length).toBe(5);
   });
 
-  test('vision with no cells in the first row yields zero-length observation', () => {
+  test('vision with no cells in the first row still includes extra inputs', () => {
     const input: BotInput = {
       vision: [[]],
       snakeLength: 5,
-      ticksWithoutFood: 10,
+      satiety: 0,
     };
 
-    expect(getObservationSize(input)).toBe(2);
-    expect(encodeObservation(input, { hungerThreshold: 15 }).length).toBe(2);
-  });
-
-  test('negative hungerThreshold uses default hunger threshold from game defaults', () => {
-    const input: BotInput = {
-      vision: [[0]],
-      snakeLength: 5,
-      ticksWithoutFood: 30,
-    };
-
-    const result = encodeObservation(input, {
-      hungerThreshold: -1,
-    });
-
-    expect(result.slice(-1)[0]).toBe(30 / defaults.snake.hungerThreshold);
+    expect(getObservationSize(input)).toBe(5);
+    expect(encodeObservation(input, {}).length).toBe(5);
   });
 
   test('zero maxSnakeLengthForEncoding makes normalized snake length default for non-zero length', () => {
     const input: BotInput = {
       vision: [[0]],
       snakeLength: 5,
-      ticksWithoutFood: 10,
+      satiety: 2.5,
     };
 
     const result = encodeObservation(input, {
-      hungerThreshold: 15,
       maxSnakeLengthForEncoding: 0,
     });
 
-    expect(result.slice(-2)[0]).toBeCloseTo(5 / DEFAULT_MAX_SNAKE_LENGTH);
-    expect(result.slice(-2)[1]).toBeCloseTo(10 / 15);
+    expect(result[1]).toBeCloseTo(5 / DEFAULT_MAX_SNAKE_LENGTH);
+    expect(result[2]).toBeCloseTo(2.5);
   });
 
   test('zero visionValueScale makes non-zero vision cells default', () => {
     const input: BotInput = {
       vision: [[42]],
       snakeLength: 5,
-      ticksWithoutFood: 10,
+      satiety: 2.5,
     };
 
     const result = encodeObservation(input, {
-      hungerThreshold: 15,
       visionValueScale: 0,
     });
 
     expect(result[0]).toBeCloseTo(42 / DEFAULT_VISION_VALUE_SCALE);
-    expect(result.slice(-2)[1]).toBeCloseTo(10 / 15);
+    expect(result[2]).toBeCloseTo(2.5);
   });
 
   test('handles negative snake length safely', () => {
     const input: BotInput = {
       vision: [[0]],
       snakeLength: -5,
-      ticksWithoutFood: 10,
+      satiety: 0,
     };
 
-    const result = encodeObservation(input, {
-      hungerThreshold: 15,
-    });
+    const result = encodeObservation(input, {});
 
-    expect(result.slice(-2)[0]).toBeCloseTo(-5 / 20);
+    expect(result[1]).toBeCloseTo(-5 / 20);
   });
+
+  test('encodes the previous relative decision as one-hot values', () => {
+    const result = encodeObservation({
+      vision: [[0]],
+      snakeLength: 5,
+      satiety: 0,
+      previousDecision: 'left',
+    }, {});
+
+    expect(result.slice(-3)).toEqual(new Float32Array([1, 0, 0]));
+  });
+
+  test('passes food-value satiety without normalization', () => {
+    const result = encodeObservation({
+      vision: [],
+      snakeLength: 5,
+      satiety: 3,
+    }, {});
+
+    expect(result[1]).toBe(3);
+  });
+
 }); 

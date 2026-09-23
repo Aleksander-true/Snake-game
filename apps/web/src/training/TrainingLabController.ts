@@ -1,12 +1,13 @@
 import {
   calculateObservationInputSize,
+  isObservationVersion,
   createBuiltInGeneticTrainingPresets,
-  createDefaultSettings,
   createDefaultGeneticTrainingConfig,
   createDenseNetworkFromGenome,
   createNeuralArenaAlgorithm,
   getHeuristicAlgorithmById,
   resolveTrainingScenarioGames,
+  resolveTrainingHeuristic,
 } from '@snake-game/core';
 import type {
   ArenaParticipant,
@@ -114,12 +115,14 @@ export class TrainingLabController {
 
   private writeInitialValues(): void {
     const defaults = createDefaultGeneticTrainingConfig(
-      calculateObservationInputSize(createDefaultSettings().visionSize),
+      calculateObservationInputSize(9, 4), undefined, 4,
     );
     this.setValue('trainingGenerations', defaults.generations);
     this.setValue('trainingPopulation', defaults.populationSize);
     this.setValue('trainingElite', defaults.eliteCount);
     this.setValue('trainingTournament', defaults.tournamentSize);
+    this.setValue('trainingVisionSize', defaults.visionSize);
+    this.setValue('trainingObservationVersion', defaults.observationVersion);
     this.setValue('trainingHiddenLayers', defaults.topology.slice(1, -1).join(','));
     this.setValue('trainingCrossover', defaults.crossoverRate);
     this.setValue('trainingMutationRate', defaults.mutationRate);
@@ -127,6 +130,7 @@ export class TrainingLabController {
     this.setValue('trainingValidationEvery', defaults.validationEvery);
     this.setValue('trainingSoloGames', defaults.scenarioGames.solo);
     this.setValue('trainingHeuristicGames', defaults.scenarioGames.heuristic);
+    this.setValue('trainingHeuristicOpponent', resolveTrainingHeuristic(defaults.heuristicOpponent));
     this.setValue('trainingCohortGames', defaults.scenarioGames.cohort);
     this.setValue('trainingLevel', this.options.initialConfig.level);
     this.setValue('trainingDifficulty', this.options.initialConfig.difficultyLevel);
@@ -182,6 +186,17 @@ export class TrainingLabController {
         control.addEventListener('input', clearValidation);
         control.addEventListener('change', clearValidation);
       });
+    this.select('trainingObservationVersion').addEventListener('change', () => {
+      this.renderPresetOptions(this.select('trainingPresetSelect').value);
+    });
+    this.input('trainingVisionSize').addEventListener('input', () => {
+      const field = this.input('trainingVisionSize');
+      const value = Number(field.value);
+      const invalid = !Number.isInteger(value) || value < 3 || value > 63 || value % 2 === 0;
+      field.setCustomValidity(invalid ? 'Поле зрения: укажите нечётное целое число от 3 до 63' : '');
+      if (invalid) field.setAttribute('aria-invalid', 'true');
+      else field.removeAttribute('aria-invalid');
+    });
     this.applyWorkerSelection();
   }
 
@@ -215,7 +230,7 @@ export class TrainingLabController {
   private startTraining(checkpoint?: GeneticTrainingCheckpoint): void {
     if (this.runner.isRunning()) return;
     try {
-      const config = this.readConfig();
+      const config = checkpoint ? { ...checkpoint.config } : this.readConfig();
       const labSettings = this.readLabSettings();
       if (checkpoint) {
         Object.assign(config, checkpoint.config, {
@@ -329,10 +344,24 @@ export class TrainingLabController {
     this.setStatus('Обучение отменено без дополнительного сохранения. Ранее созданные checkpoint сохранены.');
   }
 
+  private readObservationVersion() {
+    const version = Number(this.select('trainingObservationVersion').value);
+    if (!isObservationVersion(version)) throw new Error('Неподдерживаемая версия модели');
+    return version;
+  }
+
   private readConfig(): GeneticTrainingConfig {
-    const inputSize = calculateObservationInputSize(createDefaultSettings().visionSize);
+    const observationVersion = this.fineTuneModel?.observationVersion
+      ?? this.readObservationVersion();
+    const visionSize = this.fineTuneModel?.trainingConfig.visionSize
+      ?? this.integer('trainingVisionSize', 3, 63);
+    if (!this.fineTuneModel && visionSize % 2 === 0) {
+      this.rejectField(this.input('trainingVisionSize'), 'Поле зрения: укажите нечётное целое число от 3 до 63');
+    }
+    const inputSize = calculateObservationInputSize(visionSize, observationVersion);
     const seed = this.integer('trainingSeed', 1, 2_000_000_000);
-    const config = createDefaultGeneticTrainingConfig(inputSize, seed);
+    const config = createDefaultGeneticTrainingConfig(inputSize, seed, observationVersion);
+    config.visionSize = visionSize;
     const hiddenLayersInput = this.input('trainingHiddenLayers');
     const hiddenLayerParts = hiddenLayersInput.value.split(',').map((value) => value.trim());
     const hiddenLayers = hiddenLayerParts.map(Number);
@@ -357,6 +386,7 @@ export class TrainingLabController {
     config.level = this.integer('trainingLevel', 1, 100);
     config.difficultyLevel = this.integer('trainingDifficulty', 1, 10);
     config.gameMode = this.select('trainingGameMode').value === 'survival' ? 'survival' : 'classic';
+    config.heuristicOpponent = resolveTrainingHeuristic(this.select('trainingHeuristicOpponent').value);
     config.scenarioGames = {
       solo: this.integer('trainingSoloGames', 0, 1000),
       heuristic: this.integer('trainingHeuristicGames', 0, 1000),
@@ -404,6 +434,7 @@ export class TrainingLabController {
       `Fitness = очки × ${value('trainingFitnessScore')}`,
       `+ приближение к еде × ${value('trainingFitnessApproach')}`,
       `+ победы × ${value('trainingFitnessWins')}`,
+      `+ (ничья с выживанием ? 0.5 × ${value('trainingFitnessWins')} : 0)`,
       `+ min(1, тики / лимит) × ${value('trainingFitnessSurvival')}`,
       `+ (жива в конце ? ${value('trainingFitnessAlive')} : −${value('trainingFitnessDeath')}).`,
     ].join(' ');
@@ -492,10 +523,9 @@ export class TrainingLabController {
       format(report.bestMetrics.averageScore),
       format(report.bestMetrics.averageFoodApproach ?? 0),
       format(report.bestMetrics.averageSurvivedTicks),
-      `${format(report.bestMetrics.winRate * 100)}%`,
+      `${format(report.populationWinRate * 100)}% / ${format(report.populationDrawRate * 100)}%`,
+      `${format(report.populationTickLimitRate * 100)}%`,
       format(report.diversity),
-      `${format(report.simulationsPerSecond)} сим/с`,
-      `${format(report.ticksPerSecond ?? 0)} тиков/с`,
       formatDuration(report.elapsedMs),
     ].forEach((value) => {
       const cell = document.createElement('td');
@@ -696,7 +726,7 @@ export class TrainingLabController {
     const validationSeeds = preview.config.validationSeeds;
     const seed = validationSeeds[(this.previewRun - 1) % validationSeeds.length];
     let latestTrace: NeuralNetworkTrace | null = null;
-    this.networkVisualizer?.showTopology(preview.config.topology);
+    this.networkVisualizer?.showTopology(preview.config.topology, preview.config.observationVersion);
     const participants = this.createPreviewParticipants(preview, network, (trace) => {
       latestTrace = trace;
     });
@@ -707,6 +737,7 @@ export class TrainingLabController {
       level: preview.config.level,
       difficultyLevel: preview.config.difficultyLevel,
       gameMode: preview.config.gameMode,
+      settings: { visionSize: preview.config.visionSize },
       speedMultiplier: Number(this.select('trainingReplaySpeed').value) as ArenaSpeedMultiplier,
       seed,
       fitToViewport: true,
@@ -782,11 +813,11 @@ export class TrainingLabController {
   ): ArenaParticipant[] {
     const participants: ArenaParticipant[] = [{
       name: 'Чемпион',
-      algorithm: createNeuralArenaAlgorithm({ id: preview.id, network, onTrace }),
+      algorithm: createNeuralArenaAlgorithm({ id: preview.id, network, onTrace, observationVersion: preview.config.observationVersion }),
     }];
     const scenario = this.readReplayScenario();
     if (scenario === 'heuristic') {
-      const heuristicId = (this.previewRun - 1) % 2 === 0 ? 'basic' : 'solid';
+      const heuristicId = resolveTrainingHeuristic(preview.config.heuristicOpponent);
       participants.push({
         name: `Эвристика ${heuristicId}`,
         algorithm: getHeuristicAlgorithmById(heuristicId),
@@ -802,6 +833,7 @@ export class TrainingLabController {
           : 'Копия нейросети',
         algorithm: createNeuralArenaAlgorithm({
           id: opponent.id,
+          observationVersion: preview.config.observationVersion,
           network: createDenseNetworkFromGenome(preview.config.topology, opponent.genome),
         }),
       });
@@ -907,6 +939,8 @@ export class TrainingLabController {
       await this.renderModels();
       await this.renderCheckpoints();
       this.fineTuneModel = null;
+      this.input('trainingVisionSize').disabled = false;
+      this.select('trainingObservationVersion').disabled = false;
       this.setStatus(
         `Обучение завершено: ${result.completedGenerations} поколений. Модель сохранена автоматически.`,
       );
@@ -1057,7 +1091,11 @@ export class TrainingLabController {
     if (this.runner.isRunning()) return;
     try {
       await this.repository.delete(model.id);
-      if (this.fineTuneModel?.id === model.id) this.fineTuneModel = null;
+      if (this.fineTuneModel?.id === model.id) {
+        this.fineTuneModel = null;
+        this.input('trainingVisionSize').disabled = false;
+        this.select('trainingObservationVersion').disabled = false;
+      }
       if (this.activePreview?.source === 'saved' && this.activePreview.id === model.id) {
         this.replay?.stop();
         this.replay = null;
@@ -1136,6 +1174,10 @@ export class TrainingLabController {
     this.setValue('trainingPopulation', config.populationSize);
     this.setValue('trainingElite', config.eliteCount);
     this.setValue('trainingTournament', config.tournamentSize);
+    this.setValue('trainingVisionSize', config.visionSize);
+    this.setValue('trainingObservationVersion', config.observationVersion);
+    this.input('trainingVisionSize').disabled = !!this.fineTuneModel;
+    this.select('trainingObservationVersion').disabled = !!this.fineTuneModel;
     this.setValue('trainingHiddenLayers', config.topology.slice(1, -1).join(','));
     this.setValue('trainingCrossover', config.crossoverRate);
     this.setValue('trainingMutationRate', config.mutationRate);
@@ -1143,6 +1185,7 @@ export class TrainingLabController {
     this.setValue('trainingValidationEvery', config.validationEvery);
     this.setValue('trainingSoloGames', scenarioGames.solo);
     this.setValue('trainingHeuristicGames', scenarioGames.heuristic);
+    this.setValue('trainingHeuristicOpponent', resolveTrainingHeuristic(config.heuristicOpponent));
     this.setValue('trainingCohortGames', scenarioGames.cohort);
     this.setValue('trainingLevel', config.level);
     this.setValue('trainingDifficulty', config.difficultyLevel);
@@ -1164,10 +1207,11 @@ export class TrainingLabController {
   private renderPresetOptions(selectedValue?: string): void {
     const select = this.select('trainingPresetSelect');
     select.replaceChildren();
-    const inputSize = calculateObservationInputSize(createDefaultSettings().visionSize);
+    const version = this.readObservationVersion();
+    const inputSize = calculateObservationInputSize(9, version);
     const builtInGroup = document.createElement('optgroup');
     builtInGroup.label = 'Встроенные';
-    for (const preset of createBuiltInGeneticTrainingPresets(inputSize)) {
+    for (const preset of createBuiltInGeneticTrainingPresets(inputSize, undefined, version)) {
       const option = document.createElement('option');
       option.value = `built-in:${preset.id}`;
       option.textContent = preset.name;
@@ -1199,7 +1243,11 @@ export class TrainingLabController {
     const preset = this.findSelectedPreset(selected);
     if (!preset) return;
     const topology = this.fineTuneModel?.topology ?? preset.config.topology;
-    this.writeConfigValues({ ...preset.config, topology: [...topology] });
+    const visionSize = this.fineTuneModel
+      ? this.fineTuneModel.trainingConfig.visionSize
+      : preset.config.visionSize;
+    this.writeConfigValues({ ...preset.config, topology: [...topology], visionSize,
+      observationVersion: this.fineTuneModel?.observationVersion ?? preset.config.observationVersion });
     if ('labSettings' in preset) this.writeLabSettings(preset.labSettings);
     const topologyMessage = this.fineTuneModel ? ' Топология выбранной модели сохранена.' : '';
     this.setStatus(`Применён пресет «${preset.name}».${topologyMessage}`);
@@ -1238,9 +1286,12 @@ export class TrainingLabController {
   }
 
   private findSelectedPreset(selected: string) {
-    const inputSize = calculateObservationInputSize(createDefaultSettings().visionSize);
+    const version = this.readObservationVersion();
+    const size = Number(this.input('trainingVisionSize').value);
+    const visionSize = Number.isInteger(size) && size >= 3 && size <= 63 && size % 2 === 1 ? size : 9;
+    const inputSize = calculateObservationInputSize(visionSize, version);
     if (selected.startsWith('built-in:')) {
-      return createBuiltInGeneticTrainingPresets(inputSize)
+      return createBuiltInGeneticTrainingPresets(inputSize, undefined, version)
         .find((preset) => preset.id === selected.slice('built-in:'.length));
     }
     if (selected.startsWith('custom:')) {
@@ -1272,7 +1323,8 @@ export class TrainingLabController {
     const header = [
       'generation', 'bestFitness', 'meanFitness', 'medianFitness', 'validationFitness',
       'averageScore', 'averageSurvivedTicks', 'winRate', 'aliveRate', 'diversity',
-      'averageFoodApproach',
+      'averageFoodApproach', 'populationWinRate', 'populationDrawRate',
+      'populationTickLimitRate',
       'simulationsPerSecond',
       'ticksPerSecond', 'elapsedMs',
     ];
@@ -1288,6 +1340,9 @@ export class TrainingLabController {
       report.bestMetrics.aliveRate,
       report.diversity,
       report.bestMetrics.averageFoodApproach ?? 0,
+      report.populationWinRate,
+      report.populationDrawRate,
+      report.populationTickLimitRate,
       report.simulationsPerSecond,
       report.ticksPerSecond ?? '',
       report.elapsedMs,
@@ -1321,6 +1376,7 @@ export class TrainingLabController {
     this.button('trainingMenu').disabled = running;
     this.select('trainingDisplayMode').disabled = running;
     this.select('trainingWorkerSelection').disabled = running;
+    this.select('trainingHeuristicOpponent').disabled = running;
     this.input('trainingCheckpointEvery').disabled = running;
     this.applyWorkerSelection();
   }
@@ -1439,6 +1495,8 @@ const trainingParameterHelp: Record<string, string> = {
   trainingElite: 'Число лучших кандидатов, переходящих в следующее поколение без мутации.',
   trainingTournament: 'Сколько случайных кандидатов сравнивается при выборе родителя. Большее значение усиливает отбор.',
   trainingHiddenLayers: 'Количество нейронов в скрытых слоях через запятую. Большая сеть медленнее и требует больше данных.',
+  trainingObservationVersion: 'Одноканальная модель: препятствия −1, чужая голова −2, шея −1.6, тело −1.2; ёж спереди −1.6, сзади −1.2, без затухания. Двухканальная добавляет угрозы и след прошлого наблюдения. v5: одноканальная с гауссовой инициализацией связей зрения; v6: эти связи начинаются с 0.1. Пять дополнительных входов и следующие слои остаются случайными, смещения нулевые. Дообучение сохраняет версию и обученные веса.',
+  trainingVisionSize: 'Нечётная сторона квадратного поля зрения от 3 до 63; голова точно в центре. Число входов равно размер² + 5 или 2 × размер² + 5 для двух каналов. Большое поле видит дальше, но резко увеличивает сеть и время обучения.',
   trainingCrossover: 'Вероятность смешать веса двух родителей. Ноль отключает скрещивание.',
   trainingMutationRate: 'Вероятность изменения каждого веса потомка. Слишком большое значение разрушает удачные решения.',
   trainingMutationSigma: 'Средняя сила изменения мутировавшего веса.',
@@ -1449,7 +1507,8 @@ const trainingParameterHelp: Record<string, string> = {
   trainingMaxTicks: 'Максимальная длина одной партии. Большое значение позволяет долгие стратегии, но сильно замедляет обучение.',
   trainingValidationEvery: 'Период проверки лучшего кандидата поколения на постоянных validation seed. Лучший validation-результат определяет сохраняемую модель, но не влияет на генетический отбор следующей популяции.',
   trainingSoloGames: 'Число одиночных партий для каждого кандидата в поколении. Ноль отключает сценарий.',
-  trainingHeuristicGames: 'Число партий каждого кандидата против basic/solid-ботов. Ноль отключает сценарий.',
+  trainingHeuristicGames: 'Число партий каждого кандидата против выбранной эвристики. Ноль отключает сценарий.',
+  trainingHeuristicOpponent: 'Один фиксированный соперник для обучения, validation и replay: Rookie → Basic → Solid → Wise. Сложность игрового поля не меняет выбранный профиль. Для следующего этапа выберите «Дообучить» и другую эвристику.',
   trainingCohortGames: 'Число партий каждого кандидата против соперника из текущего поколения. Ноль отключает сценарий.',
   trainingFitnessScore: 'Награда за каждое игровое очко.',
   trainingFitnessApproach: 'Награда за каждую новую клетку приближения к выбранной еде. Отход назад и повторное движение по уже пройденному пути не награждаются.',
@@ -1494,6 +1553,8 @@ const trainingLabMarkup = `
       <label class="dev-row"><span class="dev-row-label">Популяция</span><input id="trainingPopulation" class="dev-input" type="number" min="4" max="256"></label>
       <label class="dev-row"><span class="dev-row-label">Элита</span><input id="trainingElite" class="dev-input" type="number" min="1"></label>
       <label class="dev-row"><span class="dev-row-label">Турнир</span><input id="trainingTournament" class="dev-input" type="number" min="2"></label>
+      <label class="dev-row"><span class="dev-row-label">Тип модели</span><select id="trainingObservationVersion" class="dev-input"><option value="3">Одноканальная (v3)</option><option value="4">Двухканальная (v4)</option><option value="5">Одноканальная: гауссова (v5)</option><option value="6">Одноканальная: веса 0.1 (v6)</option></select></label>
+      <label class="dev-row"><span class="dev-row-label">Поле зрения</span><input id="trainingVisionSize" class="dev-input" type="number" min="3" max="63" step="2"></label>
       <label class="dev-row"><span class="dev-row-label">Скрытые слои</span><input id="trainingHiddenLayers" class="dev-input" type="text" placeholder="16,8"></label>
       <label class="dev-row"><span class="dev-row-label">Скрещивание</span><input id="trainingCrossover" class="dev-input" type="number" min="0" max="1" step="0.01"></label>
       <label class="dev-row"><span class="dev-row-label">Мутация</span><input id="trainingMutationRate" class="dev-input" type="number" min="0" max="1" step="0.001"></label>
@@ -1509,6 +1570,7 @@ const trainingLabMarkup = `
       <label class="dev-row"><span class="dev-row-label">Validation</span><input id="trainingValidationEvery" class="dev-input" type="number" min="1"></label>
       <label class="dev-row"><span class="dev-row-label">Одиночные партии</span><input id="trainingSoloGames" class="dev-input" type="number" min="0" max="1000" step="1"></label>
       <label class="dev-row"><span class="dev-row-label">Против эвристик</span><input id="trainingHeuristicGames" class="dev-input" type="number" min="0" max="1000" step="1"></label>
+      <label class="dev-row"><span class="dev-row-label">Эвристика-соперник</span><select id="trainingHeuristicOpponent" class="dev-input"><option value="rookie">Rookie — новичок</option><option value="basic">Basic — базовая</option><option value="solid">Solid — сильная</option><option value="wise">Wise — самая сильная</option></select></label>
       <label class="dev-row"><span class="dev-row-label">Против поколения</span><input id="trainingCohortGames" class="dev-input" type="number" min="0" max="1000" step="1"></label>
     </div>
     <div class="dev-section">
@@ -1553,7 +1615,7 @@ const trainingLabMarkup = `
     </div>
     <div class="dev-section training-report-wrap">
       <div class="dev-section-title">Поколения</div>
-      <table class="training-report-table"><thead><tr><th>Поколение</th><th>Best fitness</th><th>Mean fitness</th><th>Median fitness</th><th>Validation</th><th>Средние очки</th><th>Приближение</th><th>Средние тики</th><th>Победы</th><th>Разнообразие</th><th>Партий/с</th><th>Тиков/с</th><th>Время</th></tr></thead><tbody id="trainingReportBody"></tbody></table>
+      <table class="training-report-table"><thead><tr><th>Поколение</th><th>Best fitness</th><th>Mean fitness</th><th>Median fitness</th><th>Validation</th><th>Средние очки</th><th>Приближение</th><th>Средние тики</th><th>Победы / Ничья</th><th>Достижения лимита тиков, %</th><th>Разнообразие</th><th>Время</th></tr></thead><tbody id="trainingReportBody"></tbody></table>
     </div>
     <div class="dev-section"><div class="dev-section-title">Итоги чемпиона</div><div id="trainingSummary" class="training-summary">Обучение ещё не завершено.</div></div>
   </div>

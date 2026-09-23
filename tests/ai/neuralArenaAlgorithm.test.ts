@@ -16,6 +16,7 @@ import type {
   NeuralArenaAlgorithmOptions,
   SimpleNetwork,
   Snake,
+  NeuralNetworkTrace,
 } from '@snake-game/core';
 
 function createTestNetwork(inputSize: number): SimpleNetwork {
@@ -63,7 +64,7 @@ const defaultState: GameState = {
 };
 
 describe('neuralArenaAlgorithm', () => {
-  test('buildBotInput returns vision, snake length and hunger', () => {
+  test('buildBotInput returns vision, snake length and satiety', () => {
     const settings = createDefaultSettings();
 
     const snake = {
@@ -75,45 +76,26 @@ describe('neuralArenaAlgorithm', () => {
         { x: 5, y: 7 },
       ],
       ticksWithoutFood: 4,
+      satiety: 2.5,
     } as Snake;
 
     const input = buildBotInput(defaultState, snake, settings);
 
     expect(input.snakeLength).toBe(3);
-    expect(input.ticksWithoutFood).toBe(4);
+    expect(input.satiety).toBe(2.5);
     expect(Array.isArray(input.vision)).toBe(true);
   });
 
   test('chooseNeuralDecision returns a relative action', () => {
     const settings = createDefaultSettings();
 
-    const network: SimpleNetwork = {
-      hiddenLayer: {
-        inputSize: 4,
-        outputSize: 2,
-        weights: new Float32Array([
-          1, 0, 0, 0,
-          0, 1, 0, 0,
-        ]),
-        bias: new Float32Array([0, 0]),
-      },
-      outputLayer: {
-        inputSize: 2,
-        outputSize: 3,
-        weights: new Float32Array([
-          1, 0,
-          0, 1,
-          -1, -1,
-        ]),
-        bias: new Float32Array([0, 0, 0]),
-      },
-    };
+    const network = createTestNetwork(7);
 
     const decision = chooseNeuralDecision(
       {
         vision: [[1, 0]],
         snakeLength: 5,
-        ticksWithoutFood: 0,
+        satiety: 0,
       },
       settings,
       {
@@ -138,9 +120,10 @@ describe('neuralArenaAlgorithm', () => {
         { x: 5, y: 6 },
       ],
       ticksWithoutFood: 0,
+      satiety: 0,
     } as Snake;
 
-    const inputSize = settings.visionSize * settings.visionSize + 2;
+    const inputSize = settings.visionSize * settings.visionSize + 5;
     const network = createTestNetwork(inputSize);
 
     const direction = chooseNeuralDirection(defaultState, snake, settings, {
@@ -152,7 +135,7 @@ describe('neuralArenaAlgorithm', () => {
 
   test('createNeuralArenaAlgorithm creates arena-compatible algorithm', () => {
     const settings = createDefaultSettings();
-    const inputSize = settings.visionSize * settings.visionSize + 2;
+    const inputSize = settings.visionSize * settings.visionSize + 5;
     const network = createTestNetwork(inputSize);
 
     const algorithm = createNeuralArenaAlgorithm({
@@ -163,9 +146,38 @@ describe('neuralArenaAlgorithm', () => {
     expect(typeof algorithm.chooseDirection).toBe('function');
   });
 
+  test('passes the previous relative decision to the next network input', () => {
+    const settings = createDefaultSettings();
+    const inputSize = settings.visionSize * settings.visionSize + 5;
+    const traces: NeuralNetworkTrace[] = [];
+    const algorithm = createNeuralArenaAlgorithm({
+      network: createTestNetwork(inputSize),
+      onTrace: (trace) => traces.push(trace),
+    });
+    const snake = {
+      id: 7,
+      alive: true,
+      head: { x: 5, y: 5 },
+      direction: 'up' as Direction,
+      segments: [{ x: 5, y: 5 }, { x: 5, y: 6 }],
+      ticksWithoutFood: 0,
+      satiety: 0,
+    } as Snake;
+
+    algorithm.chooseDirection(defaultState, snake, settings);
+    algorithm.chooseDirection(defaultState, snake, settings);
+
+    expect(traces[0].input.slice(-3)).toEqual(new Float32Array([0, 1, 0]));
+    const previousAction = traces[0].output.action;
+    const expected = previousAction === 'left' ? [1, 0, 0]
+      : previousAction === 'front' ? [0, 1, 0]
+        : [0, 0, 1];
+    expect(traces[1].input.slice(-3)).toEqual(new Float32Array(expected));
+  });
+
   test('neural algorithm completes a headless arena run', () => {
     const settings = createDefaultSettings();
-    const inputSize = settings.visionSize * settings.visionSize + 2;
+    const inputSize = settings.visionSize * settings.visionSize + 5;
     const network = createTestNetwork(inputSize);
 
     const algorithm = createNeuralArenaAlgorithm({
@@ -205,6 +217,7 @@ describe('neuralArenaAlgorithm', () => {
         { x: 5, y: 6 },
       ],
       ticksWithoutFood: 5,
+      satiety: 0,
       alive: false,
     } as Snake;
 
@@ -218,7 +231,7 @@ describe('neuralArenaAlgorithm', () => {
     const input: BotInput = {
       vision: [[0]],
       snakeLength: 5,
-      ticksWithoutFood: 10,
+      satiety: 0,
     };
 
     const NETWORK_INPUT_SIZE = 10;
@@ -233,6 +246,6 @@ describe('neuralArenaAlgorithm', () => {
       network,
     } as NeuralArenaAlgorithmOptions;
 
-    expect(() => chooseNeuralDecision(input, settings, options)).toThrow(`Neural network input size mismatch: encoded observation has length 3, but network input size is ${NETWORK_INPUT_SIZE}`);
+    expect(() => chooseNeuralDecision(input, settings, options)).toThrow(`Neural network input size mismatch: encoded observation has length 6, but network input size is ${NETWORK_INPUT_SIZE}`);
   });
 });

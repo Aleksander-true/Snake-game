@@ -9,12 +9,91 @@ import {
   evaluateTrainingTask,
   mutateGenome,
   resolveTrainingScenarioGames,
+  resolveTrainingHeuristic,
+  getHeuristicAlgorithmById,
 } from '@snake-game/core';
 import defaults from '../packages/core/src/gameDefaults.json';
 
 describe('genetic training', () => {
+  test.each([5, 6] as const)('v%i initializes, resumes and fine-tunes without resetting weights', observationVersion => {
+    const config = { ...createSmallConfig(2), observationVersion,
+      visionSize: 9, topology: [86, 4, 3] };
+    const session = new GeneticTrainingSession(config);
+    expect(session.createCheckpoint().population).toEqual(new GeneticTrainingSession(config).createCheckpoint().population);
+    const initial = session.createEvaluationTasks();
+    if (observationVersion === 6) {
+      for (const task of initial) for (let neuron = 0; neuron < 4; neuron++) {
+        expect(Array.from(task.candidate.genome.slice(neuron * 86, neuron * 86 + 81)))
+          .toEqual(new Array(81).fill(Math.fround(0.1)));
+      }
+    }
+    completeNextGeneration(session);
+    const checkpoint = JSON.parse(JSON.stringify(session.createCheckpoint()));
+    const resumed = new GeneticTrainingSession(config, { checkpoint });
+    expect(resumed.createCheckpoint().population).toEqual(checkpoint.population);
+    completeNextGeneration(session);
+    completeNextGeneration(resumed);
+    expect(resumed.createResult().model.genome).toEqual(session.createResult().model.genome);
+    const model = resumed.createResult().model;
+    expect(model.observationVersion).toBe(observationVersion);
+    model.genome[0] = 0.375;
+    const fineTuned = new GeneticTrainingSession(config, { initialModel: model });
+    expect(Array.from(fineTuned.createEvaluationTasks()[0].candidate.genome)).toEqual(model.genome);
+    expect(() => new GeneticTrainingSession({ ...config, observationVersion: 3 }, { initialModel: model })).toThrow();
+    expect(() => new GeneticTrainingSession({ ...config, visionSize: 10, topology: [105, 4, 3] })).toThrow('odd');
+    expect(() => new GeneticTrainingSession({ ...config, topology: [86, 3] })).toThrow('hidden layer');
+  });
+
+  test.each(['rookie', 'basic', 'solid', 'wise'] as const)('uses only %s in training and validation and retains it in checkpoints', opponent => {
+    const ids = ['rookie', 'basic', 'solid', 'wise'] as const;
+    const spies = ids.map(id => jest.spyOn(getHeuristicAlgorithmById(id), 'chooseDirection'));
+    try {
+      const config = { ...createSmallConfig(2), heuristicOpponent: opponent,
+        scenarioGames: { solo: 0, heuristic: 3, cohort: 0 } };
+      const session = new GeneticTrainingSession(config);
+      completeNextGeneration(session);
+      ids.forEach((id, index) => {
+        if (id === opponent) expect(spies[index]).toHaveBeenCalled();
+        else expect(spies[index]).not.toHaveBeenCalled();
+      });
+      const checkpoint = JSON.parse(JSON.stringify(session.createCheckpoint()));
+      expect(checkpoint.config.heuristicOpponent).toBe(opponent);
+      const resumed = new GeneticTrainingSession(config, { checkpoint });
+      completeNextGeneration(resumed);
+      expect(resumed.createResult().model.trainingConfig.heuristicOpponent).toBe(opponent);
+      expect(() => new GeneticTrainingSession({ ...config, heuristicOpponent: opponent === 'rookie' ? 'wise' : 'rookie' }, { checkpoint })).toThrow('heuristic opponent');
+    } finally {
+      spies.forEach(spy => spy.mockRestore());
+    }
+  });
+
+  test('defaults old configurations to rookie and rejects unsupported opponents', () => {
+    expect(resolveTrainingHeuristic(undefined)).toBe('rookie');
+    expect(() => resolveTrainingHeuristic('mixed')).toThrow('Unsupported');
+    const config = createSmallConfig(1);
+    delete config.heuristicOpponent;
+    expect(new GeneticTrainingSession(config).createCheckpoint().config.heuristicOpponent).toBe('rookie');
+  });
+  test('dual-channel training resumes exactly and is independent of result arrival order', () => {
+    const config = { ...createSmallConfig(2), observationVersion: 4 as const,
+      visionSize: 9, topology: [167, 4, 3], scenarioGames: { solo: 1, heuristic: 1, cohort: 1 } };
+    const session = new GeneticTrainingSession(config, { runId: 'dual' });
+    completeNextGeneration(session);
+    const checkpoint = JSON.parse(JSON.stringify(session.createCheckpoint()));
+    const resumed = new GeneticTrainingSession(config, { checkpoint });
+    const results = session.createEvaluationTasks().map(evaluateTrainingTask);
+    for (const [target, evaluations] of [[session, results], [resumed, [...results].reverse()]] as const) {
+      const prepared = target.prepareGeneration([...evaluations]);
+      target.completeGeneration(prepared, prepared.validationTask ? evaluateTrainingTask(prepared.validationTask) : undefined, 100);
+    }
+    expect(resumed.createResult().model.genome).toEqual(session.createResult().model.genome);
+    expect(resumed.createResult().reports).toEqual(session.createResult().reports);
+    expect(resumed.createResult().model.observationVersion).toBe(4);
+    expect(() => new GeneticTrainingSession(config, { initialModel: resumed.createResult().model })).not.toThrow();
+    expect(() => new GeneticTrainingSession({ ...config, visionSize: 10, topology: [205, 4, 3] })).toThrow('odd');
+  });
   test('loads tuned genetic defaults from the canonical JSON', () => {
-    const config = createDefaultGeneticTrainingConfig(402);
+    const config = createDefaultGeneticTrainingConfig(405);
     const training = defaults.training;
 
     expect(config).toMatchObject({
@@ -25,7 +104,8 @@ describe('genetic training', () => {
       crossoverRate: training.crossoverRate,
       mutationRate: training.mutationRate,
       mutationSigma: training.mutationSigma,
-      topology: [402, ...training.hiddenLayers, 3],
+      topology: [405, ...training.hiddenLayers, 3],
+      visionSize: 20,
       trainingSeedStrategy: training.seedStrategy,
       trainingSeeds: training.trainingSeedOffsets.map((offset) => training.seed + offset),
       validationSeeds: training.validationSeedOffsets.map((offset) => training.seed + offset),
@@ -35,7 +115,7 @@ describe('genetic training', () => {
   });
 
   test('provides the four staged training presets', () => {
-    const presets = createBuiltInGeneticTrainingPresets(402);
+    const presets = createBuiltInGeneticTrainingPresets(405);
 
     expect(presets.map((preset) => preset.name)).toEqual([
       'Начальное обучение кормлению',
@@ -49,6 +129,13 @@ describe('genetic training', () => {
     );
   });
 
+  test('uses satiety observation semantics for new network topology', () => {
+    const config = createDefaultGeneticTrainingConfig(405);
+
+    expect(config.visionSize).toBe(20);
+    expect(config.observationVersion).toBe(3);
+  });
+
   test('migrates legacy scenario weights to deterministic game counts', () => {
     expect(resolveTrainingScenarioGames({
       trainingSeeds: [1, 2, 3, 4, 5, 6],
@@ -57,7 +144,7 @@ describe('genetic training', () => {
   });
 
   test('rewards bounded progress toward food without replacing score rewards', () => {
-    const config = createDefaultGeneticTrainingConfig(402);
+    const config = createDefaultGeneticTrainingConfig(405);
     const baseStats = {
       snakeId: 1,
       name: 'Candidate',
@@ -107,7 +194,7 @@ describe('genetic training', () => {
   });
 
   test('completes a small deterministic training run', () => {
-    const config = createDefaultGeneticTrainingConfig(402);
+    const config = createDefaultGeneticTrainingConfig(405);
     Object.assign(config, {
       populationSize: 4,
       generations: 2,
@@ -117,7 +204,7 @@ describe('genetic training', () => {
       trainingSeeds: [3],
       validationSeeds: [5],
       validationEvery: 1,
-      topology: [402, 4, 3],
+      topology: [405, 4, 3],
       scenarioGames: { solo: 1, heuristic: 0, cohort: 0 },
     });
     const run = () => new GeneticTrainer(config).run();
@@ -126,14 +213,14 @@ describe('genetic training', () => {
 
     expect(first.completedGenerations).toBe(2);
     expect(first.reports).toHaveLength(2);
-    expect(first.model.topology).toEqual([402, 4, 3]);
+    expect(first.model.topology).toEqual([405, 4, 3]);
     expect(first.reports.map((report) => report.bestFitness))
       .toEqual(second.reports.map((report) => report.bestFitness));
     expect(first.model.genome).toEqual(second.model.genome);
   });
 
   test('reports each generation best and saves the best validation result', () => {
-    const config = createDefaultGeneticTrainingConfig(402);
+    const config = createDefaultGeneticTrainingConfig(405);
     Object.assign(config, {
       populationSize: 4,
       generations: 2,
@@ -143,7 +230,7 @@ describe('genetic training', () => {
       trainingSeeds: [3],
       validationSeeds: [5],
       validationEvery: 1,
-      topology: [402, 4, 3],
+      topology: [405, 4, 3],
       scenarioGames: { solo: 1, heuristic: 0, cohort: 0 },
     });
     const generations: Array<{ best: number; reportBest: number; validation?: number }> = [];
@@ -303,7 +390,7 @@ describe('genetic training', () => {
 });
 
 function createSmallConfig(generations: number) {
-  const config = createDefaultGeneticTrainingConfig(402);
+  const config = createDefaultGeneticTrainingConfig(405);
   Object.assign(config, {
     populationSize: 4,
     generations,
@@ -314,7 +401,7 @@ function createSmallConfig(generations: number) {
     trainingSeeds: [3],
     validationSeeds: [5],
     validationEvery: 1,
-    topology: [402, 4, 3],
+    topology: [405, 4, 3],
     scenarioGames: { solo: 1, heuristic: 0, cohort: 0 },
   });
   return config;

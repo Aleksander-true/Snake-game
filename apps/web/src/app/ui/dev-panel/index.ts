@@ -366,10 +366,7 @@ function buildAiSection(currentLevel: number): string {
   return buildSection('🤖 ИИ / Зрение',
     settingsRow('visionSize',          'Размер обзора', currentLevel)           +
     settingsRow('obstacleSignalClose', 'Сигнал преп. (близко)', currentLevel)   +
-    settingsRow('obstacleSignalDecay', 'Затухание преп.', currentLevel)          +
-    settingsRow('foodSignalClose',   'Сигнал еды (близко)', currentLevel) +
-    settingsRow('foodSignalDecay',   'Затухание еды', currentLevel)        +
-    settingsRow('foodSignalMin',     'Мин. сигнал еды', currentLevel)
+    settingsRow('obstacleSignalDecay', 'Затухание преп.', currentLevel)
   );
 }
 

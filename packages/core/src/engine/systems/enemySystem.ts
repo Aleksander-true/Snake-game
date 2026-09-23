@@ -316,7 +316,7 @@ function findFoodTarget(
   return foods[0] ? { pos: foods[0].food.pos } : null;
 }
 
-function canOccupy(enemy: Enemy, pos: Position, state: GameState): boolean {
+export function canOccupy(enemy: Enemy, pos: Position, state: GameState): boolean {
   const cells = getEnemyCells(enemy, pos);
   if (cells.some(cell =>
     cell.x < 0 || cell.x >= state.width || cell.y < 0 || cell.y >= state.height

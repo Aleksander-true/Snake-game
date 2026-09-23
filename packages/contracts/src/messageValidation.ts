@@ -219,6 +219,7 @@ function isSnakeSnapshot(value: unknown): boolean {
     && isFiniteNumber(value.score)
     && isFiniteNumber(value.levelsWon)
     && isFiniteNumber(value.ticksWithoutFood)
+    && isFiniteNumber(value.satiety)
     && (value.deathReason === undefined || typeof value.deathReason === 'string')
     && (value.controller.type === 'human' || value.controller.type === 'bot')
     && isNonEmptyString(value.controller.controllerId)

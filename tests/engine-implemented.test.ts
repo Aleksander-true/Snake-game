@@ -1,6 +1,7 @@
 import {
   applyDirection,
   checkLevelComplete,
+  ChickenFoodEntity,
   collidesWithSnake,
   collidesWithWall,
   createDefaultSettings,
@@ -26,6 +27,7 @@ import {
   validateWalls,
 } from '@snake-game/core';
 import type { EngineContext, GameState, RandomPort } from '@snake-game/core';
+import defaults from '../packages/core/src/gameDefaults.json';
 
 const testRng: RandomPort = {
   next: () => 0.5,
@@ -141,13 +143,15 @@ describe('Engine implemented behavior', () => {
   describe('Hunger system', () => {
     test('processHunger increments counter before threshold and does not trim tail', () => {
       const ctx = createCtx();
-      ctx.settings.hungerThreshold = 3;
       const snake = new SnakeEntity(0, 'P1', [{ x: 4, y: 4 }, { x: 3, y: 4 }, { x: 2, y: 4 }], 'right', false);
       snake.ticksWithoutFood = 1;
+      snake.setSatiety(3);
 
       const dead = processHunger(snake, ctx);
       expect(dead).toBe(false);
       expect(snake.ticksWithoutFood).toBe(2);
+      expect(ctx.settings.hungerThreshold).toBe(defaults.snake.hungerThreshold);
+      expect(snake.satiety).toBeCloseTo(3 - 1 / defaults.snake.hungerThreshold);
       expect(snake.segments.length).toBe(3);
     });
 
@@ -169,6 +173,22 @@ describe('Engine implemented behavior', () => {
       snake.ticksWithoutFood = 7;
       resetHunger(snake);
       expect(snake.ticksWithoutFood).toBe(0);
+    });
+
+    test('resetting the hunger interval does not restore satiety', () => {
+      const ctx = createCtx();
+      const snake = new SnakeEntity(0, 'P1', [
+        { x: 4, y: 4 },
+        { x: 3, y: 4 },
+        { x: 2, y: 4 },
+      ], 'right', false);
+      snake.ticksWithoutFood = defaults.snake.hungerThreshold - 1;
+      snake.setSatiety(1);
+
+      processHunger(snake, ctx);
+
+      expect(snake.ticksWithoutFood).toBe(0);
+      expect(snake.satiety).toBeCloseTo(1 - 1 / defaults.snake.hungerThreshold);
     });
   });
 
@@ -345,7 +365,30 @@ describe('Engine implemented behavior', () => {
       engine.processTick(state);
       expect(snake.score).toBe(1);
       expect(snake.segments.length).toBe(beforeLen + 1);
+      expect(snake.ticksWithoutFood).toBe(1);
+      expect(snake.satiety).toBe(1);
       expect(state.foods.length).toBe(1);
+    });
+
+    test('adult chicken sets satiety to three and decay starts on the next tick', () => {
+      const ctx = createCtx();
+      const engine = new GameEngine(ctx);
+      const state = createState(10, 10);
+      const snake = new SnakeEntity(0, 'P1', [
+        { x: 2, y: 2 },
+        { x: 1, y: 2 },
+        { x: 0, y: 2 },
+      ], 'right', false);
+      const chicken = ChickenFoodEntity.newborn({ x: 3, y: 2 });
+      chicken.age = ctx.settings.foodAdultAge;
+      state.snakes = [snake];
+      state.foods = [chicken];
+
+      engine.processTick(state);
+      expect(snake.satiety).toBe(3);
+
+      engine.processTick(state);
+      expect(snake.satiety).toBeCloseTo(3 - 1 / defaults.snake.hungerThreshold);
     });
 
     test('moving into own tail cell is allowed when tail moves away', () => {

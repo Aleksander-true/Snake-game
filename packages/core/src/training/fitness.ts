@@ -7,9 +7,12 @@ export function calculateRunFitness(
   weights: FitnessWeights,
 ): number {
   const survival = Math.min(1, stats.survivedTicks / Math.max(1, maxTicks));
+  const drawReward = stats.drawAtEnd && stats.aliveAtEnd && stats.levelsWon === 0
+    ? 0.5 * weights.wins : 0;
   return stats.score * weights.score
     + stats.foodApproachProgress * (weights.approach ?? 0)
     + stats.levelsWon * weights.wins
+    + drawReward
     + survival * weights.survival
     + (stats.aliveAtEnd ? weights.aliveAtLimit : -weights.death);
 }
@@ -26,6 +29,8 @@ export function aggregateEvaluationMetrics(
       averageSurvivedTicks: 0,
       averageFinalLength: 0,
       winRate: 0,
+      drawRate: 0,
+      tickLimitRate: 0,
       aliveRate: 0,
       deathReasons: {},
     };
@@ -44,6 +49,8 @@ export function aggregateEvaluationMetrics(
     averageSurvivedTicks: sum((item) => item.survivedTicks),
     averageFinalLength: sum((item) => item.finalLength),
     winRate: sum((item) => item.levelsWon > 0 ? 1 : 0),
+    drawRate: sum((item) => item.drawAtEnd ? 1 : 0),
+    tickLimitRate: sum((item) => item.reachedTickLimit ? 1 : 0),
     aliveRate: sum((item) => item.aliveAtEnd ? 1 : 0),
     deathReasons,
   };

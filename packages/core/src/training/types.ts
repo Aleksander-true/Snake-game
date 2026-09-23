@@ -1,3 +1,4 @@
+import type { ObservationVersion } from '../ai/encodeObservation';
 import type { GameMode } from '../engine/types';
 
 export interface TrainingScenarioWeights {
@@ -24,6 +25,8 @@ export interface FitnessWeights {
   cycle: number;
 }
 
+export type TrainingHeuristicId = 'rookie' | 'basic' | 'solid' | 'wise';
+
 export interface GeneticTrainingConfig {
   populationSize: number;
   generations: number;
@@ -33,6 +36,9 @@ export interface GeneticTrainingConfig {
   mutationRate: number;
   mutationSigma: number;
   topology: number[];
+  /** Vision matrix side. */
+  visionSize: number;
+  observationVersion: ObservationVersion;
   /** Missing in legacy artifacts, which retain fixed training seeds. */
   trainingSeedStrategy?: 'fixed' | 'per-generation';
   trainingSeeds: number[];
@@ -42,6 +48,8 @@ export interface GeneticTrainingConfig {
   level: number;
   difficultyLevel: number;
   gameMode: GameMode;
+  /** Missing in older artifacts; defaults to rookie. */
+  heuristicOpponent?: TrainingHeuristicId;
   scenarioGames: TrainingScenarioGames;
   /** @deprecated Version 1 models may contain weights; they are migrated when loaded. */
   scenarioWeights?: TrainingScenarioWeights;
@@ -63,6 +71,8 @@ export interface TrainingEvaluationMetrics {
   averageSurvivedTicks: number;
   averageFinalLength: number;
   winRate: number;
+  drawRate: number;
+  tickLimitRate: number;
   aliveRate: number;
   deathReasons: Record<string, number>;
 }
@@ -83,6 +93,9 @@ export interface GenerationReport {
   validationFitness?: number;
   bestMetrics: TrainingEvaluationMetrics;
   validationMetrics?: TrainingEvaluationMetrics;
+  populationWinRate: number;
+  populationDrawRate: number;
+  populationTickLimitRate: number;
   elapsedMs: number;
   simulationsPerSecond: number;
   ticksPerSecond?: number;
@@ -90,7 +103,7 @@ export interface GenerationReport {
 
 export interface TrainedModelArtifact {
   formatVersion: 1;
-  observationVersion: 1;
+  observationVersion: ObservationVersion;
   id: string;
   name: string;
   createdAt: string;

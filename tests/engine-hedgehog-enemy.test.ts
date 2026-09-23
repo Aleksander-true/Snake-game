@@ -63,9 +63,9 @@ describe('Hedgehog enemy', () => {
     expect(getHedgehogLevelPopulationPercent(5, settings)).toBe(100);
     expect(getHedgehogLevelPopulationPercent(10, settings)).toBe(200);
     expect(getHedgehogSpawnChancePerTick(3, 10, settings)).toBe(0);
-    expect(getHedgehogSpawnChancePerTick(5, 3, settings)).toBe(0.016);
-    expect(getHedgehogSpawnChancePerTick(5, 3, settings, 1)).toBe(0.008);
-    expect(getHedgehogSpawnChancePerTick(5, 3, settings, 2)).toBe(0.004);
+    expect(getHedgehogSpawnChancePerTick(5, 3, settings)).toBe(0.008);
+    expect(getHedgehogSpawnChancePerTick(5, 3, settings, 1)).toBe(0.004);
+    expect(getHedgehogSpawnChancePerTick(5, 3, settings, 2)).toBe(0.002);
     expect(getHedgehogMoveInterval(1, settings)).toBe(4);
     expect(getHedgehogMoveInterval(3, settings)).toBe(4);
     expect(getHedgehogMoveInterval(4, settings)).toBe(3);
@@ -101,11 +101,11 @@ describe('Hedgehog enemy', () => {
 
     expect(trySpawnHedgehogForTick(
       state,
-      createContext({ next: () => 0.016 })
+      createContext({ next: () => 0.008 })
     )).toBeNull();
     expect(trySpawnHedgehogForTick(
       state,
-      createContext({ next: () => 0.015999 })
+      createContext({ next: () => 0.007999 })
     )).not.toBeNull();
     expect(state.enemies).toHaveLength(1);
 

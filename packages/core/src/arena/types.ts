@@ -39,6 +39,10 @@ export interface ArenaSnakeStats {
   survivedTicks: number;
   survivedMs: number;
   aliveAtEnd: boolean;
+  /** The run stopped at maxTicks while this snake was still alive. */
+  reachedTickLimit: boolean;
+  /** This snake survived a multiplayer draw; absent in older recorded stats. */
+  drawAtEnd?: boolean;
   deathReason?: string;
 }
 

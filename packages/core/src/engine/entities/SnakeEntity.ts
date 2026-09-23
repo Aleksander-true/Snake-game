@@ -5,6 +5,7 @@ export class SnakeEntity implements Snake {
   public score: number;
   public levelsWon: number;
   public ticksWithoutFood: number;
+  public satiety: number;
   public movementPaused: boolean;
   public deathReason?: string;
 
@@ -19,6 +20,7 @@ export class SnakeEntity implements Snake {
     this.score = 0;
     this.levelsWon = 0;
     this.ticksWithoutFood = 0;
+    this.satiety = 0;
     this.movementPaused = false;
   }
 
@@ -55,6 +57,14 @@ export class SnakeEntity implements Snake {
 
   incrementHungerTick(): void {
     this.ticksWithoutFood++;
+  }
+
+  decreaseSatiety(amount: number): void {
+    this.satiety = Math.max(0, this.satiety - Math.max(0, amount));
+  }
+
+  setSatiety(value: number): void {
+    this.satiety = Math.max(0, value);
   }
 
   resetHunger(): void {

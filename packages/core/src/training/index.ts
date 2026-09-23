@@ -4,6 +4,8 @@ export {
   createBuiltInGeneticTrainingPresets,
   createDefaultGeneticTrainingConfig,
   resolveTrainingScenarioGames,
+  resolveTrainingHeuristic,
+  isTrainingObservationConfig,
 } from './defaults';
 export { aggregateEvaluationMetrics, calculateRunFitness } from './fitness';
 export { crossoverGenomes, mutateGenome, selectTournament } from './geneticOperators';
@@ -19,6 +21,7 @@ export type {
   TrainingLabSettings,
   TrainingScenarioWeights,
   TrainingScenarioGames,
+  TrainingHeuristicId,
   GeneticTrainingPreset,
   CompletedTrainingGeneration,
   GeneticTrainingCheckpoint,

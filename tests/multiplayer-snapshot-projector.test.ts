@@ -241,6 +241,7 @@ function createSnapshot(): GameSnapshotDTO {
       score: 5,
       levelsWon: 1,
       ticksWithoutFood: 2,
+      satiety: 1.5,
       controller: {
         type: 'human',
         controllerId: 'player-1',
@@ -275,6 +276,7 @@ function createRemoteSnake(): GameSnapshotDTO['snakes'][number] {
     score: 3,
     levelsWon: 0,
     ticksWithoutFood: 1,
+    satiety: 0.75,
     controller: {
       type: 'bot',
       controllerId: 'bot:1',

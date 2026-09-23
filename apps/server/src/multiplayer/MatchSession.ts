@@ -516,6 +516,7 @@ export class MatchSession {
         score: snake.score,
         levelsWon: snake.levelsWon,
         ticksWithoutFood: snake.ticksWithoutFood,
+        satiety: snake.satiety,
         deathReason: snake.deathReason,
         controller: this.createController(snake.id, snake.name, snake.isBot),
       })),
