@@ -21,7 +21,7 @@ const metrics: TrainingEvaluationMetrics = {
 };
 
 describe('training evaluation worker pool', () => {
-  test('dual-channel results are identical with one or three evaluation workers', async () => {
+  test('v3 results are identical with one or three evaluation workers', async () => {
     class EvaluationWorker {
       onmessage: ((event: MessageEvent<EvaluationWorkerResponse>) => void) | null = null;
       terminate(): void {}
@@ -31,8 +31,8 @@ describe('training evaluation worker pool', () => {
         })));
       }
     }
-    const config = { ...createDefaultGeneticTrainingConfig(167, 3, 4),
-      topology: [167, 4, 3], populationSize: 4, eliteCount: 1, tournamentSize: 2,
+    const config = { ...createDefaultGeneticTrainingConfig(86, 3, 3),
+      topology: [86, 4, 3], populationSize: 4, eliteCount: 1, tournamentSize: 2,
       maxTicks: 30, scenarioGames: { solo: 1, heuristic: 1, cohort: 1 } };
     const tasks = new GeneticTrainingSession(config).createEvaluationTasks();
     const evaluate = async (count: number) => {

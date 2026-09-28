@@ -3,7 +3,6 @@ import type { GameState, Snake, BotInput, BotDecision, Direction } from '../../e
 import type { GameSettings } from '../../engine/settings';
 import type { NeuralNetwork, NeuralNetworkTrace } from './simpleNetwork';
 
-import { buildDualObservation, type DualObservation } from '../dualObservation';
 import { generateSingleChannelVision } from '../vision';
 import { getBotDirection } from '../botController';
 import { encodeObservation, type ObservationVersion } from '../encodeObservation';
@@ -64,10 +63,7 @@ export function chooseNeuralDirection(
     options: NeuralArenaAlgorithmOptions,
     previousDecision: BotDecision = 'front',
   ): Direction {
-    const botInput = options.observationVersion === 4
-      ? buildDualObservation(state, snake, settings).input
-      : buildBotInput(state, snake, settings, previousDecision);
-    botInput.previousDecision = previousDecision;
+    const botInput = buildBotInput(state, snake, settings, previousDecision);
     const decision = chooseNeuralDecision(botInput, settings, options);
     return getBotDirection(snake.direction, decision);
   }
@@ -77,31 +73,9 @@ export function createNeuralArenaAlgorithm(
   ): ArenaAlgorithm {
     const id = options.id ?? "neural-simple-v1";
     const previousDecisionByState = new WeakMap<GameState, Map<number, BotDecision>>();
-    const history = new WeakMap<GameState, Map<number, {
-      observation: DualObservation; decision: BotDecision; direction: Direction;
-    }>>();
     const chooseDirection = (state: GameState, snake: Snake , settings: GameSettings) => {
       if (!snake.alive) {
         return snake.direction;
-      }
-      if (options.observationVersion === 4) {
-        let entries = history.get(state);
-        if (!entries) { entries = new Map(); history.set(state, entries); }
-        const old = entries.get(snake.id);
-        const compatible = old && old.observation.snake === snake
-          && old.observation.level === state.level && old.observation.mode === state.gameMode
-          && old.observation.occupied.length === settings.visionSize
-          && old.observation.tick <= state.tickCount;
-        if (compatible && old.observation.tick === state.tickCount) {
-          if (options.onTrace) chooseNeuralDecision(old.observation.input, settings, options);
-          return old.direction;
-        }
-        const observation = buildDualObservation(state, snake, settings, compatible ? old.observation : undefined);
-        observation.input.previousDecision = compatible ? old.decision : 'front';
-        const decision = chooseNeuralDecision(observation.input, settings, options);
-        const direction = getBotDirection(snake.direction, decision);
-        entries.set(snake.id, { observation, decision, direction });
-        return direction;
       }
       let previousDecisionBySnakeId = previousDecisionByState.get(state);
       if (!previousDecisionBySnakeId) {

@@ -16,7 +16,8 @@ export interface DemoNeuralPolicyOptions {
 
 /** Encoded observation = vision, two scalar features and previous-decision one-hot. */
 export function calculateObservationInputSize(visionSize: number, observationVersion: ObservationVersion = 3): number {
-  return visionSize * visionSize * (observationVersion === 4 ? 2 : 1) + 5;
+  void observationVersion;
+  return visionSize * visionSize + 5;
 }
 
 /** Build an untrained neural policy whose weights are initialized by the Arena RNG. */

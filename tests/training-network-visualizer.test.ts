@@ -2,31 +2,13 @@ import type { NeuralNetworkTrace } from '@snake-game/core';
 import { TrainingNetworkVisualizer } from '../apps/web/src/training/TrainingNetworkVisualizer';
 
 describe('training network visualizer', () => {
-  test.each([5, 6] as const)('renders v%i as a single 9 by 9 vision grid', version => {
+  test('renders v3 as a single 9 by 9 vision grid', () => {
     const host = document.createElement('aside');
-    new TrainingNetworkVisualizer(host).showTopology([86, 16, 9, 3], version);
+    new TrainingNetworkVisualizer(host).showTopology([86, 16, 9, 3], 3);
     const grids = host.querySelectorAll('.training-network-grid--vision');
     expect(grids).toHaveLength(1);
     expect(grids[0].children).toHaveLength(81);
     expect(host.textContent).not.toContain('Угрозы и события');
-  });
-  test('renders two labeled 9 by 9 matrices for explicit observation version 4', () => {
-    const host = document.createElement('aside');
-    const visualizer = new TrainingNetworkVisualizer(host);
-    visualizer.showTopology([167, 32, 8, 3], 4);
-    const grids = host.querySelectorAll('.training-network-grid--vision');
-    expect(grids).toHaveLength(2);
-    for (const grid of grids) expect(grid.children).toHaveLength(81);
-    expect(host.textContent).toContain('Текущее поле');
-    expect(host.textContent).toContain('Угрозы и события');
-    const input = new Float32Array(167);
-    input[81] = -0.8;
-    visualizer.render({ input, layerValues: [], output: {
-      scores: new Float32Array(3), action: 'front', actionIndex: 1,
-    } });
-    expect((grids[1].firstElementChild as HTMLElement).title).toContain('-0.800');
-    visualizer.showTopology([86, 3], 3);
-    expect(host.querySelectorAll('.training-network-grid--vision')).toHaveLength(1);
   });
   test('renders vision, hidden layers and relative output activations', () => {
     const host = document.createElement('aside');

@@ -1,6 +1,7 @@
 import {
   calculateObservationInputSize,
   isObservationVersion,
+  SUPPORTED_OBSERVATION_VERSIONS,
   createBuiltInGeneticTrainingPresets,
   createDefaultGeneticTrainingConfig,
   createDenseNetworkFromGenome,
@@ -22,6 +23,7 @@ import type {
   TrainingLabSettings,
   TrainedModelArtifact,
   TrainingCandidateGenome,
+  ObservationVersion,
 } from '@snake-game/core';
 import { createArenaDemoController } from '../arena/ArenaDemoRunner';
 import type { ArenaDemoController, ArenaSpeedMultiplier } from '../arena/ArenaDemoRunner';
@@ -115,7 +117,7 @@ export class TrainingLabController {
 
   private writeInitialValues(): void {
     const defaults = createDefaultGeneticTrainingConfig(
-      calculateObservationInputSize(9, 4), undefined, 4,
+      calculateObservationInputSize(9, 3), undefined, 3,
     );
     this.setValue('trainingGenerations', defaults.generations);
     this.setValue('trainingPopulation', defaults.populationSize);
@@ -1484,6 +1486,13 @@ function scaleY(value: number, min: number, range: number, height: number): numb
   return height - 12 - (value - min) / range * (height - 24);
 }
 
+const trainingObservationVersionLabels: Record<ObservationVersion, string> = {
+  3: 'Одноканальная (v3)',
+};
+const trainingObservationVersionOptions = SUPPORTED_OBSERVATION_VERSIONS
+  .map((version) => `<option value="${version}">${trainingObservationVersionLabels[version]}</option>`)
+  .join('');
+
 const trainingParameterHelp: Record<string, string> = {
   trainingPresetSelect: 'Готовый набор параметров. Применение заменяет текущие значения полей; при дообучении топология выбранной модели сохраняется.',
   trainingDisplayMode: 'Визуальный режим показывает партии чемпионов. Фоновый отключает Canvas и экономит ресурсы.',
@@ -1495,8 +1504,8 @@ const trainingParameterHelp: Record<string, string> = {
   trainingElite: 'Число лучших кандидатов, переходящих в следующее поколение без мутации.',
   trainingTournament: 'Сколько случайных кандидатов сравнивается при выборе родителя. Большее значение усиливает отбор.',
   trainingHiddenLayers: 'Количество нейронов в скрытых слоях через запятую. Большая сеть медленнее и требует больше данных.',
-  trainingObservationVersion: 'Одноканальная модель: препятствия −1, чужая голова −2, шея −1.6, тело −1.2; ёж спереди −1.6, сзади −1.2, без затухания. Двухканальная добавляет угрозы и след прошлого наблюдения. v5: одноканальная с гауссовой инициализацией связей зрения; v6: эти связи начинаются с 0.1. Пять дополнительных входов и следующие слои остаются случайными, смещения нулевые. Дообучение сохраняет версию и обученные веса.',
-  trainingVisionSize: 'Нечётная сторона квадратного поля зрения от 3 до 63; голова точно в центре. Число входов равно размер² + 5 или 2 × размер² + 5 для двух каналов. Большое поле видит дальше, но резко увеличивает сеть и время обучения.',
+  trainingObservationVersion: 'Версия определяет формат входов нейросети. Сейчас доступна только одноканальная v3; селектор и метаданные версии сохранены для будущих реализаций.',
+  trainingVisionSize: 'Нечётная сторона квадратного поля зрения от 3 до 63; голова точно в центре. Число входов равно размер² + 5. Большое поле видит дальше, но резко увеличивает сеть и время обучения.',
   trainingCrossover: 'Вероятность смешать веса двух родителей. Ноль отключает скрещивание.',
   trainingMutationRate: 'Вероятность изменения каждого веса потомка. Слишком большое значение разрушает удачные решения.',
   trainingMutationSigma: 'Средняя сила изменения мутировавшего веса.',
@@ -1553,7 +1562,7 @@ const trainingLabMarkup = `
       <label class="dev-row"><span class="dev-row-label">Популяция</span><input id="trainingPopulation" class="dev-input" type="number" min="4" max="256"></label>
       <label class="dev-row"><span class="dev-row-label">Элита</span><input id="trainingElite" class="dev-input" type="number" min="1"></label>
       <label class="dev-row"><span class="dev-row-label">Турнир</span><input id="trainingTournament" class="dev-input" type="number" min="2"></label>
-      <label class="dev-row"><span class="dev-row-label">Тип модели</span><select id="trainingObservationVersion" class="dev-input"><option value="3">Одноканальная (v3)</option><option value="4">Двухканальная (v4)</option><option value="5">Одноканальная: гауссова (v5)</option><option value="6">Одноканальная: веса 0.1 (v6)</option></select></label>
+      <label class="dev-row"><span class="dev-row-label">Тип модели</span><select id="trainingObservationVersion" class="dev-input">${trainingObservationVersionOptions}</select></label>
       <label class="dev-row"><span class="dev-row-label">Поле зрения</span><input id="trainingVisionSize" class="dev-input" type="number" min="3" max="63" step="2"></label>
       <label class="dev-row"><span class="dev-row-label">Скрытые слои</span><input id="trainingHiddenLayers" class="dev-input" type="text" placeholder="16,8"></label>
       <label class="dev-row"><span class="dev-row-label">Скрещивание</span><input id="trainingCrossover" class="dev-input" type="number" min="0" max="1" step="0.01"></label>

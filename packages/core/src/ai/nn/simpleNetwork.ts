@@ -119,39 +119,6 @@ export function runNeuralNetwork(input: Float32Array, network: NeuralNetwork): N
   return createNetworkOutput(scores);
 }
 
-/** Initialize only vision connections of a new single-channel network. */
-export function initializeSpatialVisionWeights(
-  network: DenseNetwork,
-  visionSize: number,
-  version: 5 | 6,
-  rng: RandomPort,
-): void {
-  const layer = network.layers[0];
-  if (network.layers.length < 2 || !Number.isInteger(visionSize) || visionSize < 3
-    || visionSize % 2 === 0 || layer.inputSize !== visionSize * visionSize + 5) {
-    throw new Error('Spatial initialization requires an odd visionSize and a hidden layer');
-  }
-  for (let neuron = 0; neuron < layer.outputSize; neuron++) {
-    const offset = neuron * layer.inputSize;
-    if (version === 6) {
-      layer.weights.fill(0.1, offset, offset + visionSize * visionSize);
-      continue;
-    }
-    const centerX = rng.next() * (visionSize - 1);
-    const centerY = rng.next() * (visionSize - 1);
-    const amplitude = (rng.next() * 2 - 1) * 0.1;
-    const width = 1 + rng.next() * (visionSize / 2 - 1);
-    for (let y = 0; y < visionSize; y++) {
-      for (let x = 0; x < visionSize; x++) {
-        const distanceSquared = (x - centerX) ** 2 + (y - centerY) ** 2;
-        const noise = (rng.next() * 2 - 1) * 0.01;
-        layer.weights[offset + y * visionSize + x] =
-          amplitude * Math.exp(-distanceSquared / (2 * width ** 2)) + noise;
-      }
-    }
-  }
-}
-
 export function traceNeuralNetwork(
   input: Float32Array,
   network: NeuralNetwork,

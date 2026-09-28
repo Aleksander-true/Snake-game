@@ -63,17 +63,8 @@ describe('training replay controls', () => {
     expect(vision.value).toBe('9');
     expect(vision.step).toBe('2');
     const type = panel.querySelector<HTMLSelectElement>('#trainingObservationVersion')!;
-    expect(type.value).toBe('4');
-    expect(Array.from(type.options).map(option => option.value)).toEqual(['3', '4', '5', '6']);
-    for (const version of ['5', '6']) {
-      type.value = version;
-      type.dispatchEvent(new Event('change'));
-      panel.querySelector<HTMLInputElement>('#trainingPresetName')!.value = `Version ${version}`;
-      panel.querySelector<HTMLButtonElement>('#trainingPresetSave')!.click();
-      type.value = '3';
-      panel.querySelector<HTMLButtonElement>('#trainingPresetApply')!.click();
-      expect(type.value).toBe(version);
-    }
+    expect(type.value).toBe('3');
+    expect(Array.from(type.options).map(option => option.value)).toEqual(['3']);
     for (const invalid of ['10', '8.5', '64', '2', '']) {
       vision.value = invalid;
       vision.dispatchEvent(new Event('input'));

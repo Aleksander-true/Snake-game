@@ -4,7 +4,6 @@ import {
   createDenseNetwork,
   createDenseNetworkFromGenome,
   flattenNetwork,
-  initializeSpatialVisionWeights,
 } from '../ai/nn/simpleNetwork';
 import {
   createStatefulSeededRng,
@@ -292,10 +291,6 @@ export class GeneticTrainingSession {
         this.config.topology[this.config.topology.length - 1],
         this.rng,
       );
-      const version = this.config.observationVersion;
-      if (version === 5 || version === 6) {
-        initializeSpatialVisionWeights(network, this.config.visionSize, version, this.rng);
-      }
       return { id: `candidate-1-${index + 1}`, genome: flattenNetwork(network) };
     });
   }
@@ -504,16 +499,10 @@ function validateConfig(config: GeneticTrainingConfig): void {
     throw new Error('visionSize must be an integer between 3 and 64');
   }
   if (!isObservationVersion(config.observationVersion)) {
-    throw new Error('Only observationVersion 3, 4, 5 or 6 is supported');
+    throw new Error('Only observationVersion 3 is supported');
   }
-  if ((config.observationVersion === 5 || config.observationVersion === 6) && config.topology.length < 3) {
-    throw new Error('Observation versions 5 and 6 require a hidden layer');
-  }
-  if (config.topology[0] !== visionSize * visionSize * (config.observationVersion === 4 ? 2 : 1) + 5) {
+  if (config.topology[0] !== visionSize * visionSize + 5) {
     throw new Error('topology input size does not match visionSize and observationVersion');
-  }
-  if (config.observationVersion !== 3 && visionSize % 2 === 0) {
-    throw new Error('Observation versions 4, 5 and 6 require an odd visionSize');
   }
   if (config.trainingSeeds.length === 0 || config.validationSeeds.length === 0) {
     throw new Error('training and validation seeds must not be empty');

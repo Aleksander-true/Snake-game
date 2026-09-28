@@ -15,7 +15,6 @@ const OUTPUT_ACTIONS = [
 export class TrainingNetworkVisualizer {
   private topologyKey = '';
   private vision: LayerView | null = null;
-  private events: LayerView | null = null;
   private extraInputs: LayerView | null = null;
   private hiddenLayers: LayerView[] = [];
   private outputs: HTMLElement[] = [];
@@ -38,14 +37,12 @@ export class TrainingNetworkVisualizer {
 
     const inputSize = topology[0] ?? 0;
     const extraInputCount = 5;
-    const visionCount = Math.max(0, inputSize - extraInputCount) / (observationVersion === 4 ? 2 : 1);
+    const visionCount = Math.max(0, inputSize - extraInputCount);
     const visionSide = Math.sqrt(visionCount);
     const visionColumns = Number.isInteger(visionSide)
       ? visionSide
       : Math.ceil(Math.sqrt(Math.max(1, visionCount)));
-    this.vision = this.createLayer(observationVersion === 4 ? 'Текущее поле' : 'Зрение', visionCount, visionColumns, 'vision');
-    this.events = observationVersion === 4
-      ? this.createLayer('Угрозы и события', visionCount, visionColumns, 'vision') : null;
+    this.vision = this.createLayer('Зрение', visionCount, visionColumns, 'vision');
     this.extraInputs = this.createExtraInputs();
     this.hiddenLayers = topology.slice(1, -1).map((size, index) => (
       this.createLayer(
@@ -60,8 +57,6 @@ export class TrainingNetworkVisualizer {
 
   render(trace: NeuralNetworkTrace): void {
     this.updateLayer(this.vision, trace.input.subarray(0, this.vision?.cells.length ?? 0));
-    const count = this.vision?.cells.length ?? 0;
-    this.updateLayer(this.events, trace.input.subarray(count, count * 2));
     this.updateLayer(
       this.extraInputs,
       trace.input.subarray(Math.max(0, trace.input.length - (this.extraInputs?.cells.length ?? 0))),
@@ -82,7 +77,6 @@ export class TrainingNetworkVisualizer {
   reset(): void {
     this.topologyKey = '';
     this.vision = null;
-    this.events = null;
     this.extraInputs = null;
     this.hiddenLayers = [];
     this.outputs = [];

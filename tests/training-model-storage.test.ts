@@ -13,23 +13,6 @@ import {
 describe('local trained model repository', () => {
   beforeEach(() => localStorage.clear());
 
-  test.each([5, 6] as const)('round-trips v%i models and presets without modifying the genome', observationVersion => {
-    const model = createModel();
-    model.observationVersion = observationVersion;
-    model.trainingConfig = { ...createDefaultGeneticTrainingConfig(86, 1, observationVersion), topology: [86, 2, 3] };
-    model.topology = [86, 2, 3];
-    model.genome = Array.from({ length: 183 }, (_, i) => i / 1000);
-    expect(parseModelArtifact(JSON.stringify(model))).toEqual(model);
-    const presets = new LocalTrainingPresetRepository(localStorage);
-    presets.save({ id: 'new-version', name: 'Инициализация', config: model.trainingConfig,
-      createdAt: model.createdAt, labSettings: {
-        displayMode: 'background', workerSelection: 'automatic', workerCount: 4, checkpointEvery: 10,
-      } });
-    expect(presets.list()[0].config.observationVersion).toBe(observationVersion);
-    model.trainingConfig.visionSize = 10;
-    expect(() => parseModelArtifact(JSON.stringify(model))).toThrow();
-  });
-
   test('stores and restores a versioned model', async () => {
     const repository = new LocalModelRepository(localStorage);
     const model = createModel();
@@ -55,23 +38,8 @@ describe('local trained model repository', () => {
     expect(() => parseModelArtifact(JSON.stringify(invalid))).toThrow('совместимую модель');
   });
 
-  test('round-trips dual-channel models and rejects inconsistent observation metadata', async () => {
-    const model = createModel();
-    model.observationVersion = 4;
-    model.trainingConfig = createDefaultGeneticTrainingConfig(167, 1, 4);
-    model.topology = [167, 3];
-    model.trainingConfig.topology = [...model.topology];
-    model.genome = new Array(504).fill(0);
-    const repository = new LocalModelRepository(localStorage);
-    await repository.save(model);
-    expect(await repository.get(model.id)).toEqual(model);
-    expect(parseModelArtifact(JSON.stringify(model))).toEqual(model);
-    model.trainingConfig.observationVersion = 3;
-    expect(() => parseModelArtifact(JSON.stringify(model))).toThrow('совместимую модель');
-  });
-
-  test('rejects models with an older observation version', () => {
-    const model = { ...createModel(), observationVersion: 2 };
+  test.each([2, 4, 5, 6])('rejects unsupported observation version %i', (observationVersion) => {
+    const model = { ...createModel(), observationVersion };
 
     expect(() => parseModelArtifact(JSON.stringify(model))).toThrow('совместимую модель');
   });

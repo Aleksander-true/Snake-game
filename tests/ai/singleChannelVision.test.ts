@@ -2,7 +2,6 @@ import {
   AppleFoodEntity, HedgehogEntity, SnakeEntity, buildBotInput, createDefaultSettings,
   encodeObservation, generateVision, rotateToVision, type Direction, type GameState,
 } from '@snake-game/core';
-import { buildDualObservation } from '../../packages/core/src/ai/dualObservation';
 
 const settings = { ...createDefaultSettings(), visionSize: 9 };
 function fixture() {
@@ -19,21 +18,18 @@ function fixture() {
 }
 
 describe('single-channel neural vision', () => {
-  test.each([3, 4, 5, 6] as const)('uses the same normalized food signals in observation v%i', observationVersion => {
+  test('uses normalized food signals in observation v3', () => {
     const { state, snake } = fixture();
     state.foods = [
       AppleFoodEntity.newborn({ x: 10, y: 5 }),
       AppleFoodEntity.newborn({ x: 9, y: 10 }),
       AppleFoodEntity.newborn({ x: 6, y: 10 }, settings.foodYoungAge),
     ];
-    const input = observationVersion !== 4
-      ? buildBotInput(state, snake, settings)
-      : buildDualObservation(state, snake, settings).input;
-    const encoded = encodeObservation(input, { observationVersion });
+    const input = buildBotInput(state, snake, settings);
+    const encoded = encodeObservation(input, { observationVersion: 3 });
     expect(encoded[4]).toBeCloseTo(0.525);
     expect(encoded[4 * 9 + 3]).toBe(1);
     expect(encoded[4 * 9]).toBe(2);
-    if (observationVersion === 4) expect(input.events![0][4]).toBe(0);
   });
 
   test.each<Direction>(['up', 'right', 'down', 'left'])('encodes exact normalized segment values facing %s', direction => {
@@ -80,7 +76,6 @@ describe('single-channel neural vision', () => {
     expect(input.vision[4][8]).toBe(-100);
     expect(input.vision[4][3]).toBe(original[4][3]);
     expect(input.vision[4][3]).toBeGreaterThan(0);
-    expect(buildDualObservation(state, snake, settings).input.vision[3][6]).toBe(-100);
   });
 
   test('boundaries remain -1 at all distances and dead opponents leave no obstacle', () => {

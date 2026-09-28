@@ -47,7 +47,8 @@ export function createDefaultGeneticTrainingConfig(
 }
 
 function inferTrainingVisionSize(inputSize: number, observationVersion: ObservationVersion): number {
-  const visionSide = Math.sqrt((inputSize - 5) / (observationVersion === 4 ? 2 : 1));
+  void observationVersion;
+  const visionSide = Math.sqrt(inputSize - 5);
   if (Number.isInteger(visionSide) && visionSide > 0) return visionSide;
   return defaults.ai.visionSize;
 }
@@ -60,12 +61,11 @@ export function isTrainingObservationConfig(value: unknown): boolean {
   const version = config.observationVersion;
   return isObservationVersion(version)
     && typeof size === 'number' && Number.isInteger(size) && size >= 3 && size <= 64
-    && (version === 3 || size % 2 === 1)
     && Array.isArray(config.topology)
-    && config.topology.length >= (version === 5 || version === 6 ? 3 : 2)
+    && config.topology.length >= 2
     && config.topology.every(layer => Number.isInteger(layer) && layer > 0)
     && config.topology[config.topology.length - 1] === 3
-    && config.topology[0] === size * size * (version === 4 ? 2 : 1) + 5;
+    && config.topology[0] === size * size + 5;
 }
 
 export function createBuiltInGeneticTrainingPresets(

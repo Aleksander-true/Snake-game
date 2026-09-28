@@ -137,8 +137,6 @@ export interface GameConfig {
 /** Input for bot AI */
 export interface BotInput {
   vision: number[][];
-  /** Normalized threats and events for observation version 4. */
-  events?: number[][];
   snakeLength: number;
   satiety: number;
   /** Previous relative neural decision. Defaults to front before the first decision. */

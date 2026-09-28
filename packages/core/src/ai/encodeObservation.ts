@@ -1,9 +1,10 @@
 import { BotInput } from '../engine/types';
 
-export type ObservationVersion = 3 | 4 | 5 | 6;
+export const SUPPORTED_OBSERVATION_VERSIONS = [3] as const;
+export type ObservationVersion = typeof SUPPORTED_OBSERVATION_VERSIONS[number];
 
 export function isObservationVersion(value: unknown): value is ObservationVersion {
-  return value === 3 || value === 4 || value === 5 || value === 6;
+  return SUPPORTED_OBSERVATION_VERSIONS.some((version) => version === value);
 }
 
 export interface ObservationEncodingOptions {
@@ -12,13 +13,13 @@ export interface ObservationEncodingOptions {
   visionValueScale?: number;
 }
 
-export function getObservationSize(input: BotInput, observationVersion: ObservationVersion = 3): number {
+export function getObservationSize(input: BotInput, _observationVersion: ObservationVersion = 3): number {
     if (!input.vision) {
         return 5;
     }
     let size = 5
     for (const row of input.vision) {
-        size += row.length * (observationVersion === 4 ? 2 : 1);
+        size += row.length;
     }
     return size;
 }
@@ -32,7 +33,7 @@ export function encodeObservation(
     const result = new Float32Array(getObservationSize(input, options.observationVersion));
     const maxSnakeLength = options.maxSnakeLengthForEncoding && options.maxSnakeLengthForEncoding > 0 ?
         options.maxSnakeLengthForEncoding : DEFAULT_MAX_SNAKE_LENGTH;
-    const visionValueScale = options.observationVersion !== 4 && options.visionValueScale && options.visionValueScale > 0 ?
+    const visionValueScale = options.visionValueScale && options.visionValueScale > 0 ?
       options.visionValueScale : DEFAULT_VISION_VALUE_SCALE;
     let index = 0;
     for (let y = 0; y < input.vision.length; y++) {
@@ -40,15 +41,6 @@ export function encodeObservation(
       for (let x = 0; x < row.length; x++) {
         result[index] = row[x] / visionValueScale;
         index++;
-      }
-    }
-    if (options.observationVersion === 4) {
-      if (!input.events || input.events.length !== input.vision.length
-        || input.events.some((row, y) => row.length !== input.vision[y].length)) {
-        throw new Error('Observation version 4 requires two equally sized channels');
-      }
-      for (const row of input.events) {
-        for (const value of row) result[index++] = value;
       }
     }
     result[index] = input.snakeLength / maxSnakeLength;
